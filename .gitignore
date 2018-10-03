@@ -3,6 +3,8 @@
 
 bin/*
 bin
+obj/*
+obj
 
 # Compiled Object files
 *.slo
