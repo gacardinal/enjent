@@ -19,9 +19,12 @@ namespace dotnet_core_socket_server
         private const int MAX_REQUEST_HEADERS_LENGTH = 2048;
         private const string WEBSOCKET_SEC_KEY_HEADER = "Sec-WebSocket-Key";
         private static readonly byte[] RFC6455_CONCAT_GUID = new byte[] {
-            50, 53, 56, 69, 65, 70, 65, 53, 45, 69, 57, 49, 
-            52, 45, 52, 55, 68, 65, 45, 57, 53, 67, 65, 45, 
-            67, 53, 65, 66, 48, 68, 67, 56, 53, 66, 49, 49 
+            50, 53, 56, 69, 65, 70, 
+            65, 53, 45, 69, 57, 49, 
+            52, 45, 52, 55, 68, 65, 
+            45, 57, 53, 67, 65, 45, 
+            67, 53, 65, 66, 48, 68, 
+            67, 56, 53, 66, 49, 49 
         };
 
         private Socket socket;
@@ -51,14 +54,18 @@ namespace dotnet_core_socket_server
             return false;  
         }
 
-        public void ReadRequestHeaders() {
+        public bool ReadRequestHeaders() {
             byte[] buffer = new byte[HEADER_CHUNK_BUFFER_SIZE];
             int byteRead = 0;
 
             do {
                 byteRead = this.socket.Receive(buffer);
-                this.AppendHeaderChunk(buffer, byteRead);
+                if (!this.AppendHeaderChunk(buffer, byteRead)) {
+                    return false;
+                }
             } while( buffer[byteRead - 1] != NEWLINE_BYTE && buffer[byteRead - 2] != NEWLINE_BYTE );
+        
+            return true;
         }
 
         public void AnalyzeRequestHeaders() {
@@ -105,7 +112,7 @@ namespace dotnet_core_socket_server
             }
         }
 
-        public void Negociate101Upgrade() {
+        public bool Negociate101Upgrade() {
             if (this.headersmap.ContainsKey(ClientObject.WEBSOCKET_SEC_KEY_HEADER)) {
                 byte[] seckeyheader = this.headersmap[ClientObject.WEBSOCKET_SEC_KEY_HEADER];
                 byte[] tohash = new byte[seckeyheader.Length + ClientObject.RFC6455_CONCAT_GUID.Length - 1];
@@ -127,9 +134,15 @@ namespace dotnet_core_socket_server
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Upgrade: websocket\n"));
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Extensions: permessage-deflate\n"));
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Accept: " + negociatedkey + "\n\n"));
-            } else {
-                throw new Exception("No SEC key found.");
-            }
+            
+                return true;
+            } 
+
+            return false;
+        }
+
+        public void Greet() {
+            // this.socket.Send(new byte[] { 1 });
         }
 
         public void Dispose() {
@@ -139,24 +152,3 @@ namespace dotnet_core_socket_server
         }
     }
 }
-
-/*
-
-Websocket example to respond to :
-
-GET /test HTTP/1.1
-Host localhost:13003
-Connection Upgrade
-Pragma no-cache
-Cache-Control no-cache
-User-Agent Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.92 Safari/537.36
-Upgrade websocket
-Origin null
-Sec-WebSocket-Version 13
-Accept-Encoding gzip, deflate, br
-Accept-Language en-US,en;q=0.9,en-GB;q=0.8,fr-CA;q=0.7,fr;q=0.6,ca;q=0.5
-Cookie _ga=GA1.1.141756367.1538080381
-Sec-WebSocket-Key e5OsiUCZmjzRPb66zBFBiA==
-Sec-WebSocket-Extensions permessage-deflate; client_max_window_bits
-
- */

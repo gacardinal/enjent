@@ -18,12 +18,14 @@ namespace dotnet_core_socket_server
             Socket handler = listener.EndAccept(ar);
 
             ClientObject cli = new ClientObject(handler);
-            cli.ReadRequestHeaders();
-            cli.AnalyzeRequestHeaders();
-            cli.Negociate101Upgrade();
+            if (cli.ReadRequestHeaders()) {
+                cli.AnalyzeRequestHeaders();
+                cli.Negociate101Upgrade();
+                cli.Greet();
+            } else {
+                cli.Dispose();
+            }
             
-            cli.Dispose();
-
             manualResetEvent.Set();
         }
 
