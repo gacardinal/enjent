@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Collections.Generic;
 using System.Security.Cryptography;
+using NarcityMedia.Net;
 
 namespace NarcityMedia
 {
@@ -176,12 +177,18 @@ namespace NarcityMedia
         }
 
         public void Greet() {
-            this.socket.Send(new byte[] { 
-                0b10000001, (byte)(ClientObject.GREET_MESSAGE.Length) /*, 0b00000000, 0b00000000,
-                0b00000000, 0b00000000, 0b00000000, 0b00000000, 
-                0b00000000, 0b00000000, 0b00000000, 0b00000000, 
-                0b00000000, 0b00000000,*/ 
-            });
+            Console.WriteLine("Greeting new client");
+            SocketMessage message = new SocketMessage(SocketMessage.ApplicationMessageCode.Greeting);
+            List<SocketFrame> frames = message.GetFrames();
+            frames[0].GetBytes();
+
+            this.socket.Send(frames[0].GetBytes());
+            // this.socket.Send(new byte[] { 
+            //     0b10000001, (byte)(ClientObject.GREET_MESSAGE.Length) /*, 0b00000000, 0b00000000,
+            //     0b00000000, 0b00000000, 0b00000000, 0b00000000, 
+            //     0b00000000, 0b00000000, 0b00000000, 0b00000000, 
+            //     0b00000000, 0b00000000,*/ 
+            // });
 
             this.socket.Send(ClientObject.GREET_MESSAGE);
         }

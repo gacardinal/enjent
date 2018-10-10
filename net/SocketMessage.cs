@@ -4,18 +4,13 @@ using System.Collections.Generic;
 
 namespace NarcityMedia.Net
 {
-    class SocketMessageBuilder
-    {
-
-    }
-
     abstract class SocketFrame
     {
         public enum OPCode
         {
             Continuation = 0x0,
             Text = 0x1,
-            Binary = 0x3,
+            Binary = 0x2,
             Ping = 0x9,
             Pong = 0xA
         }
@@ -25,8 +20,9 @@ namespace NarcityMedia.Net
 
         protected byte[] data;
         protected byte opcode;
+        protected byte contentLength;
 
-        public SocketFrame(bool fin, bool masked)
+        public SocketFrame(bool fin, bool masked, byte length)
         {
             this.fin = fin;
             this.masked = masked;
@@ -36,7 +32,25 @@ namespace NarcityMedia.Net
 
         public byte[] GetBytes()
         {
-            return new byte[] {};
+            byte[] frame = new byte[3];
+
+            // First octet - 1 bit for FIN, 3 reserved, 4 for OP Code
+            byte octet0 = (byte) ((this.fin) ? 0b10000000 : 0b00000000);
+            octet0 = (byte) (octet0 | this.opcode);
+
+            byte octet1 = (byte) ((this.masked) ? 0b10000000 : 0b00000000);
+            // TODO: COmpute content length instead of hardcoding it
+            octet1 = (byte) (octet1 | 0b00001000);
+
+            byte octet2 = 0b00000001;
+
+            Console.WriteLine("OCTET 0 : " + Convert.ToString(octet0, 2) + " " + Convert.ToString(octet1, 2) + " " + Convert.ToString(octet2, 2));
+
+            frame[0] = octet0;
+            frame[1] = octet1;
+            frame[2] = octet2;
+
+            return frame;
         }
     }
 
@@ -48,7 +62,7 @@ namespace NarcityMedia.Net
         // Codes must match positions in the ControlFrameTypes enum
         private readonly byte[] DataFrameTypesOPCodes = { 0x1, 0x2 };
 
-        public SocketDataFrame(bool fin, bool masked, DataFrameType dataType) : base(fin, masked)
+        public SocketDataFrame(bool fin, bool masked, byte length, DataFrameType dataType) : base(fin, masked, length)
         {
             this.DataType = dataType;
             this.InitOPCode();
@@ -65,12 +79,12 @@ namespace NarcityMedia.Net
     class SocketMessage
     {
         // Start values at value 1 to avoid sending empty application data
-        public enum ApplicationMessageCode { Hello = 1, FetchNOtifications, FetchCurrentArticle, FetchComments }
-
-        private ushort appMessageCode;
+        public enum ApplicationMessageCode { Greeting = 1, FetchNOtifications, FetchCurrentArticle, FetchComments }
 
         // WS standard allows 7 bits to represent message length
-        private byte messageLength;
+        private byte contentLength;
+
+        private ushort appMessageCode;
 
         public SocketDataFrame.DataFrameType MessageType;
 
@@ -79,7 +93,7 @@ namespace NarcityMedia.Net
             get { return this.appMessageCode; }
             set {
                 this.appMessageCode = value;
-                this.messageLength = ComputePayloadLength();
+                ComputePayloadLength();
             }
         }
 
@@ -88,7 +102,7 @@ namespace NarcityMedia.Net
             this.AppMessageCode = (ushort) code;
         }
 
-        private byte ComputePayloadLength()
+        private void ComputePayloadLength()
         {
             ushort payload = this.appMessageCode;
             byte MSB = 0;
@@ -102,14 +116,14 @@ namespace NarcityMedia.Net
                 payload = (ushort)(payload >> 1);
             }
 
-            return MSB;
+            this.contentLength = MSB;
         }
 
         // The server currently supports 1 frame messages only
         public List<SocketFrame> GetFrames()
         {
             List<SocketFrame> frames = new List<SocketFrame>(1);
-            frames.Add(new SocketDataFrame(true, false, SocketDataFrame.DataFrameType.Binary));
+            frames.Add(new SocketDataFrame(true, false, this.contentLength, SocketDataFrame.DataFrameType.Binary));
 
             return frames;
         }
