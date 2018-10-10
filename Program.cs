@@ -17,7 +17,6 @@ namespace dotnet_core_socket_server
         private static HttpListener HTTPServer = new HttpListener();
 
         public static void DidAcceptSocketConnection(IAsyncResult ar) {
-            Console.WriteLine("Accepted connection");
             Socket listener = (Socket) ar.AsyncState;
             Socket handler = listener.EndAccept(ar);
 
