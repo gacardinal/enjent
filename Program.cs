@@ -3,6 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Collections.Generic;
+using NarcityMedia;
 
 namespace dotnet_core_socket_server
 {
@@ -20,10 +21,13 @@ namespace dotnet_core_socket_server
             Socket handler = listener.EndAccept(ar);
 
             ClientObject cli = new ClientObject(handler);
-            if (cli.ReadRequestHeaders()) {
-                cli.AnalyzeRequestHeaders();
-                cli.Negociate101Upgrade();
-                cli.Greet();
+            if (cli.ReadRequestHeaders() &&
+                cli.AnalyzeRequestHeaders() &&
+                cli.Negociate101Upgrade() )
+                {
+                    cli.Greet();
+                    // TODO: Add socket to SocketManager
+                    // TODO: Dispose of client object on disconnection
             } else {
                 cli.Dispose();
             }
@@ -64,8 +68,6 @@ namespace dotnet_core_socket_server
 
             while (HTTPServer.IsListening)
             {
-                Console.WriteLine("A");
-                Console.WriteLine(HTTPServer.IsListening);
                 IAsyncResult result = HTTPServer.BeginGetContext(new AsyncCallback(Program.HTTPCallback), HTTPServer);
                 result.AsyncWaitHandle.WaitOne();
                 Console.WriteLine("Request processed asyncronously.");
@@ -79,9 +81,9 @@ namespace dotnet_core_socket_server
             // Call EndGetContext to complete the asynchronous operation.
             HttpListenerContext context = listener.EndGetContext(result);
             HttpListenerRequest request = context.Request;
+            HttpListenerResponse response = context.Response;
             Console.WriteLine(request.Url);
             Console.WriteLine(request.HttpMethod);
-            HttpListenerResponse response = context.Response;
 
             response.AddHeader("Content-Type", "text/plain");
             string responseText = "ALLO";

@@ -5,7 +5,7 @@ using System.Threading;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 
-namespace dotnet_core_socket_server
+namespace NarcityMedia
 {
     public enum HTTPMethods {
         GET, POST, DELETE, PUT
@@ -13,6 +13,7 @@ namespace dotnet_core_socket_server
 
     public class ClientObject : IDisposable {
         private const byte NEWLINE_BYTE = (byte)'\n';
+        private const byte QUESTION_MARK_BYTE = (byte)'?';
         private const byte COLON_BYTE = (byte)':';
         private const byte SPACE_BYTE = (byte)' ';
         private const int HEADER_CHUNK_BUFFER_SIZE = 1024;
@@ -36,6 +37,8 @@ namespace dotnet_core_socket_server
         private int requestheaderslength;
         private int writeindex = 0;
     
+        public byte[] url;
+
         public ClientObject(Socket socket) {
             this.socket = socket;
         }
@@ -64,20 +67,44 @@ namespace dotnet_core_socket_server
                 if (!this.AppendHeaderChunk(buffer, byteRead)) {
                     return false;
                 }
-            } while( buffer[byteRead - 1] != NEWLINE_BYTE && buffer[byteRead - 2] != NEWLINE_BYTE );
+            } while( byteRead != 0 && buffer[byteRead - 1] != NEWLINE_BYTE && buffer[byteRead - 2] != NEWLINE_BYTE );
         
             return true;
         }
 
-        public void AnalyzeRequestHeaders() {
+        public bool AnalyzeRequestHeaders() {
+            bool lookingForQuestionMark = true;
+            bool buildingQueryString = false;
+            int urlStartImdex = 0;
             // First, read until new line to get method and path
             for (int i = 0; i < this.requestheaderslength; i++) {
                 if (this.requestheaders[i] == ClientObject.NEWLINE_BYTE) {
                     this.methodandpath = new byte[i];
                     Array.Copy(this.requestheaders, 0, this.methodandpath, 0, i);                    
-                
+
                     break;
                 }
+                else if (lookingForQuestionMark && this.requestheaders[i] == ClientObject.QUESTION_MARK_BYTE)
+                {
+                    urlStartImdex = i + 1; // +1 to ignore the '?'
+                    lookingForQuestionMark = false;
+                    buildingQueryString = true;
+                }
+                else if (buildingQueryString && this.requestheaders[i] == ClientObject.SPACE_BYTE)
+                {
+                    this.url = new byte[i - urlStartImdex];
+                    Array.Copy(this.requestheaders, urlStartImdex, this.url, 0, i - urlStartImdex);
+                    buildingQueryString = false;
+                    Console.WriteLine(System.Text.Encoding.Default.GetString(this.url));
+                }
+            }
+            Console.WriteLine(System.Text.Encoding.Default.GetString(this.methodandpath));
+            
+            // If no '? was found request is invalid
+            if (lookingForQuestionMark)
+            {
+                this.socket.Send(System.Text.Encoding.Default.GetBytes("HTTP/1.1 401\n"));
+                return false;
             }
 
             // Read until ":", then read until "new line"
@@ -111,9 +138,12 @@ namespace dotnet_core_socket_server
                     trimming = true;
                 }
             }
+
+            return true;
         }
 
         public bool Negociate101Upgrade() {
+
             if (this.headersmap.ContainsKey(ClientObject.WEBSOCKET_SEC_KEY_HEADER)) {
                 byte[] seckeyheader = this.headersmap[ClientObject.WEBSOCKET_SEC_KEY_HEADER];
                 byte[] tohash = new byte[seckeyheader.Length + ClientObject.RFC6455_CONCAT_GUID.Length - 1];
@@ -135,6 +165,7 @@ namespace dotnet_core_socket_server
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Upgrade: websocket\n"));
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Extensions: permessage-deflate\n"));
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Accept: " + negociatedkey + "\n\n"));
+                Console.WriteLine(System.Text.Encoding.Default.GetString(this.requestheaders));
             
                 return true;
             } 
