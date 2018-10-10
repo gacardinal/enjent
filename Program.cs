@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Collections.Generic;
 using NarcityMedia;
+using NarcityMedia.Log;
 
 namespace dotnet_core_socket_server
 {
@@ -25,10 +26,12 @@ namespace dotnet_core_socket_server
                 cli.AnalyzeRequestHeaders() &&
                 cli.Negociate101Upgrade() )
                 {
+                    Logger.Log("Socket connection accepted", Logger.LogType.Success);
                     cli.Greet();
                     // TODO: Add socket to SocketManager
                     // TODO: Dispose of client object on disconnection
             } else {
+                Logger.Log("Socket connection refused, couldn't parse headers", Logger.LogType.Error);
                 cli.Dispose();
             }
             
@@ -46,7 +49,7 @@ namespace dotnet_core_socket_server
             socket.Bind(endpoint);
             socket.Listen(200);
 
-            Console.WriteLine("Listening to connections");
+            Logger.Log("Listening for socket connections", Logger.LogType.Info);
             while (!Program.exit) {
                 manualResetEvent.Reset();
                 
@@ -64,13 +67,12 @@ namespace dotnet_core_socket_server
             HTTPServer.Prefixes.Add("http://localhost:8887/");
             HTTPServer.Start();
 
-            Console.WriteLine("HTTP Server is starting");
+            Logger.Log("HTTP Server is starting", Logger.LogType.Info);
 
             while (HTTPServer.IsListening)
             {
                 IAsyncResult result = HTTPServer.BeginGetContext(new AsyncCallback(Program.HTTPCallback), HTTPServer);
                 result.AsyncWaitHandle.WaitOne();
-                Console.WriteLine("Request processed asyncronously.");
             }
         }
 
@@ -82,8 +84,6 @@ namespace dotnet_core_socket_server
             HttpListenerContext context = listener.EndGetContext(result);
             HttpListenerRequest request = context.Request;
             HttpListenerResponse response = context.Response;
-            Console.WriteLine(request.Url);
-            Console.WriteLine(request.HttpMethod);
 
             response.AddHeader("Content-Type", "text/plain");
             string responseText = "ALLO";

@@ -43,6 +43,11 @@ namespace NarcityMedia
             this.socket = socket;
         }
 
+        protected void WriteBytes(byte[] message)
+        {
+            Console.WriteLine(System.Text.Encoding.Default.GetString(message));
+        }
+
         private bool AppendHeaderChunk(byte[] buffer, int byteRead) {
             if (this.writeindex + byteRead <= ClientObject.HEADER_CHUNK_BUFFER_SIZE) {
                 for (int i = 0; i < byteRead; i++) {
@@ -95,10 +100,8 @@ namespace NarcityMedia
                     this.url = new byte[i - urlStartImdex];
                     Array.Copy(this.requestheaders, urlStartImdex, this.url, 0, i - urlStartImdex);
                     buildingQueryString = false;
-                    Console.WriteLine(System.Text.Encoding.Default.GetString(this.url));
                 }
             }
-            Console.WriteLine(System.Text.Encoding.Default.GetString(this.methodandpath));
             
             // If no '? was found request is invalid
             if (lookingForQuestionMark)
@@ -165,7 +168,6 @@ namespace NarcityMedia
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Upgrade: websocket\n"));
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Extensions: permessage-deflate\n"));
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Accept: " + negociatedkey + "\n\n"));
-                Console.WriteLine(System.Text.Encoding.Default.GetString(this.requestheaders));
             
                 return true;
             } 
