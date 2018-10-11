@@ -45,8 +45,17 @@ namespace dotnet_core_socket_server
             Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             IPEndPoint endpoint = new IPEndPoint(IPAddress.Loopback, 13003);
             
-            socket.Bind(endpoint);
-            socket.Listen(200);
+            try {
+                socket.Bind(endpoint);
+                socket.Listen(200);
+            } catch (SocketException) {
+                Logger.Log(String.Format("Couldn't bind on endpoint {0}:{1} the port might already be in use", endpoint.Address.ToString(), endpoint.Port.ToString()),
+                            Logger.LogType.Error);
+                Environment.Exit(1);
+            } catch {
+                Logger.Log("Unknown error while trying to bind socket", Logger.LogType.Error);
+                Environment.Exit(1);
+            }
 
             Logger.Log("Listening for socket connections", Logger.LogType.Info);
             while (!Program.exit) {
