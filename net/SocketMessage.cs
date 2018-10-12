@@ -133,14 +133,13 @@ namespace NarcityMedia.Net
             get { return this.appMessageCode; }
             set {
                 this.appMessageCode = value;
-                this.payloadSize = MinimumPayloadSize();
+                this.contentLength = MinimumPayloadSize();
             }
         }
 
         // WS standard allows 7 bits to represent message length
         private byte contentLength;
         private ushort appMessageCode;
-        private byte  payloadSize;
 
         public SocketMessage(ApplicationMessageCode code)
         {
