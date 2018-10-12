@@ -16,10 +16,8 @@ namespace dotnet_core_socket_server
         private static Boolean exit = false;
         private static HttpListener HTTPServer = new HttpListener();
 
-        public static void DidAcceptSocketConnection(IAsyncResult ar) {
-            Socket listener = (Socket) ar.AsyncState;
-            Socket handler = listener.EndAccept(ar);
-
+        public static void DidAcceptSocketConnection(Socket handler) {
+            // TODO: Pass handling task to thread in threadpool, preferably use a class that acts as a proxy
             ClientObject cli = new ClientObject(handler);
             if (cli.ReadRequestHeaders() &&
                 cli.AnalyzeRequestHeaders() &&
@@ -59,11 +57,8 @@ namespace dotnet_core_socket_server
 
             Logger.Log("Listening for socket connections", Logger.LogType.Info);
             while (!Program.exit) {
-                manualResetEvent.Reset();
-                
-                socket.BeginAccept(new AsyncCallback(DidAcceptSocketConnection), socket);
-
-                manualResetEvent.WaitOne();
+                Socket handler = socket.Accept();
+                DidAcceptSocketConnection(handler);
             }
 
             // Program is stopping
