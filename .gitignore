@@ -35,3 +35,5 @@ obj
 *.exe
 *.out
 *.app
+
+desktop.ini

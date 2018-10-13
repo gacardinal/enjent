@@ -16,7 +16,7 @@ namespace NarcityMedia.Log
 
         public static void Log(string message, LogType logType)
         {
-            Console.WriteLine(String.Format("{0} - {1}{2}{3}", DateTime.Now.ToString("dd/mm/yyyy - HH:mm:ss"), ANSITokens[(int)logType], message, ANSIReset));
+            Console.WriteLine(String.Format("{0} | {1}{2}{3}", DateTime.Now.ToString("dd/mm/yyyy - HH:mm:ss"), ANSITokens[(int)logType], message, ANSIReset));
         }
     }
 }

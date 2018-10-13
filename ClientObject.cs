@@ -14,6 +14,12 @@ namespace NarcityMedia
     }
 
     public class ClientObject : IDisposable {
+        public bool Authenticated
+        {
+            get { return String.IsNullOrEmpty(this.lmlTk); }
+        }
+
+        private string lmlTk;
         private const byte NEWLINE_BYTE = (byte)'\n';
         private const byte QUESTION_MARK_BYTE = (byte)'?';
         private const byte COLON_BYTE = (byte)':';
@@ -21,6 +27,7 @@ namespace NarcityMedia
         private const int HEADER_CHUNK_BUFFER_SIZE = 1024;
         private const int MAX_REQUEST_HEADERS_LENGTH = 2048;
         private const string WEBSOCKET_SEC_KEY_HEADER = "Sec-WebSocket-Key";
+        private const string WEBSOCKET_COOKIE_HEADER = "Cookie";
         private static readonly byte[] RFC6455_CONCAT_GUID = new byte[] {
             50, 53, 56, 69, 65, 70, 
             65, 53, 45, 69, 57, 49, 
@@ -148,6 +155,22 @@ namespace NarcityMedia
         }
 
         public bool Negociate101Upgrade() {
+            headersmap.Add("Cookie", System.Text.Encoding.Default.GetBytes("OGPC=19007661-2:; SID=jAY6bKZTa9dcTAHs9LnTVQBTT-4QSEUSdFuDfOYzSEyB2knFOqWfJWi2EC1FJVvdfvoTRQ.; APISID=_n81SRFO3YiOKNfu/AOxeOEisrh-E_t4Ig; SAPISID=_7nBHoE-frB6HRCQ/AclcTTOYUX6sISQny; 1P_JAR=2018-10-12-19; SIDCC=AGIhQKSTg1yFQOQXeo_F1cCHX1_MSgrFQQ3y4KXQZ-U_fMUk7lSfMG-ZJADSHhuC7D7EMVZwFEmt; lmltk=chlibadou"));
+            Console.WriteLine(System.Text.Encoding.Default.GetString(this.requestheaders));
+            if (this.headersmap.ContainsKey(ClientObject.WEBSOCKET_COOKIE_HEADER)) {
+                String cookieData = System.Text.Encoding.Default.GetString(this.headersmap[ClientObject.WEBSOCKET_COOKIE_HEADER]);
+                string cookieName = "lmltk=";
+                int index = cookieData.IndexOf(cookieName);
+                if (index != -1)
+                {
+                    int nextColon = cookieData.IndexOf(';', index + cookieName.Length);
+                    string lmlTk = (nextColon != -1) ? cookieData.Substring(index + cookieName.Length, nextColon - index + cookieName.Length) 
+                                                    : cookieData.Substring(index + cookieName.Length);
+                    
+                    this.lmlTk = lmlTk;
+                    Console.WriteLine("LMLTK: " + lmlTk);
+                }
+            }
 
             if (this.headersmap.ContainsKey(ClientObject.WEBSOCKET_SEC_KEY_HEADER)) {
                 byte[] seckeyheader = this.headersmap[ClientObject.WEBSOCKET_SEC_KEY_HEADER];
@@ -181,7 +204,6 @@ namespace NarcityMedia
             Console.WriteLine("Greeting new client");
             SocketMessage message = new SocketMessage(SocketMessage.ApplicationMessageCode.FetchComments);
             List<SocketFrame> frames = message.GetFrames();
-            frames[0].GetBytes();
 
             this.socket.Send(frames[0].GetBytes());
             // this.socket.Send(new byte[] { 
