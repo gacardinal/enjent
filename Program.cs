@@ -60,24 +60,24 @@ namespace dotnet_core_socket_server
             if (cli.ReadRequestHeaders() &&
                 cli.AnalyzeRequestHeaders() &&
                 cli.Negociate101Upgrade() )
+            {
+                Logger.Log("Acquiring mutex", Logger.LogType.Info);
+                if (mutex.WaitOne(5000))
                 {
-                    Logger.Log("Acquiring mutex", Logger.LogType.Info);
-                    if (mutex.WaitOne(5000))
-                    {
-                        cli.Greet();
-                        Logger.Log("Socket connection accepted", Logger.LogType.Success);
-                        Console.WriteLine("ORIGINAL COUNT: " + socketList.Count);
-                        // TODO: Add socket to SocketManager
-                        // TODO: Dispose of client object on disconnection
-                        socketList.Add(handler);
-                        Console.WriteLine("NEW COUNT: " + socketList.Count);
-                        Logger.Log("Releasing mutex", Logger.LogType.Info);
-                        mutex.ReleaseMutex();
-                    }
-                    else
-                    {
-                        Logger.Log("Main thread was not able to acquire the mutex to push a new socket to the local socket list", Logger.LogType.Error);
-                    }
+                    cli.Greet();
+                    Logger.Log("Socket connection accepted", Logger.LogType.Success);
+                    Console.WriteLine("ORIGINAL COUNT: " + socketList.Count);
+                    // TODO: Add socket to SocketManager
+                    // TODO: Dispose of client object on disconnection
+                    socketList.Add(handler);
+                    Console.WriteLine("NEW COUNT: " + socketList.Count);
+                    Logger.Log("Releasing mutex", Logger.LogType.Info);
+                    mutex.ReleaseMutex();
+                }
+                else
+                {
+                    Logger.Log("Main thread was not able to acquire the mutex to push a new socket to the local socket list", Logger.LogType.Error);
+                }
             } else {
                 Logger.Log("Socket connection refused, couldn't parse headers", Logger.LogType.Error);
                 cli.Dispose();

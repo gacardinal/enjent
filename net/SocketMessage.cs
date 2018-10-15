@@ -65,7 +65,7 @@ namespace NarcityMedia.Net
                 Console.WriteLine(Convert.ToString(finalBytes[i], 2));
             }
 
-            return frameHeader;
+            return finalBytes;
         }
 
         /// <summary>
@@ -80,6 +80,7 @@ namespace NarcityMedia.Net
             header.CopyTo(payload, 0);
             message.CopyTo(payload, header.Length);
 
+            // Removing trailing zeroes
             int i = payload.Length - 1;
             while (payload[i] == 0)
             {
@@ -162,12 +163,12 @@ namespace NarcityMedia.Net
         }
 
         /// <summary>
-        /// Returns a byte representing the minimum number of butsneeded< to represent the AppMessageCode
+        /// Returns a byte representing the minimum number of bytes needed to represent the AppMessageCode
         /// </summry>
         private byte MinimumPayloadSize()
         {
-            byte minSize = 8;
-            if ((ushort) this.appMessageCode >= 256) minSize = 16;
+            byte minSize = 1;
+            if ((ushort) this.appMessageCode >= 256) minSize = 2;
 
             return minSize;
         }

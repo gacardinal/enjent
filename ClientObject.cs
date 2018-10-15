@@ -206,14 +206,6 @@ namespace NarcityMedia
             List<SocketFrame> frames = message.GetFrames();
 
             this.socket.Send(frames[0].GetBytes());
-            // this.socket.Send(new byte[] { 
-            //     0b10000001, (byte)(ClientObject.GREET_MESSAGE.Length) /*, 0b00000000, 0b00000000,
-            //     0b00000000, 0b00000000, 0b00000000, 0b00000000, 
-            //     0b00000000, 0b00000000, 0b00000000, 0b00000000, 
-            //     0b00000000, 0b00000000,*/ 
-            // });
-
-            // this.socket.Send(ClientObject.GREET_MESSAGE);
         }
 
         public void Dispose() {
