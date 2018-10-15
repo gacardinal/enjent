@@ -15,7 +15,7 @@ namespace dotnet_core_socket_server
         private static Boolean exit = false;
         private static Mutex mutex = new Mutex();
         private static List<Socket> socketList = new List<Socket>(2000);
-
+        private const int MUTEX_TIMEOUT_DELAY = 5000;
         static void Main(string[] args)
         {
             Thread HTTP = new Thread(Program.DispatchHTTPServer);
@@ -58,7 +58,7 @@ namespace dotnet_core_socket_server
                 cli.AnalyzeRequestHeaders() &&
                 cli.Negociate101Upgrade() )
             {
-                if (mutex.WaitOne(5000))
+                if (mutex.WaitOne(MUTEX_TIMEOUT_DELAY))
                 {
                     cli.Greet();
                     Logger.Log("Socket connection accepted", Logger.LogType.Success);
@@ -82,7 +82,29 @@ namespace dotnet_core_socket_server
         private static void DispatchHTTPServer()
         {
             HTTPServer httpServer = new HTTPServer("http://localhost:8887/");
+
+            HTTPServer.EndpointCallback hello = Hello;
+            HTTPServer.EndpointCallback sendNotificationToUser = SendNotificationToUser;
+            HTTPServer.EndpointCallback sendnotificationToEndpoint = SendNotificationToEndpoint;
+
+            httpServer.Get("/hello", hello);
+
             httpServer.Start();
+        }
+
+        private static void Hello(HttpListenerRequest req, HttpListenerResponse res)
+        {
+            Logger.Log("HTTP Request to GET /hello", Logger.LogType.Success);
+        }
+
+        private static void SendNotificationToUser(HttpListenerRequest req, HttpListenerResponse res)
+        {
+            Logger.Log("HTTP Request to POST /sendNotificationToUser", Logger.LogType.Success);
+        }
+
+        private static void SendNotificationToEndpoint(HttpListenerRequest req, HttpListenerResponse res)
+        {
+            Logger.Log("HTTP Request to POST /sendNotificationToEndpoint", Logger.LogType.Success);
         }
     }
 }
