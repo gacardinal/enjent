@@ -59,12 +59,6 @@ namespace NarcityMedia.Net
             
             byte[] finalBytes = AppendMessageToBytes(frameHeader, this.data);
 
-            Console.WriteLine("OCTETS : ");
-            for (int i = 0; i < finalBytes.Length; i++)
-            {
-                Console.WriteLine(Convert.ToString(finalBytes[i], 2));
-            }
-
             return finalBytes;
         }
 
@@ -115,62 +109,6 @@ namespace NarcityMedia.Net
         {
             if (this.DataType == DataFrameType.Text) this.opcode = (byte) SocketFrame.OPCode.Text;
             else this.opcode = (byte) SocketFrame.OPCode.Binary;
-        }
-    }
-
-    /// <summary>
-    /// Represents an application message that is to be sent via WebSocket.
-    /// A message is composed of frames
-    /// </summary>
-    /// <remarks>This class only support messages that can fit in a single frame for now</remarks>
-    class SocketMessage
-    {
-        // Start values at value 1 to avoid sending empty application data
-        public enum ApplicationMessageCode { Greeting = 1, FetchNOtifications, FetchCurrentArticle, FetchComments }
-        public SocketDataFrame.DataFrameType MessageType = SocketDataFrame.DataFrameType.Binary;
-
-        public ushort AppMessageCode
-        {
-            get { return this.appMessageCode; }
-            set {
-                this.appMessageCode = value;
-                this.contentLength = MinimumPayloadSize();
-            }
-        }
-
-        // WS standard allows 7 bits to represent message length
-        private byte contentLength;
-        private ushort appMessageCode;
-
-        public SocketMessage(ApplicationMessageCode code)
-        {
-            this.AppMessageCode = (ushort) code;
-        }
-
-        /// <summary>
-        /// Returns the Websocket frames that compose the current message, as per
-        /// the websocket standard
-        /// </summary>
-        /// <remarks>The method currently supports only 1 frame messages</remarks>
-        /// <returns>A List containing the frames of the message</returns>
-        public List<SocketFrame> GetFrames()
-        {
-            byte[] payload = BitConverter.GetBytes((int)this.appMessageCode);
-            List<SocketFrame> frames = new List<SocketFrame>(1);
-            frames.Add(new SocketDataFrame(true, false, this.contentLength, this.MessageType, payload));
-
-            return frames;
-        }
-
-        /// <summary>
-        /// Returns a byte representing the minimum number of bytes needed to represent the AppMessageCode
-        /// </summry>
-        private byte MinimumPayloadSize()
-        {
-            byte minSize = 1;
-            if ((ushort) this.appMessageCode >= 256) minSize = 2;
-
-            return minSize;
         }
     }
 }
