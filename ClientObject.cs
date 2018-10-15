@@ -13,7 +13,7 @@ namespace NarcityMedia
         GET, POST, DELETE, PUT
     }
 
-    public class ClientObject : IDisposable {
+    class ClientObject : IDisposable {
         public bool Authenticated
         {
             get { return String.IsNullOrEmpty(this.lmlTk); }
@@ -155,8 +155,6 @@ namespace NarcityMedia
         }
 
         public bool Negociate101Upgrade() {
-            headersmap.Add("Cookie", System.Text.Encoding.Default.GetBytes("OGPC=19007661-2:; SID=jAY6bKZTa9dcTAHs9LnTVQBTT-4QSEUSdFuDfOYzSEyB2knFOqWfJWi2EC1FJVvdfvoTRQ.; APISID=_n81SRFO3YiOKNfu/AOxeOEisrh-E_t4Ig; SAPISID=_7nBHoE-frB6HRCQ/AclcTTOYUX6sISQny; 1P_JAR=2018-10-12-19; SIDCC=AGIhQKSTg1yFQOQXeo_F1cCHX1_MSgrFQQ3y4KXQZ-U_fMUk7lSfMG-ZJADSHhuC7D7EMVZwFEmt; lmltk=chlibadou"));
-            Console.WriteLine(System.Text.Encoding.Default.GetString(this.requestheaders));
             if (this.headersmap.ContainsKey(ClientObject.WEBSOCKET_COOKIE_HEADER)) {
                 String cookieData = System.Text.Encoding.Default.GetString(this.headersmap[ClientObject.WEBSOCKET_COOKIE_HEADER]);
                 string cookieName = "lmltk=";
@@ -166,9 +164,8 @@ namespace NarcityMedia
                     int nextColon = cookieData.IndexOf(';', index + cookieName.Length);
                     string lmlTk = (nextColon != -1) ? cookieData.Substring(index + cookieName.Length, nextColon - index + cookieName.Length) 
                                                     : cookieData.Substring(index + cookieName.Length);
-                    
+
                     this.lmlTk = lmlTk;
-                    Console.WriteLine("LMLTK: " + lmlTk);
                 }
             }
 
@@ -200,18 +197,99 @@ namespace NarcityMedia
             return false;
         }
 
+        /// <summary>
+        /// Greets the client by sending the SocketMessage.ApplicationMessageCode.Greeting code.
+        /// </summary>
+        /// <remarks>Calls <see cref="SendApplicationMessage" /></remarks>
         public void Greet() {
-            Console.WriteLine("Greeting new client");
             SocketMessage message = new SocketMessage(SocketMessage.ApplicationMessageCode.FetchComments);
             List<SocketFrame> frames = message.GetFrames();
 
             this.socket.Send(frames[0].GetBytes());
         }
 
+        /// <summary>
+        /// Sends an application message to the socket associated with the current client
+        /// </summary>
+        /// <param name="message">The socket message to send</param>
+        public void SendApplicationMessage(SocketMessage message)
+        {
+            List<SocketFrame> frames = message.GetFrames();
+            this.socket.Send(frames[0].GetBytes());
+        }
+
+        /// <summary>
+        /// Sends an application message to the socket associated with the current client
+        /// </summary>
+        /// <param name="messageCode">The application message code to send</param>
+        /// <remarks>Calls <see cref="SendApplicationMessage" /></remarks>
+        public void SendApplicationMessage(SocketMessage.ApplicationMessageCode messageCode)
+        {
+            SocketMessage message = new SocketMessage(messageCode);
+            this.SendApplicationMessage(message);
+        }
+
         public void Dispose() {
             if (this.socket != null) {
                 this.socket.Dispose();
             }
+        }
+    }
+
+    
+    /// <summary>
+    /// Represents an application message that is to be sent via WebSocket.
+    /// A message is composed of frames
+    /// </summary>
+    /// <remarks>This class only support messages that can fit in a single frame for now</remarks>
+    class SocketMessage
+    {
+        // Start values at value 1 to avoid sending empty application data
+        public enum ApplicationMessageCode { Greeting = 1, FetchNOtifications, FetchCurrentArticle, FetchComments }
+        public SocketDataFrame.DataFrameType MessageType = SocketDataFrame.DataFrameType.Binary;
+
+        public ushort AppMessageCode
+        {
+            get { return this.appMessageCode; }
+            set {
+                this.appMessageCode = value;
+                this.contentLength = MinimumPayloadSize();
+            }
+        }
+
+        // WS standard allows 7 bits to represent message length in bytes
+        private byte contentLength;
+        private ushort appMessageCode;
+
+        public SocketMessage(ApplicationMessageCode code)
+        {
+            this.AppMessageCode = (ushort) code;
+        }
+
+        /// <summary>
+        /// Returns the Websocket frames that compose the current message, as per
+        /// the websocket standard
+        /// </summary>
+        /// <remarks>The method currently supports only 1 frame messages</remarks>
+        /// <returns>A List containing the frames of the message</returns>
+        public List<SocketFrame> GetFrames()
+        {
+            byte[] payload = BitConverter.GetBytes((int)this.appMessageCode);
+            List<SocketFrame> frames = new List<SocketFrame>(1);
+            frames.Add(new SocketDataFrame(true, false, this.contentLength, this.MessageType, payload));
+
+            return frames;
+        }
+
+        /// <summary>
+        /// Returns a byte representing the minimum number of bytes needed to represent the AppMessageCode
+        /// </summry>
+        private byte MinimumPayloadSize()
+        {
+            byte minSize = 1;
+            if ((ushort) this.appMessageCode >= 256) minSize = 2;
+
+            return minSize;
         }
     }
 }

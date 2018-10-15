@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Collections.Generic;
 using NarcityMedia;
+using NarcityMedia.Net;
 using NarcityMedia.Log;
 
 namespace dotnet_core_socket_server
@@ -12,9 +13,7 @@ namespace dotnet_core_socket_server
     {
         public static List<ClientObject> Connections = new List<ClientObject>();
         private static Boolean exit = false;
-        private static HttpListener HTTPServer = new HttpListener();
         private static Mutex mutex = new Mutex();
-
         private static List<Socket> socketList = new List<Socket>(2000);
 
         static void Main(string[] args)
@@ -45,8 +44,6 @@ namespace dotnet_core_socket_server
                 Socket handler = socket.Accept();
                 DidAcceptSocketConnection(handler);
             }
-
-            StopHttpServer();
         }
         
         public static void DidAcceptSocketConnection(Socket handler) {
@@ -61,7 +58,6 @@ namespace dotnet_core_socket_server
                 cli.AnalyzeRequestHeaders() &&
                 cli.Negociate101Upgrade() )
             {
-                Logger.Log("Acquiring mutex", Logger.LogType.Info);
                 if (mutex.WaitOne(5000))
                 {
                     cli.Greet();
@@ -71,7 +67,6 @@ namespace dotnet_core_socket_server
                     // TODO: Dispose of client object on disconnection
                     socketList.Add(handler);
                     Console.WriteLine("NEW COUNT: " + socketList.Count);
-                    Logger.Log("Releasing mutex", Logger.LogType.Info);
                     mutex.ReleaseMutex();
                 }
                 else
@@ -86,40 +81,8 @@ namespace dotnet_core_socket_server
 
         private static void DispatchHTTPServer()
         {
-            HTTPServer.Prefixes.Add("http://localhost:8887/");
-            HTTPServer.Start();
-
-            Logger.Log("HTTP Server is starting", Logger.LogType.Info);
-
-            while (HTTPServer.IsListening)
-            {
-                IAsyncResult result = HTTPServer.BeginGetContext(new AsyncCallback(Program.HTTPCallback), HTTPServer);
-                result.AsyncWaitHandle.WaitOne();
-            }
-        }
-
-        private static void HTTPCallback(IAsyncResult result)
-        {
-            HttpListener listener = (HttpListener) result.AsyncState;
-
-            // Call EndGetContext to complete the asynchronous operation.
-            HttpListenerContext context = listener.EndGetContext(result);
-            HttpListenerRequest request = context.Request;
-            HttpListenerResponse response = context.Response;
-
-            response.AddHeader("Content-Type", "text/plain");
-            string responseText = "ALLO";
-            byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseText);
-            response.ContentLength64 = buffer.Length;
-            System.IO.Stream output = response.OutputStream;
-            output.Write(buffer,0,buffer.Length);
-            // You must close the output stream.
-            output.Close();
-        }
-
-        private static void StopHttpServer()
-        {
-            HTTPServer.Close();
+            HTTPServer httpServer = new HTTPServer("http://localhost:8887/");
+            httpServer.Start();
         }
     }
 }
