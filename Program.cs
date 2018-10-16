@@ -16,6 +16,7 @@ namespace dotnet_core_socket_server
         private static Mutex mutex = new Mutex();
         private static List<Socket> socketList = new List<Socket>(2000);
         private const int MUTEX_TIMEOUT_DELAY = 5000;
+        private static HTTPServer httpServer;
         static void Main(string[] args)
         {
             Thread HTTP = new Thread(Program.DispatchHTTPServer);
@@ -81,13 +82,15 @@ namespace dotnet_core_socket_server
 
         private static void DispatchHTTPServer()
         {
-            HTTPServer httpServer = new HTTPServer("http://localhost:8887/");
+            httpServer = new HTTPServer(new Uri("http://localhost:8887"));
 
             HTTPServer.EndpointCallback hello = Hello;
             HTTPServer.EndpointCallback sendNotificationToUser = SendNotificationToUser;
             HTTPServer.EndpointCallback sendnotificationToEndpoint = SendNotificationToEndpoint;
 
             httpServer.Get("/hello", hello);
+            httpServer.Get("/notifyuser", SendNotificationToUser);
+            httpServer.Get("/notifyendpoint", SendNotificationToEndpoint);
 
             httpServer.Start();
         }
@@ -95,16 +98,19 @@ namespace dotnet_core_socket_server
         private static void Hello(HttpListenerRequest req, HttpListenerResponse res)
         {
             Logger.Log("HTTP Request to GET /hello", Logger.LogType.Success);
+            httpServer.SendResponse(res, HttpStatusCode.OK, "GET /hello");
         }
 
         private static void SendNotificationToUser(HttpListenerRequest req, HttpListenerResponse res)
         {
             Logger.Log("HTTP Request to POST /sendNotificationToUser", Logger.LogType.Success);
+            httpServer.SendResponse(res, HttpStatusCode.OK, "GET /notifyuser");
         }
 
         private static void SendNotificationToEndpoint(HttpListenerRequest req, HttpListenerResponse res)
         {
             Logger.Log("HTTP Request to POST /sendNotificationToEndpoint", Logger.LogType.Success);
+            httpServer.SendResponse(res, HttpStatusCode.OK, "GET /notifyendpoint");
         }
     }
 }

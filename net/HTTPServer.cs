@@ -13,12 +13,12 @@ namespace NarcityMedia.Net
     class HTTPServer
     {
         private HttpListener listener;
-        private string rootEndpoint;
+        private Uri rootEndpoint;
 
         /// <summary>
         /// Dictionnary keyed by (string) HTTP method to which a dictionnary of callbacks keyed by endpoint is associated
         /// </summary>
-        private Dictionary<string, Dictionary<string, EndpointCallback>> methodEndpointsCallbackMap;
+        private Dictionary<string, Dictionary<Uri, EndpointCallback>> methodEndpointsCallbackMap;
 
         /// <summary>
         /// List that holds all the registered endpoints as arrays of strings to avoid having to split them on every request
@@ -27,7 +27,7 @@ namespace NarcityMedia.Net
 
         public delegate void EndpointCallback(HttpListenerRequest req, HttpListenerResponse res);
 
-        public string Endpoint {
+        public Uri RootEndpoint {
             get { return this.rootEndpoint; } 
             set {
                 if (!this.listener.IsListening)
@@ -43,24 +43,17 @@ namespace NarcityMedia.Net
 
         public bool IsListening { get { return this.listener.IsListening; } }
 
-        public HTTPServer(string endpoint)
+        public HTTPServer(Uri endpoint)
         {
-            if (!string.IsNullOrEmpty(endpoint))
-            {
-                this.rootEndpoint = endpoint;
-                this.methodEndpointsCallbackMap = new Dictionary<string, Dictionary<string, EndpointCallback>>();
-                this.methodEndpointsCallbackMap.Add("get", new Dictionary<string, EndpointCallback>());
-                this.methodEndpointsCallbackMap.Add("post", new Dictionary<string, EndpointCallback>());
-                this.methodEndpointsCallbackMap.Add("put", new Dictionary<string, EndpointCallback>());
-                this.methodEndpointsCallbackMap.Add("patch", new Dictionary<string, EndpointCallback>());
-                this.methodEndpointsCallbackMap.Add("delete", new Dictionary<string, EndpointCallback>());
-                this.listener = new HttpListener();
-                listener.Prefixes.Add(endpoint);
-            }
-            else
-            {
-                throw new ArgumentNullException("endpoint", "You must provide the constructor an endpoint for the HTTPServer to listen to");
-            }
+            this.rootEndpoint = endpoint;
+            this.methodEndpointsCallbackMap = new Dictionary<string, Dictionary<Uri, EndpointCallback>>();
+            this.methodEndpointsCallbackMap.Add("get", new Dictionary<Uri, EndpointCallback>());
+            this.methodEndpointsCallbackMap.Add("post", new Dictionary<Uri, EndpointCallback>());
+            this.methodEndpointsCallbackMap.Add("put", new Dictionary<Uri, EndpointCallback>());
+            this.methodEndpointsCallbackMap.Add("patch", new Dictionary<Uri, EndpointCallback>());
+            this.methodEndpointsCallbackMap.Add("delete", new Dictionary<Uri, EndpointCallback>());
+            this.listener = new HttpListener();
+            listener.Prefixes.Add(this.rootEndpoint.ToString());
         }
 
         public void Start()
@@ -86,39 +79,57 @@ namespace NarcityMedia.Net
 
             try
             {
-                this.methodEndpointsCallbackMap[request.HttpMethod.ToLower()]["/hello"](request, response);
+                this.methodEndpointsCallbackMap[request.HttpMethod.ToLower()][request.Url](request, response);
             }
             catch (KeyNotFoundException)
             {
-                // Throw 404
+                SendResponse(response, HttpStatusCode.NotFound, "Not FOund");
             }
+            catch
+            {
+                SendResponse(response, HttpStatusCode.InternalServerError, "Internal Server Error");
+            }
+        }
 
-            response.AddHeader("Content-Type", "text/plain");
-            string responseText = "ALLO";
+        public void SendResponse(HttpListenerResponse response, HttpStatusCode statusCode, string responseText)
+        {
+            SendResponse(response, (int) statusCode, responseText);
+        }
+
+        public void SendResponse(HttpListenerResponse response, int statusCode, string responseText)
+        {
             byte[] buffer = System.Text.Encoding.UTF8.GetBytes(responseText);
             response.ContentLength64 = buffer.Length;
+            response.StatusCode = statusCode;
+            response.AddHeader("Content-Type", "text/plain");
+
             System.IO.Stream output = response.OutputStream;
-            output.Write(buffer,0,buffer.Length);
-            // You must close the output stream.
+            output.Write(buffer, 0, buffer.Length);
             output.Close();
         }
 
-        private bool resolveURI(string[] uriComponents) // '/send/notification/user'
+        // private EndpointCallback resolveURI(HttpListenerRequest req, string[] uriComponents) // '/send/notification/user'
+        // {
+        //     List<string[]> searchedSplitEndpoints = this.splitEndpoints;
+
+        //     for (int i = 0; i < uriComponents.Length; i++)
+        //     {
+        //         searchedSplitEndpoints.RemoveAll(levels => levels[i] != uriComponents[i]);
+
+        //         if (searchedSplitEndpoints.Count == 1)
+        //         {
+        //             return 
+        //         }
+        //     }
+
+        //     return false;
+        // }
+
+        private void registerEndpoint(string method, string relativeEndpoint, EndpointCallback cb)
         {
-            List<string[]> searchedSplitEndpoints = this.splitEndpoints;
-
-            for (int i = 0; i < uriComponents.Length; i++)
-            {
-                searchedSplitEndpoints.RemoveAll(levels => levels[i] != uriComponents[i]);
-            }
-
-            return false;
-        }
-
-        private void registerEndpoint(string method, string endpoint, EndpointCallback cb)
-        {
-            this.methodEndpointsCallbackMap[method].Add(endpoint, cb);
-            this.splitEndpoints.Add(endpoint.Split('/'));
+            relativeEndpoint = relativeEndpoint.Substring(1, relativeEndpoint.Length - 1);
+            Uri uri = new Uri(this.rootEndpoint.ToString() + relativeEndpoint);
+            this.methodEndpointsCallbackMap[method].Add(uri, cb);
         }
 
         /// <summary>
