@@ -47,7 +47,8 @@ namespace dotnet_core_socket_server
             }
         }
         
-        public static void DidAcceptSocketConnection(Socket handler) {
+        public static void DidAcceptSocketConnection(Socket handler)
+        {
             ThreadPool.QueueUserWorkItem(NegotiateSocketConnection, handler);
         }
 
@@ -84,15 +85,25 @@ namespace dotnet_core_socket_server
         {
             httpServer = new HTTPServer(new Uri("http://localhost:8887"));
 
+            httpServer.on404 = on404;
+            httpServer.on500 = on500;
+
+            HTTPServer.EndpointCallback index = Index;
             HTTPServer.EndpointCallback hello = Hello;
             HTTPServer.EndpointCallback sendNotificationToUser = SendNotificationToUser;
             HTTPServer.EndpointCallback sendnotificationToEndpoint = SendNotificationToEndpoint;
 
+            httpServer.Get("/", index);
             httpServer.Get("/hello", hello);
             httpServer.Get("/notifyuser", SendNotificationToUser);
             httpServer.Get("/notifyendpoint", SendNotificationToEndpoint);
 
             httpServer.Start();
+        }
+
+        private static void Index(HttpListenerRequest req, HttpListenerResponse res)
+        {
+            httpServer.SendResponse(res, HttpStatusCode.OK, "GET Index");
         }
 
         private static void Hello(HttpListenerRequest req, HttpListenerResponse res)
@@ -111,6 +122,18 @@ namespace dotnet_core_socket_server
         {
             Logger.Log("HTTP Request to POST /sendNotificationToEndpoint", Logger.LogType.Success);
             httpServer.SendResponse(res, HttpStatusCode.OK, "GET /notifyendpoint");
+        }
+        
+        private static void on404(HttpListenerRequest req, HttpListenerResponse res)
+        {
+            Logger.Log(String.Format("HTTP 404 - Couldn't find endpoint {0}", req.Url.ToString()), Logger.LogType.Warning);
+            httpServer.SendResponse(res, HttpStatusCode.NotFound, "Not Found");
+        }
+
+        private static void on500(HttpListenerRequest req, HttpListenerResponse res)
+        {
+            Logger.Log("HTTP 500 - Interna Server Error", Logger.LogType.Error);
+            httpServer.SendResponse(res, HttpStatusCode.NotFound, "Internal Server Error");
         }
     }
 }

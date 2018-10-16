@@ -27,6 +27,9 @@ namespace NarcityMedia.Net
 
         public delegate void EndpointCallback(HttpListenerRequest req, HttpListenerResponse res);
 
+        public EndpointCallback on404;
+        public EndpointCallback on500;
+
         public Uri RootEndpoint {
             get { return this.rootEndpoint; } 
             set {
@@ -83,11 +86,13 @@ namespace NarcityMedia.Net
             }
             catch (KeyNotFoundException)
             {
-                SendResponse(response, HttpStatusCode.NotFound, "Not FOund");
+                if (this.on404 != null) this.on404(request, response);
+                else SendResponse(response, HttpStatusCode.NotFound, "DEFAULT Not FOund");
             }
             catch
             {
-                SendResponse(response, HttpStatusCode.InternalServerError, "Internal Server Error");
+                if (this.on500!= null) this.on500(request, response);
+                else SendResponse(response, HttpStatusCode.InternalServerError, "DEFAULT Internal Server Error");
             }
         }
 
