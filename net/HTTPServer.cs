@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Linq;
 using System.Collections.Generic;
 using System.Threading;
 using NarcityMedia.Log;
@@ -18,6 +19,11 @@ namespace NarcityMedia.Net
         /// Dictionnary keyed by (string) HTTP method to which a dictionnary of callbacks keyed by endpoint is associated
         /// </summary>
         private Dictionary<string, Dictionary<string, EndpointCallback>> methodEndpointsCallbackMap;
+
+        /// <summary>
+        /// List that holds all the registered endpoints as arrays of strings to avoid having to split them on every request
+        /// </summary>
+        private List<string[]> splitEndpoints;
 
         public delegate void EndpointCallback(HttpListenerRequest req, HttpListenerResponse res);
 
@@ -97,9 +103,22 @@ namespace NarcityMedia.Net
             output.Close();
         }
 
+        private bool resolveURI(string[] uriComponents) // '/send/notification/user'
+        {
+            List<string[]> searchedSplitEndpoints = this.splitEndpoints;
+
+            for (int i = 0; i < uriComponents.Length; i++)
+            {
+                searchedSplitEndpoints.RemoveAll(levels => levels[i] != uriComponents[i]);
+            }
+
+            return false;
+        }
+
         private void registerEndpoint(string method, string endpoint, EndpointCallback cb)
         {
             this.methodEndpointsCallbackMap[method].Add(endpoint, cb);
+            this.splitEndpoints.Add(endpoint.Split('/'));
         }
 
         /// <summary>
