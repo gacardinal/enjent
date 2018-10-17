@@ -20,11 +20,6 @@ namespace NarcityMedia.Net
         /// </summary>
         private Dictionary<string, Dictionary<Uri, EndpointCallback>> methodEndpointsCallbackMap;
 
-        /// <summary>
-        /// List that holds all the registered endpoints as arrays of strings to avoid having to split them on every request
-        /// </summary>
-        private List<string[]> splitEndpoints;
-
         public delegate void EndpointCallback(HttpListenerRequest req, HttpListenerResponse res);
 
         public EndpointCallback on404;
@@ -89,10 +84,10 @@ namespace NarcityMedia.Net
                 if (this.on404 != null) this.on404(request, response);
                 else SendResponse(response, HttpStatusCode.NotFound, "DEFAULT Not FOund");
             }
-            catch
+            catch (Exception e)
             {
                 if (this.on500!= null) this.on500(request, response);
-                else SendResponse(response, HttpStatusCode.InternalServerError, "DEFAULT Internal Server Error");
+                else SendResponse(response, HttpStatusCode.InternalServerError, "DEFAULT Internal Server Error - " + e.Message);
             }
         }
 

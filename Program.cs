@@ -86,8 +86,8 @@ namespace dotnet_core_socket_server
         {
             httpServer = new HTTPServer(new Uri("http://localhost:8887"));
 
-            httpServer.on404 = on404;
-            httpServer.on500 = on500;
+            // httpServer.on404 = on404;
+            // httpServer.on500 = on500;
 
             HTTPServer.EndpointCallback index = Index;
             HTTPServer.EndpointCallback hello = Hello;
@@ -119,6 +119,7 @@ namespace dotnet_core_socket_server
         private static void SendNotificationToUser(HttpListenerRequest req, HttpListenerResponse res)
         {
             Logger.Log("HTTP Request to POST /sendNotificationToUser", Logger.LogType.Success);
+            Connections.ForEach(s => s.SendApplicationMessage(SocketMessage.ApplicationMessageCode.FetchCurrentArticle));
             httpServer.SendResponse(res, HttpStatusCode.OK, "GET /notifyuser");
         }
 
@@ -136,7 +137,7 @@ namespace dotnet_core_socket_server
 
         private static void on500(HttpListenerRequest req, HttpListenerResponse res)
         {
-            Logger.Log("HTTP 500 - Interna Server Error", Logger.LogType.Error);
+            Logger.Log("HTTP 500 - Internal Server Error", Logger.LogType.Error);
             httpServer.SendResponse(res, HttpStatusCode.NotFound, "Internal Server Error");
         }
     }

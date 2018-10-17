@@ -202,7 +202,7 @@ namespace NarcityMedia
         /// </summary>
         /// <remarks>Calls <see cref="SendApplicationMessage" /></remarks>
         public void Greet() {
-            SocketMessage message = new SocketMessage(SocketMessage.ApplicationMessageCode.FetchComments);
+            SocketMessage message = new SocketMessage(SocketMessage.ApplicationMessageCode.Greeting);
             List<SocketFrame> frames = message.GetFrames();
 
             this.socket.Send(frames[0].GetBytes());

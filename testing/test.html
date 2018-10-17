@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Socket Server Testing</title>
+</head>
+<body>
+    <style>
+        body {
+            background: #7e7e7e;
+            color: white;
+        }
+
+        #console {
+            font-family:'Courier New', Courier, monospace;
+            font-size: 1.2em;
+            font-weight: bolder;
+            background-color: rgb(22, 22, 22);
+            color: green;
+            position: fixed;
+            right: 0px;
+            bottom: 0px;
+            top: 0px;
+            width: 50vw;
+            padding: 10px;
+            border: 0.5px solid white;
+        }
+
+        .log-entry {
+            width: 100%;
+        }
+    </style>
+
+    <script>
+        let socket;
+        let init = () => {
+            log('Initializing socket connection...');
+
+            socket = new WebSocket("ws://127.0.0.1:13003?www.test.narcity.com/test");
+            socket.binaryType = 'arraybuffer';
+            socket.onmessage = e => {
+                let dv = new DataView(e.data, 0);
+                document.getElementById("app-code").innerHTML = dv.getInt8(0);
+                log('Socket got message : ' + dv.getInt8(0));
+            };
+        }
+
+        let log = message => {
+            let logEl = document.createElement('div');
+            logEl.className = 'log-entry';
+            logEl.innerText = message;
+
+            document.getElementById('console').appendChild(logEl);
+        };
+    </script>
+
+    <div id="test-app">
+        <h1 id="app-code">-</h1>
+        <button id='refresh' onclick="init()">(Re)initlalize Socket</button>
+
+        <div id="console">
+        </div>
+    </div>
+</body>
+</html>
