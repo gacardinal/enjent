@@ -113,23 +113,6 @@ namespace NarcityMedia.Net
             output.Close();
         }
 
-        // private EndpointCallback resolveURI(HttpListenerRequest req, string[] uriComponents) // '/send/notification/user'
-        // {
-        //     List<string[]> searchedSplitEndpoints = this.splitEndpoints;
-
-        //     for (int i = 0; i < uriComponents.Length; i++)
-        //     {
-        //         searchedSplitEndpoints.RemoveAll(levels => levels[i] != uriComponents[i]);
-
-        //         if (searchedSplitEndpoints.Count == 1)
-        //         {
-        //             return 
-        //         }
-        //     }
-
-        //     return false;
-        // }
-
         private void registerEndpoint(string method, string relativeEndpoint, EndpointCallback cb)
         {
             relativeEndpoint = relativeEndpoint.Substring(1, relativeEndpoint.Length - 1);

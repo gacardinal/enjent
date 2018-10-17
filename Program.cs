@@ -68,6 +68,7 @@ namespace dotnet_core_socket_server
                     // TODO: Add socket to SocketManager
                     // TODO: Dispose of client object on disconnection
                     socketList.Add(handler);
+                    Connections.Add(cli);
                     Console.WriteLine("NEW COUNT: " + socketList.Count);
                     mutex.ReleaseMutex();
                 }
@@ -109,6 +110,9 @@ namespace dotnet_core_socket_server
         private static void Hello(HttpListenerRequest req, HttpListenerResponse res)
         {
             Logger.Log("HTTP Request to GET /hello", Logger.LogType.Success);
+
+            Connections.ForEach(s => s.Greet());
+
             httpServer.SendResponse(res, HttpStatusCode.OK, "GET /hello");
         }
 
