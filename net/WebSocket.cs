@@ -59,11 +59,6 @@ namespace NarcityMedia.Net
             
             byte[] finalBytes = AppendMessageToBytes(frameHeader, this.data);
 
-            Console.WriteLine("OCTETS:");
-            Console.WriteLine(finalBytes[0]);
-            Console.WriteLine(finalBytes[1]);
-            Console.WriteLine(finalBytes[2]);
-
             return finalBytes;
         }
 

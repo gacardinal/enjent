@@ -5,6 +5,7 @@ using System.Threading;
 using System.Collections.Generic;
 using System.Security.Cryptography;
 using NarcityMedia.Net;
+using NarcityMedia.Log;
 using System.Runtime.InteropServices;
 
 namespace NarcityMedia
@@ -81,7 +82,7 @@ namespace NarcityMedia
                 if (!this.AppendHeaderChunk(buffer, byteRead)) {
                     return false;
                 }
-            } while( byteRead != 0 && buffer[byteRead - 1] != NEWLINE_BYTE && buffer[byteRead - 2] != NEWLINE_BYTE );
+            } while ( byteRead != 0 && buffer[byteRead - 1] != NEWLINE_BYTE && buffer[byteRead - 2] != NEWLINE_BYTE );
         
             return true;
         }
@@ -202,10 +203,7 @@ namespace NarcityMedia
         /// </summary>
         /// <remarks>Calls <see cref="SendApplicationMessage" /></remarks>
         public void Greet() {
-            SocketMessage message = new SocketMessage(SocketMessage.ApplicationMessageCode.Greeting);
-            List<SocketFrame> frames = message.GetFrames();
-
-            this.socket.Send(frames[0].GetBytes());
+            this.SendApplicationMessage(SocketMessage.ApplicationMessageCode.Greeting);
         }
 
         /// <summary>
@@ -215,7 +213,25 @@ namespace NarcityMedia
         public void SendApplicationMessage(SocketMessage message)
         {
             List<SocketFrame> frames = message.GetFrames();
-            this.socket.Send(frames[0].GetBytes());
+            try
+            {
+                this.socket.Send(frames[0].GetBytes());
+            }
+            catch (ArgumentNullException e)
+            {
+                Logger.Log("Attempted to send null value to socket - " + e.Message, Logger.LogType.Error);
+            }
+            catch (SocketException e)
+            {
+                Logger.Log("A SocketException occured, this could be due to a network problem or to the socket being closed by the OS - " + e.Message, Logger.LogType.Error);
+                Logger.Log("SocketException.ErrorCode: " + e.ErrorCode, Logger.LogType.Error);
+                Logger.Log("For SocketException error codes see https://bit.ly/2OsLovc", Logger.LogType.Info);
+                Logger.Log("The closed socket will be disposed of", Logger.LogType.Info);
+            }
+            catch (ObjectDisposedException e)
+            {
+                Logger.Log("Message couldn't be sent, the socket was likely closed before attempting to send the message" + e.Message, Logger.LogType.Error);
+            }
         }
 
         /// <summary>
@@ -235,7 +251,6 @@ namespace NarcityMedia
             }
         }
     }
-
     
     /// <summary>
     /// Represents an application message that is to be sent via WebSocket.
