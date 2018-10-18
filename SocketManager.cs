@@ -2,33 +2,66 @@ using System.Collections.Generic;
 
 namespace NarcityMedia
 {
+    /// <summary>
+    /// Class that acts as a Proxy to manage the list of sockets.
+    /// This pattern ensures the thread safety of the socket lists
+    /// </summary>
+    /// <remarks>See http://csharpindepth.com/Articles/General/Singleton.aspx</remarks>
     class SocketManager
     {
-        /// Hashtable that associates multiple sockets to a hashes narcity.com URL
-        private Dictionary<string, ClientObject[]> _URL_Sockets;
+        private static SocketManager instance = new SocketManager();
 
-        /// Hashtable that associates a socket to a Lilium session string identifier
-        private Dictionary<string, ClientObject> _Session_Socket;
+        private Dictionary<string, ClientObject[]> url_sockets;
 
+        private Dictionary<string, ClientObject> session_Socket;
+
+        /// <summary>
+        /// Associates multiple ClientObjects to a URL
+        /// </summary>
         public Dictionary<string, ClientObject[]> URL_Sockets
         {
-            get { return _URL_Sockets; }
+            get { return url_sockets; }
         }
 
+        /// <summary>
+        /// Associates a socket to a Lilium session string identifier
+        /// </summary>
         public Dictionary<string, ClientObject> Session_Socket
         {
-            get { return _Session_Socket; }
+            get { return session_Socket; }
         }
 
-        public SocketManager()
+        // Explicit static constructor to tell C# compiler
+        // not to mark type as beforefieldinit
+        static SocketManager()
         {
-            this._URL_Sockets = new Dictionary<string, ClientObject[]>(200);
-            this._Session_Socket = new Dictionary<string, ClientObject>(2000);
+        }
+
+        private SocketManager()
+        {
+            this.url_sockets = new Dictionary<string, ClientObject[]>(200);
+            this.session_Socket = new Dictionary<string, ClientObject>(2000);
+        }
+
+        public static SocketManager Singleton
+        {
+            get
+            {
+                return instance;
+            }
         }
 
         public void AddClientObject(ClientObject cli)
         {
-            
+            lock (this.url_sockets)
+            {
+                ;
+            }
+
+            lock (this.session_Socket)
+            {
+                ;
+            }
         }
     }
 }

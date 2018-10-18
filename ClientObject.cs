@@ -43,19 +43,48 @@ namespace NarcityMedia
         private byte[] methodandpath;
         private byte[] requestheaders = new byte[ClientObject.MAX_REQUEST_HEADERS_LENGTH];
         private Dictionary<string, byte[]> headersmap = new Dictionary<string, byte[]>();
-        
+        private ManualResetEvent cliResetEvent = new ManualResetEvent(false);
+
+        // The MAXIMUM header length is 4
+        private byte[] wsHeaderBuffer = new byte[4];
         private int requestheaderslength;
         private int writeindex = 0;
     
         public byte[] url;
 
+        public delegate void SocketMessageCallback(WebSocketMessage message);
+
         public ClientObject(Socket socket) {
             this.socket = socket;
+            this.BeginListening();
         }
 
-        protected void WriteBytes(byte[] message)
+        protected void BeginListening()
         {
-            Console.WriteLine(System.Text.Encoding.Default.GetString(message));
+            try
+            {
+                cliResetEvent.Reset();
+                this.socket.BeginReceive(this.wsHeaderBuffer, 0, this.wsHeaderBuffer.Length, 0, new AsyncCallback(this.ReadSocketData), this.socket);
+                cliResetEvent.WaitOne();
+            }
+            catch (Exception e)
+            {
+                Logger.Log(e.Message, Logger.LogType.Error);
+            }
+        }
+
+        private void ReadSocketData(IAsyncResult ar)
+        {
+            cliResetEvent.Set();
+            Console.WriteLine("Received data");
+            Socket socket = (Socket) ar.AsyncState;
+
+            socket.EndReceive(ar);
+        }
+
+        protected void WriteBytes(byte[] bytes)
+        {
+            Console.WriteLine(System.Text.Encoding.Default.GetString(bytes));
         }
 
         private bool AppendHeaderChunk(byte[] buffer, int byteRead) {
@@ -193,7 +222,7 @@ namespace NarcityMedia
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Accept: " + negociatedkey + "\n\n"));
             
                 return true;
-            } 
+            }
 
             return false;
         }
@@ -203,19 +232,20 @@ namespace NarcityMedia
         /// </summary>
         /// <remarks>Calls <see cref="SendApplicationMessage" /></remarks>
         public void Greet() {
-            this.SendApplicationMessage(SocketMessage.ApplicationMessageCode.Greeting);
+            this.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.Greeting);
         }
 
         /// <summary>
         /// Sends an application message to the socket associated with the current client
         /// </summary>
         /// <param name="message">The socket message to send</param>
-        public void SendApplicationMessage(SocketMessage message)
+        public bool SendApplicationMessage(WebSocketMessage message)
         {
             List<SocketFrame> frames = message.GetFrames();
             try
             {
                 this.socket.Send(frames[0].GetBytes());
+                return true;
             }
             catch (ArgumentNullException e)
             {
@@ -232,6 +262,8 @@ namespace NarcityMedia
             {
                 Logger.Log("Message couldn't be sent, the socket was likely closed before attempting to send the message" + e.Message, Logger.LogType.Error);
             }
+
+            return false;
         }
 
         /// <summary>
@@ -239,9 +271,9 @@ namespace NarcityMedia
         /// </summary>
         /// <param name="messageCode">The application message code to send</param>
         /// <remarks>Calls <see cref="SendApplicationMessage" /></remarks>
-        public void SendApplicationMessage(SocketMessage.ApplicationMessageCode messageCode)
+        public void SendApplicationMessage(WebSocketMessage.ApplicationMessageCode messageCode)
         {
-            SocketMessage message = new SocketMessage(messageCode);
+            WebSocketMessage message = new WebSocketMessage(messageCode);
             this.SendApplicationMessage(message);
         }
 
@@ -257,7 +289,7 @@ namespace NarcityMedia
     /// A message is composed of frames
     /// </summary>
     /// <remarks>This class only support messages that can fit in a single frame for now</remarks>
-    class SocketMessage
+    class WebSocketMessage
     {
         // Start values at value 1 to avoid sending empty application data
         public enum ApplicationMessageCode { Greeting = 1, FetchNOtifications, FetchCurrentArticle, FetchComments }
@@ -276,7 +308,7 @@ namespace NarcityMedia
         private byte contentLength;
         private ushort appMessageCode;
 
-        public SocketMessage(ApplicationMessageCode code)
+        public WebSocketMessage(ApplicationMessageCode code)
         {
             this.AppMessageCode = (ushort) code;
         }

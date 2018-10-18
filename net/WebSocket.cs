@@ -8,7 +8,7 @@ namespace NarcityMedia.Net
     /// Represents a general concept of a WebSocket frame described by the 
     /// WebSocket standard
     /// </summary>
-    abstract class SocketFrame
+    abstract partial class SocketFrame
     {
         public enum OPCode
         {
@@ -114,7 +114,6 @@ namespace NarcityMedia.Net
 }
 
 /*
-
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
     +-+-+-+-+-------+-+-------------+-------------------------------+

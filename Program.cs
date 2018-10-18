@@ -82,6 +82,11 @@ namespace dotnet_core_socket_server
             }
         }
 
+        private static void OnSocketMessage(WebSocketMessage message)
+        {
+            Logger.Log("CLIENT OBJECT RECEIVED A MESSAGE YAY", Logger.LogType.Info);
+        }
+
         private static void DispatchHTTPServer()
         {
             httpServer = new HTTPServer(new Uri("http://localhost:8887"));
@@ -119,7 +124,7 @@ namespace dotnet_core_socket_server
         private static void SendNotificationToUser(HttpListenerRequest req, HttpListenerResponse res)
         {
             Logger.Log("HTTP Request to POST /sendNotificationToUser", Logger.LogType.Success);
-            Connections.ForEach(s => s.SendApplicationMessage(SocketMessage.ApplicationMessageCode.FetchCurrentArticle));
+            Connections.ForEach(s => s.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.FetchCurrentArticle));
             httpServer.SendResponse(res, HttpStatusCode.OK, "GET /notifyuser");
         }
 
