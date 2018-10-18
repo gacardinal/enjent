@@ -15,10 +15,8 @@
 
         #console {
             font-family:'Courier New', Courier, monospace;
-            font-size: 1.2em;
             font-weight: bolder;
             background-color: rgb(22, 22, 22);
-            color: green;
             position: fixed;
             right: 0px;
             bottom: 0px;
@@ -31,10 +29,23 @@
         .log-entry {
             width: 100%;
         }
+        .log-entry.success {
+            color: #0F0;
+        }
+        .log-entry.error {
+            color: #F00;
+        }
     </style>
 
     <script>
         let socket;
+
+        let send = message => {
+            if (socket) {
+                log("Can't send with an unitialized socket", 'error');
+            }
+        }
+
         let init = () => {
             log('Initializing socket connection...');
 
@@ -47,18 +58,29 @@
             };
         }
 
-        let log = message => {
+        let log = (message, level = 'success') => {
             let logEl = document.createElement('div');
-            logEl.className = 'log-entry';
+            logEl.className = 'log-entry ' + level.toLowerCase();
             logEl.innerText = message;
 
             document.getElementById('console').appendChild(logEl);
+        };
+
+        let navigate = () => {
+            if (document.getElementById('url').value) {
+                send(document.getElementById('url').value);
+                log('"Navigated" to ' + document.getElementById('url').value);
+            } else {
+                log("Can't send empty URL", 'error');
+            }
         };
     </script>
 
     <div id="test-app">
         <h1 id="app-code">-</h1>
         <button id='refresh' onclick="init()">(Re)initlalize Socket</button>
+        <button id='navigate' onclick="navigate()">Simulate user navigation</button>
+        <input type="text" id="url" placeholder="Navigate To" />
 
         <div id="console">
         </div>
