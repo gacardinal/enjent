@@ -49,23 +49,32 @@ namespace NarcityMedia
         private byte[] wsHeaderBuffer = new byte[4];
         private int requestheaderslength;
         private int writeindex = 0;
-    
+        private Thread listener;
+
         public byte[] url;
 
         public delegate void SocketMessageCallback(WebSocketMessage message);
 
         public ClientObject(Socket socket) {
             this.socket = socket;
-            this.BeginListening();
+            
+            this.listener = new Thread(BeginListening);
+            this.listener.Name = "ClientListenerThread";
+            this.listener.Start(new ListenerThreadData(this.socket));
         }
 
-        protected void BeginListening()
+        // See https://docs.microsoft.com/en-us/dotnet/api/system.net.sockets.socketasynceventargs?view=netframework-4.7.2
+        protected static void BeginListening(Object state)
         {
+            Socket socket = (Socket) state;
+            ManualResetEvent mre = new ManualResetEvent(true);
             try
             {
-                cliResetEvent.Reset();
-                this.socket.BeginReceive(this.wsHeaderBuffer, 0, this.wsHeaderBuffer.Length, 0, new AsyncCallback(this.ReadSocketData), this.socket);
-                cliResetEvent.WaitOne();
+                while (true) {
+                    mre.Reset();
+                    this.socket.BeginReceive(this.wsHeaderBuffer, 0, this.wsHeaderBuffer.Length, 0, new AsyncCallback(this.ReadSocketData), this.socket);
+                    mre.WaitOne();
+                }
             }
             catch (Exception e)
             {
@@ -280,6 +289,20 @@ namespace NarcityMedia
         public void Dispose() {
             if (this.socket != null) {
                 this.socket.Dispose();
+            }
+        }
+
+        private class ListenerThreadData
+        {
+            public Socket socket;
+
+            public ListenerThreadData()
+            {
+            }
+
+            public ListenerThreadData(Socket socket)
+            {
+                this.socket = socket;
             }
         }
     }

@@ -56,7 +56,7 @@ namespace NarcityMedia.Net
 
             frameHeader[0] = octet0;
             frameHeader[1] = octet1;
-            
+
             byte[] finalBytes = AppendMessageToBytes(frameHeader, this.data);
 
             return finalBytes;
