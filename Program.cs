@@ -42,14 +42,12 @@ namespace dotnet_core_socket_server
             ThreadPool.GetMaxThreads(out workerThreads, out portThreads);
             Logger.Log("The process Thread Pool has a mixaimum of " + workerThreads.ToString() + " worker threads", Logger.LogType.Info);
             while (!Program.exit) {
+                Console.WriteLine("BEFORE Socket accept");
+                // MAIN THREAD blocks here and resumes on each new Socket
                 Socket handler = socket.Accept();
-                DidAcceptSocketConnection(handler);
+                Console.WriteLine("AFTER Socket accept");
+                ThreadPool.QueueUserWorkItem(NegotiateSocketConnection, handler);
             }
-        }
-        
-        public static void DidAcceptSocketConnection(Socket handler)
-        {
-            ThreadPool.QueueUserWorkItem(NegotiateSocketConnection, handler);
         }
 
         private static void NegotiateSocketConnection(Object s)
@@ -104,8 +102,11 @@ namespace dotnet_core_socket_server
             httpServer.Get("/notifyuser", SendNotificationToUser);
             httpServer.Get("/notifyendpoint", SendNotificationToEndpoint);
 
+            // .Start() is blocking meaning the thread won't finish until the server stops listenning
             httpServer.Start();
         }
+
+
 
         private static void Index(HttpListenerRequest req, HttpListenerResponse res)
         {
