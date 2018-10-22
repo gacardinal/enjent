@@ -43,7 +43,6 @@ namespace NarcityMedia
         private byte[] methodandpath;
         private byte[] requestheaders = new byte[ClientObject.MAX_REQUEST_HEADERS_LENGTH];
         private Dictionary<string, byte[]> headersmap = new Dictionary<string, byte[]>();
-        private static ManualResetEvent cliResetEvent = new ManualResetEvent(false);
 
         // The MAXIMUM header length is 4
         private static byte[] wsHeaderBuffer = new byte[4];
@@ -64,16 +63,21 @@ namespace NarcityMedia
         }
 
         // See https://docs.microsoft.com/en-us/dotnet/api/system.net.sockets.socketasynceventargs?view=netframework-4.7.2
-        protected static void BeginListening(Object state)
+        protected static void BeginListening(Object state) 
         {
             Socket socket = (Socket) state;
-            ManualResetEvent mre = new ManualResetEvent(true);
+            byte[] readBytes = new byte[2]; // Websockets headers are 2 bytes long
+            bool listening = true;
             try
             {
-                while (true) {
-                    mre.Reset();
-                    socket.BeginReceive(wsHeaderBuffer, 0, wsHeaderBuffer.Length, 0, new AsyncCallback(ReadSocketData), socket);
-                    mre.WaitOne();
+                while (listening)
+                {
+                    int received = socket.Receive(readBytes, SocketFlags.None); // Blocking
+                    Console.WriteLine("Valid : " + SocketDataFrame.IsValidHeader(readBytes));
+                    WriteOctets(readBytes);
+                    if (received >= 2 && SocketDataFrame.IsValidHeader(readBytes)) {
+                        Console.WriteLine("Yay");
+                    }
                 }
             }
             catch (Exception e)
@@ -84,16 +88,15 @@ namespace NarcityMedia
 
         private static void ReadSocketData(IAsyncResult ar)
         {
-            cliResetEvent.Set();
             Console.WriteLine("Received data");
-            Socket socket = (Socket) ar.AsyncState;
-
-            socket.EndReceive(ar);
         }
 
-        protected void WriteBytes(byte[] bytes)
+        private static void WriteOctets(byte[] bytes)
         {
-            Console.WriteLine(System.Text.Encoding.Default.GetString(bytes));
+            foreach (byte b in bytes)
+            {
+                Console.WriteLine(Convert.ToString(b, 2));
+            }
         }
 
         private bool AppendHeaderChunk(byte[] buffer, int byteRead) {
@@ -292,15 +295,13 @@ namespace NarcityMedia
             }
         }
 
-        private class ListenerThreadData
+        private class ListenerThreadState
         {
             public Socket socket;
+            public const int BUFFER_SIZE = 1024;
+            public byte[] buffer = new byte[BUFFER_SIZE];
 
-            public ListenerThreadData()
-            {
-            }
-
-            public ListenerThreadData(Socket socket)
+            public ListenerThreadState(Socket socket)
             {
                 this.socket = socket;
             }

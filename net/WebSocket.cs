@@ -96,6 +96,10 @@ namespace NarcityMedia.Net
         public enum DataFrameType { Text, Binary }
         public DataFrameType DataType;
 
+        public SocketDataFrame() : base(true, true, 0)
+        {
+        }
+
         public SocketDataFrame(bool fin, bool masked, byte length,
                                 DataFrameType dataType,
                                 byte[] message) : base(fin, masked, length)
@@ -109,6 +113,21 @@ namespace NarcityMedia.Net
         {
             if (this.DataType == DataFrameType.Text) this.opcode = (byte) SocketFrame.OPCode.Text;
             else this.opcode = (byte) SocketFrame.OPCode.Binary;
+        }
+
+        protected static SocketDataFrame FromBytes(byte[] bytes)
+        {
+            SocketDataFrame frame = new SocketDataFrame();
+
+            return frame;
+        }
+
+        public static bool IsValidHeader(byte[] bytes)
+        {
+            return (
+                bytes.Length == 2
+                && Enum.IsDefined(typeof(SocketFrame.OPCode), bytes[0] & 0b00001111) // Valid OP Code
+            );
         }
     }
 }

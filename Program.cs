@@ -17,6 +17,7 @@ namespace dotnet_core_socket_server
         private static List<Socket> socketList = new List<Socket>(2000);
         private const int MUTEX_TIMEOUT_DELAY = 5000;
         private static HTTPServer httpServer;
+
         static void Main(string[] args)
         {
             Thread HTTP = new Thread(Program.DispatchHTTPServer);
@@ -42,10 +43,8 @@ namespace dotnet_core_socket_server
             ThreadPool.GetMaxThreads(out workerThreads, out portThreads);
             Logger.Log("The process Thread Pool has a mixaimum of " + workerThreads.ToString() + " worker threads", Logger.LogType.Info);
             while (!Program.exit) {
-                Console.WriteLine("BEFORE Socket accept");
-                // MAIN THREAD blocks here and resumes on each new Socket
+                // MAIN THREAD blocks here and resumes on each new Socket connection
                 Socket handler = socket.Accept();
-                Console.WriteLine("AFTER Socket accept");
                 ThreadPool.QueueUserWorkItem(NegotiateSocketConnection, handler);
             }
         }
