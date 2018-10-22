@@ -44,6 +44,10 @@ namespace NarcityMedia.Net
         public HTTPServer(Uri endpoint)
         {
             this.rootEndpoint = endpoint;
+
+            this.on404 = this.Default404;
+            this.on500 = this.Default500;
+
             this.methodEndpointsCallbackMap = new Dictionary<string, Dictionary<Uri, EndpointCallback>>();
             this.methodEndpointsCallbackMap.Add("get", new Dictionary<Uri, EndpointCallback>());
             this.methodEndpointsCallbackMap.Add("post", new Dictionary<Uri, EndpointCallback>());
@@ -81,14 +85,23 @@ namespace NarcityMedia.Net
             }
             catch (KeyNotFoundException)
             {
-                if (this.on404 != null) this.on404(request, response);
-                else SendResponse(response, HttpStatusCode.NotFound, "DEFAULT Not FOund");
+                this.on404(request, response);
             }
             catch (Exception e)
             {
-                if (this.on500!= null) this.on500(request, response);
-                else SendResponse(response, HttpStatusCode.InternalServerError, "DEFAULT Internal Server Error - " + e.Message);
+                Logger.Log("5XX Internal server error - " + e.Message, Logger.LogType.Error);
+                this.on500(request, response);
             }
+        }
+
+        private void Default404(HttpListenerRequest req, HttpListenerResponse res)
+        {
+            SendResponse(res, HttpStatusCode.NotFound, "Not FOund");
+        }
+
+        private void Default500(HttpListenerRequest req, HttpListenerResponse res)
+        {
+            SendResponse(res, HttpStatusCode.InternalServerError, "Internal Server Error - ");
         }
 
         public void SendResponse(HttpListenerResponse response, HttpStatusCode statusCode, string responseText)
