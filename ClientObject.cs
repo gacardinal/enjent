@@ -43,10 +43,10 @@ namespace NarcityMedia
         private byte[] methodandpath;
         private byte[] requestheaders = new byte[ClientObject.MAX_REQUEST_HEADERS_LENGTH];
         private Dictionary<string, byte[]> headersmap = new Dictionary<string, byte[]>();
-        private ManualResetEvent cliResetEvent = new ManualResetEvent(false);
+        private static ManualResetEvent cliResetEvent = new ManualResetEvent(false);
 
         // The MAXIMUM header length is 4
-        private byte[] wsHeaderBuffer = new byte[4];
+        private static byte[] wsHeaderBuffer = new byte[4];
         private int requestheaderslength;
         private int writeindex = 0;
         private Thread listener;
@@ -60,7 +60,7 @@ namespace NarcityMedia
             
             this.listener = new Thread(BeginListening);
             this.listener.Name = "ClientListenerThread";
-            this.listener.Start(new ListenerThreadData(this.socket));
+            this.listener.Start(this.socket);
         }
 
         // See https://docs.microsoft.com/en-us/dotnet/api/system.net.sockets.socketasynceventargs?view=netframework-4.7.2
@@ -72,7 +72,7 @@ namespace NarcityMedia
             {
                 while (true) {
                     mre.Reset();
-                    this.socket.BeginReceive(this.wsHeaderBuffer, 0, this.wsHeaderBuffer.Length, 0, new AsyncCallback(this.ReadSocketData), this.socket);
+                    socket.BeginReceive(wsHeaderBuffer, 0, wsHeaderBuffer.Length, 0, new AsyncCallback(ReadSocketData), socket);
                     mre.WaitOne();
                 }
             }
@@ -82,7 +82,7 @@ namespace NarcityMedia
             }
         }
 
-        private void ReadSocketData(IAsyncResult ar)
+        private static void ReadSocketData(IAsyncResult ar)
         {
             cliResetEvent.Set();
             Console.WriteLine("Received data");
