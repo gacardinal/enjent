@@ -24,9 +24,9 @@ namespace NarcityMedia.Net
         protected bool masked;
         protected byte[] data;
         protected byte opcode;
-        protected byte contentLength;
+        protected ushort contentLength;
 
-        public SocketFrame(bool fin, bool masked, byte length)
+        public SocketFrame(bool fin, bool masked, ushort length)
         {
             this.fin = fin;
             this.masked = masked;
@@ -101,13 +101,27 @@ namespace NarcityMedia.Net
         {
         }
 
-        public SocketDataFrame(bool fin, bool masked, byte length,
+        public SocketDataFrame(bool fin, bool masked, ushort length,
+                                DataFrameType dataType) : base(fin, masked, length)
+        {
+            this.DataType = dataType;
+            this.InitOPCode();
+        }
+        public SocketDataFrame(bool fin, bool masked, ushort length,
                                 DataFrameType dataType,
                                 byte[] message) : base(fin, masked, length)
         {
             this.DataType = dataType;
             this.InitOPCode();
-            this.data = message;
+
+            if (message.Length <= 126)
+            {
+                this.data = message;
+            }
+            else
+            {
+                throw new ArgumentOutOfRangeException("This class does not support frames that have a content length value that is greater than 126");
+            }
         }
 
         protected override void InitOPCode()
@@ -123,16 +137,13 @@ namespace NarcityMedia.Net
             return frame;
         }
 
-        public static SocketDataFrame TryParse(byte[] bytes)
-        {
-            return new SocketDataFrame();
-        }
-
         public static bool IsValidHeader(byte[] bytes)
         {
             return (
-                bytes.Length == 2
+                bytes.Length >= 2 && bytes.Length <= 4
                 && Enum.IsDefined(typeof(SocketFrame.OPCode), bytes[0] & 0b00001111) // Valid OP Code
+                && (bytes[1] & 0b10000000) == 0b10000000                             // Mask is true
+                && (bytes[1] & 0b01111111) <= 0b01111110                             // Don't allow content length values above 126 (very large frames not supproted)
             );
         }
     }

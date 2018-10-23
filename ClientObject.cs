@@ -72,12 +72,12 @@ namespace NarcityMedia
             {
                 while (this.listenToSocket)
                 {
-                    int received = socket.Receive(wsHeaderBuffer, SocketFlags.None); // Blocking
+                    int received = socket.Receive(wsHeaderBuffer, 2, SocketFlags.None); // Blocking
                     Console.WriteLine("Valid : " + SocketDataFrame.IsValidHeader(wsHeaderBuffer));
                     WriteOctets(wsHeaderBuffer);
                     if (received >= 2 && SocketDataFrame.IsValidHeader(wsHeaderBuffer))
                     {
-                        Console.WriteLine("Yay");
+                        this.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.FetchCurrentArticle);
                     }
                     else 
                     {
@@ -333,6 +333,39 @@ namespace NarcityMedia
             List<SocketFrame> frames = new List<SocketFrame>(1);
             frames.Add(frame);
             this.SendFrames(frames);
+        }
+
+        
+        /// <summary>
+        /// Tries to parse a byte[] header into a SocketDataFrame object.
+        /// Returns a null reference if object cannot be parsed
+        /// </summary>
+        /// <param name="bytes"></param>
+        /// <returns>The parsed object if parse is successful or a NULL object if the parse wasn't successful</returns>
+        /// <remarks>
+        /// This method is not exactly like the Int*.TryParse() functions as it doesn't take an 'out' parameter and return a
+        /// boolean value but rather returns either the parsed object or a null reference, which means that callers of this method need to check
+        /// for null before using the return value
+        /// </remarks>
+        public SocketDataFrame TryParse(byte[] bytes)
+        {
+            bool fin = (bytes[0] >> 7) != 0;
+            byte opcode = (byte) (bytes[0] & 0b00001111);
+            bool masked = (bytes[1] & 0b10000000) != 0;
+            ushort contentLength = (ushort) (bytes[1] | 0b01111111);
+
+            if (contentLength == 126)
+            {
+                this.socket.Receive(bytes, 2, 2, SocketFlags.None);
+                contentLength = (ushort) (bytes[2] << 8 | bytes[3]);
+            }
+            else
+            {
+                return null;
+            }
+
+            SocketDataFrame frame = new SocketDataFrame(fin, masked, contentLength, (SocketDataFrame.DataFrameType)opcode);
+            return new SocketDataFrame();
         }
 
         public void Dispose() {
