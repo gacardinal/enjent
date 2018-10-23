@@ -58,13 +58,16 @@
         let init = () => {
             log('Initializing socket connection...');
 
-            try{
+            try {
                 socket = new WebSocket("ws://127.0.0.1:13003?www.test.narcity.com/test");
                 socket.binaryType = 'arraybuffer';
                 socket.onmessage = e => {
                     let dv = new DataView(e.data, 0);
                     document.getElementById("app-code").innerHTML = dv.getInt8(0);
                     log('Socket got message : ' + dv.getInt8(0));
+                };
+                socket.onclose = () => {
+                    log("Socket was closed!", "error");
                 };
             } catch (e) {
                 log("Couldn't initialize socket - " + e.message, 'error');
@@ -85,7 +88,7 @@
                 log('"Navigated" to ' + document.getElementById('url').value);
             } else {
                 log("Can't send empty URL", 'error');
-            }url
+            }
         };
     </script>
 
