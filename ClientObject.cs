@@ -176,22 +176,30 @@ namespace NarcityMedia
             bool trimming = true;
             bool lookingForColon = true;
             string currentheader = String.Empty;
-            for (int i = lastStop; i < this.requestheaderslength; i++) {
-                if (trimming && this.requestheaders[i] == ClientObject.SPACE_BYTE) {
+            for (int i = lastStop; i < this.requestheaderslength; i++)
+            {
+                if (trimming && this.requestheaders[i] == ClientObject.SPACE_BYTE)
+                {
                     lastStop++;
                     continue;
-                } else {
+                }
+                else
+                {
                     trimming = false;
                 }
 
-                if (this.requestheaders[i] == lookingFor) {
+                if (this.requestheaders[i] == lookingFor)
+                {
                     int len = i - lastStop;
                     byte[] subset = new byte[len];
                     Array.Copy(this.requestheaders, lastStop, subset, 0, len);
                     
-                    if (lookingForColon) {
+                    if (lookingForColon)
+                    {
                         currentheader = System.Text.Encoding.Default.GetString(subset);
-                    } else {
+                    }
+                    else
+                    {
                         this.headersmap[currentheader] = subset;
                     }
 
@@ -206,7 +214,8 @@ namespace NarcityMedia
         }
 
         public bool Negociate101Upgrade() {
-            if (this.headersmap.ContainsKey(ClientObject.WEBSOCKET_COOKIE_HEADER)) {
+            if (this.headersmap.ContainsKey(ClientObject.WEBSOCKET_COOKIE_HEADER))
+            {
                 String cookieData = System.Text.Encoding.Default.GetString(this.headersmap[ClientObject.WEBSOCKET_COOKIE_HEADER]);
                 string cookieName = "lmltk=";
                 int index = cookieData.IndexOf(cookieName);
@@ -220,13 +229,16 @@ namespace NarcityMedia
                 }
             }
 
-            if (this.headersmap.ContainsKey(ClientObject.WEBSOCKET_SEC_KEY_HEADER)) {
+            if (this.headersmap.ContainsKey(ClientObject.WEBSOCKET_SEC_KEY_HEADER))
+            {
                 byte[] seckeyheader = this.headersmap[ClientObject.WEBSOCKET_SEC_KEY_HEADER];
                 byte[] tohash = new byte[seckeyheader.Length + ClientObject.RFC6455_CONCAT_GUID.Length - 1];
-                for (int i = 0; i < seckeyheader.Length - 1; i++) {
+                for (int i = 0; i < seckeyheader.Length - 1; i++)
+                {
                     tohash[i] = seckeyheader[i];
                 }
-                for (int i = 0; i < ClientObject.RFC6455_CONCAT_GUID.Length; i++) {
+                for (int i = 0; i < ClientObject.RFC6455_CONCAT_GUID.Length; i++) 
+                {
                     tohash[i + seckeyheader.Length - 1] = ClientObject.RFC6455_CONCAT_GUID[i];
                 }
 
@@ -263,9 +275,34 @@ namespace NarcityMedia
         public bool SendApplicationMessage(WebSocketMessage message)
         {
             List<SocketFrame> frames = message.GetFrames();
+            return SendFrames(frames);
+        }
+
+        /// <summary>
+        /// Sends an application message to the socket associated with the current client
+        /// </summary>
+        /// <param name="messageCode">The application message code to send</param>
+        /// <remarks>Calls <see cref="SendApplicationMessage" /></remarks>
+        public bool SendApplicationMessage(WebSocketMessage.ApplicationMessageCode messageCode)
+        {
+            WebSocketMessage message = new WebSocketMessage(messageCode);
+            return this.SendApplicationMessage(message);
+        }
+    
+        /// <summary>
+        /// Sends Websocket frames via the client socket
+        /// </summary>
+        /// <param name="frames">The list of frames to send</param>
+        /// <returns>A boolean value that indicates whether the send was successful or not</returns>
+        private bool SendFrames(List<SocketFrame> frames)
+        {
             try
             {
-                this.socket.Send(frames[0].GetBytes());
+                foreach (SocketFrame frame in frames)
+                {
+                    this.socket.Send(frame.GetBytes());
+                }
+
                 return true;
             }
             catch (ArgumentNullException e)
@@ -288,14 +325,14 @@ namespace NarcityMedia
         }
 
         /// <summary>
-        /// Sends an application message to the socket associated with the current client
+        /// Sends a websocket control frame such as a 'pong' or a 'close' frame
         /// </summary>
-        /// <param name="messageCode">The application message code to send</param>
-        /// <remarks>Calls <see cref="SendApplicationMessage" /></remarks>
-        public void SendApplicationMessage(WebSocketMessage.ApplicationMessageCode messageCode)
+        /// <param name="frame">The control frame to send</param>
+        public void SendControlFrame(SocketFrame frame)
         {
-            WebSocketMessage message = new WebSocketMessage(messageCode);
-            this.SendApplicationMessage(message);
+            List<SocketFrame> frames = new List<SocketFrame>(1);
+            frames.Add(frame);
+            this.SendFrames(frames);
         }
 
         public void Dispose() {
