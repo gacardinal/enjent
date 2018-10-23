@@ -46,6 +46,7 @@ namespace NarcityMedia
 
         // The MAXIMUM header length is 4
         private static byte[] wsHeaderBuffer = new byte[4];
+        private bool listenToSocket = true;
         private int requestheaderslength;
         private int writeindex = 0;
         private Thread listener;
@@ -57,26 +58,31 @@ namespace NarcityMedia
         public ClientObject(Socket socket) {
             this.socket = socket;
             
-            this.listener = new Thread(BeginListening);
+            this.listener = new Thread(this.BeginListening);
             this.listener.Name = "ClientListenerThread";
             this.listener.Start(this.socket);
         }
 
         // See https://docs.microsoft.com/en-us/dotnet/api/system.net.sockets.socketasynceventargs?view=netframework-4.7.2
-        protected static void BeginListening(Object state) 
+        protected void BeginListening(Object state) 
         {
             Socket socket = (Socket) state;
-            byte[] readBytes = new byte[2]; // Websockets headers are 2 bytes long
-            bool listening = true;
+
             try
             {
-                while (listening)
+                while (this.listenToSocket)
                 {
-                    int received = socket.Receive(readBytes, SocketFlags.None); // Blocking
-                    Console.WriteLine("Valid : " + SocketDataFrame.IsValidHeader(readBytes));
-                    WriteOctets(readBytes);
-                    if (received >= 2 && SocketDataFrame.IsValidHeader(readBytes)) {
+                    int received = socket.Receive(wsHeaderBuffer, SocketFlags.None); // Blocking
+                    Console.WriteLine("Valid : " + SocketDataFrame.IsValidHeader(wsHeaderBuffer));
+                    WriteOctets(wsHeaderBuffer);
+                    if (received >= 2 && SocketDataFrame.IsValidHeader(wsHeaderBuffer))
+                    {
                         Console.WriteLine("Yay");
+                    }
+                    else 
+                    {
+                        // TODO: remove socket from global list
+                        this.listenToSocket = false;
                     }
                 }
             }
@@ -84,6 +90,9 @@ namespace NarcityMedia
             {
                 Logger.Log(e.Message, Logger.LogType.Error);
             }
+
+            // End thread execution
+            return;
         }
 
         private static void ReadSocketData(IAsyncResult ar)
@@ -292,18 +301,6 @@ namespace NarcityMedia
         public void Dispose() {
             if (this.socket != null) {
                 this.socket.Dispose();
-            }
-        }
-
-        private class ListenerThreadState
-        {
-            public Socket socket;
-            public const int BUFFER_SIZE = 1024;
-            public byte[] buffer = new byte[BUFFER_SIZE];
-
-            public ListenerThreadState(Socket socket)
-            {
-                this.socket = socket;
             }
         }
     }

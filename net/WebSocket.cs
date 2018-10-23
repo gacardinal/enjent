@@ -15,6 +15,7 @@ namespace NarcityMedia.Net
             Continuation = 0x0,
             Text = 0x1,
             Binary = 0x2,
+            Close = 0x8,
             Ping = 0x9,
             Pong = 0xA
         }
@@ -122,6 +123,11 @@ namespace NarcityMedia.Net
             return frame;
         }
 
+        public static SocketDataFrame TryParse(byte[] bytes)
+        {
+            return new SocketDataFrame();
+        }
+
         public static bool IsValidHeader(byte[] bytes)
         {
             return (
@@ -156,6 +162,7 @@ namespace NarcityMedia.Net
         0x0 : Continuation
         0x1 : Text (UTF-8)
         0x2 : Binary
+        0x8 : Close
         0x9 : Ping
         0xA : Pong
  */
