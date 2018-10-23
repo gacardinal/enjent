@@ -77,11 +77,21 @@ namespace NarcityMedia
                     WriteOctets(wsHeaderBuffer);
                     if (received >= 2 && SocketDataFrame.IsValidHeader(wsHeaderBuffer))
                     {
-                        this.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.FetchCurrentArticle);
+                        SocketFrame frame = this.TryParse(wsHeaderBuffer);
+                        if (frame != null)
+                        {
+                            this.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.FetchCurrentArticle);
+                        }
+                        else
+                        {
+                            this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
+                            this.listenToSocket = false;    
+                        }
                     }
-                    else 
+                    else
                     {
                         // TODO: remove socket from global list
+                        this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
                         this.listenToSocket = false;
                     }
                 }
@@ -108,9 +118,12 @@ namespace NarcityMedia
             }
         }
 
-        private bool AppendHeaderChunk(byte[] buffer, int byteRead) {
-            if (this.writeindex + byteRead <= ClientObject.HEADER_CHUNK_BUFFER_SIZE) {
-                for (int i = 0; i < byteRead; i++) {
+        private bool AppendHeaderChunk(byte[] buffer, int byteRead)
+        {
+            if (this.writeindex + byteRead <= ClientObject.HEADER_CHUNK_BUFFER_SIZE)
+            {
+                for (int i = 0; i < byteRead; i++)
+                {
                     this.requestheaders[i + this.writeindex] = buffer[i];
                 }
 
@@ -123,27 +136,34 @@ namespace NarcityMedia
             return false;  
         }
 
-        public bool ReadRequestHeaders() {
+        public bool ReadRequestHeaders()
+        {
             byte[] buffer = new byte[HEADER_CHUNK_BUFFER_SIZE];
             int byteRead = 0;
 
-            do {
+            do
+            {
                 byteRead = this.socket.Receive(buffer);
-                if (!this.AppendHeaderChunk(buffer, byteRead)) {
+                if (!this.AppendHeaderChunk(buffer, byteRead))
+                {
                     return false;
                 }
-            } while ( byteRead != 0 && buffer[byteRead - 1] != NEWLINE_BYTE && buffer[byteRead - 2] != NEWLINE_BYTE );
+            }
+            while ( byteRead != 0 && buffer[byteRead - 1] != NEWLINE_BYTE && buffer[byteRead - 2] != NEWLINE_BYTE );
         
             return true;
         }
 
-        public bool AnalyzeRequestHeaders() {
+        public bool AnalyzeRequestHeaders()
+        {
             bool lookingForQuestionMark = true;
             bool buildingQueryString = false;
             int urlStartImdex = 0;
             // First, read until new line to get method and path
-            for (int i = 0; i < this.requestheaderslength; i++) {
-                if (this.requestheaders[i] == ClientObject.NEWLINE_BYTE) {
+            for (int i = 0; i < this.requestheaderslength; i++)
+            {
+                if (this.requestheaders[i] == ClientObject.NEWLINE_BYTE)
+                {
                     this.methodandpath = new byte[i];
                     Array.Copy(this.requestheaders, 0, this.methodandpath, 0, i);                    
 
@@ -264,7 +284,8 @@ namespace NarcityMedia
         /// Greets the client by sending the SocketMessage.ApplicationMessageCode.Greeting code.
         /// </summary>
         /// <remarks>Calls <see cref="SendApplicationMessage" /></remarks>
-        public void Greet() {
+        public void Greet()
+        {
             this.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.Greeting);
         }
 
@@ -352,7 +373,7 @@ namespace NarcityMedia
             bool fin = (bytes[0] >> 7) != 0;
             byte opcode = (byte) (bytes[0] & 0b00001111);
             bool masked = (bytes[1] & 0b10000000) != 0;
-            ushort contentLength = (ushort) (bytes[1] | 0b01111111);
+            ushort contentLength = (ushort) (bytes[1] & 0b01111111);
 
             if (contentLength == 126)
             {
