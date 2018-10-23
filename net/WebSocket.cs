@@ -10,7 +10,7 @@ namespace NarcityMedia.Net
     /// </summary>
     abstract partial class SocketFrame
     {
-        public enum OPCode
+        public enum OPCodes
         {
             Continuation = 0x0,
             Text = 0x1,
@@ -58,9 +58,13 @@ namespace NarcityMedia.Net
             frameHeader[0] = octet0;
             frameHeader[1] = octet1;
 
-            byte[] finalBytes = AppendMessageToBytes(frameHeader, this.data);
+            if (this.data != null)
+            {
+                byte[] finalBytes = AppendMessageToBytes(frameHeader, this.data);
+                return finalBytes;
+            }
 
-            return finalBytes;
+            return frameHeader;
         }
 
         /// <summary>
@@ -126,8 +130,8 @@ namespace NarcityMedia.Net
 
         protected override void InitOPCode()
         {
-            if (this.DataType == DataFrameType.Text) this.opcode = (byte) SocketFrame.OPCode.Text;
-            else this.opcode = (byte) SocketFrame.OPCode.Binary;
+            if (this.DataType == DataFrameType.Text) this.opcode = (byte) SocketFrame.OPCodes.Text;
+            else this.opcode = (byte) SocketFrame.OPCodes.Binary;
         }
 
         protected static SocketDataFrame FromBytes(byte[] bytes)
@@ -141,10 +145,19 @@ namespace NarcityMedia.Net
         {
             return (
                 bytes.Length >= 2 && bytes.Length <= 4
-                && Enum.IsDefined(typeof(SocketFrame.OPCode), bytes[0] & 0b00001111) // Valid OP Code
+                && Enum.IsDefined(typeof(SocketFrame.OPCodes), bytes[0] & 0b00001111) // Valid OP Code
                 && (bytes[1] & 0b10000000) == 0b10000000                             // Mask is true
                 && (bytes[1] & 0b01111111) <= 0b01111110                             // Don't allow content length values above 126 (very large frames not supproted)
             );
+        }
+    }
+
+    class SocketControlFrame : SocketDataFrame
+    {
+        public SocketControlFrame(bool fin, bool masked, SocketFrame.OPCodes controlOpCode)
+                : base(true, false, 0, SocketDataFrame.DataFrameType.Binary)
+        {
+            this.opcode = (byte) controlOpCode;
         }
     }
 }
