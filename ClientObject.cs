@@ -44,8 +44,7 @@ namespace NarcityMedia
         private byte[] requestheaders = new byte[ClientObject.MAX_REQUEST_HEADERS_LENGTH];
         private Dictionary<string, byte[]> headersmap = new Dictionary<string, byte[]>();
 
-        // The MAXIMUM header length is 4
-        private static byte[] wsHeaderBuffer = new byte[4];
+        private byte[] frameBuffer = new byte[8];
         private bool listenToSocket = true;
         private int requestheaderslength;
         private int writeindex = 0;
@@ -72,12 +71,12 @@ namespace NarcityMedia
             {
                 while (this.listenToSocket)
                 {
-                    int received = socket.Receive(wsHeaderBuffer, 2, SocketFlags.None); // Blocking
-                    Console.WriteLine("Valid : " + SocketDataFrame.IsValidHeader(wsHeaderBuffer));
-                    WriteOctets(wsHeaderBuffer);
-                    if (received >= 2 && SocketDataFrame.IsValidHeader(wsHeaderBuffer))
+                    int received = socket.Receive(frameBuffer, 2, SocketFlags.None); // Blocking
+                    Console.WriteLine("Valid : " + SocketDataFrame.IsValidHeader(frameBuffer));
+                    WriteOctets(frameBuffer);
+                    if (received >= 2 && SocketDataFrame.IsValidHeader(frameBuffer))
                     {
-                        SocketFrame frame = this.TryParse(wsHeaderBuffer);
+                        SocketFrame frame = this.TryParse(frameBuffer);
                         if (frame != null)
                         {
                             this.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.FetchCurrentArticle);
@@ -377,16 +376,25 @@ namespace NarcityMedia
 
             if (contentLength == 126)
             {
-                this.socket.Receive(bytes, 2, 2, SocketFlags.None);
-                contentLength = (ushort) (bytes[2] << 8 | bytes[3]);
-            }
-            else
-            {
-                return null;
-            }
+                if (contentLength <= this.frameBuffer.Length)
+                {
+                    this.socket.Receive(bytes, 2, 2, SocketFlags.None);
+                    contentLength = (ushort) (bytes[2] << 8 | bytes[3]);
 
-            SocketDataFrame frame = new SocketDataFrame(fin, masked, contentLength, (SocketDataFrame.DataFrameType)opcode);
-            return new SocketDataFrame();
+                    // Resize this instance's buffer according to the length of the content that is being received
+                    // (content length) + 2 (header base length) + 2 (extended payload length)
+                    byte[] largerBuffer = new byte[contentLength + 2 + 2];
+                    this.frameBuffer.CopyTo(largerBuffer, 0);
+                    this.frameBuffer = largerBuffer;
+                }
+
+                this.socket.Receive(this.frameBuffer);
+
+                SocketDataFrame frame = new SocketDataFrame(fin, masked, contentLength, (SocketDataFrame.DataFrameType)opcode, this.frameBuffer);
+                return new SocketDataFrame();
+            }
+            
+            return null;
         }
 
         public void Dispose() {
