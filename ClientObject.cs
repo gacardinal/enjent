@@ -43,8 +43,6 @@ namespace NarcityMedia
         private byte[] methodandpath;
         private byte[] requestheaders = new byte[ClientObject.MAX_REQUEST_HEADERS_LENGTH];
         private Dictionary<string, byte[]> headersmap = new Dictionary<string, byte[]>();
-
-        private byte[] frameBuffer = new byte[8];
         private bool listenToSocket = true;
         private int requestheaderslength;
         private int writeindex = 0;
@@ -66,32 +64,22 @@ namespace NarcityMedia
         protected void BeginListening(Object state) 
         {
             Socket socket = (Socket) state;
-
+            byte[] frameHeaderBuffer = new byte[2];
             try
             {
                 while (this.listenToSocket)
                 {
-                    int received = socket.Receive(frameBuffer, 2, SocketFlags.None); // Blocking
-                    Console.WriteLine("Valid : " + SocketDataFrame.IsValidHeader(frameBuffer));
-                    WriteOctets(frameBuffer);
-                    if (received >= 2 && SocketDataFrame.IsValidHeader(frameBuffer))
+                    int received = socket.Receive(frameHeaderBuffer); // Blocking
+                    WriteOctets(frameHeaderBuffer);
+                    SocketFrame frame = this.TryParse(frameHeaderBuffer);
+                    if (frame != null)
                     {
-                        SocketFrame frame = this.TryParse(frameBuffer);
-                        if (frame != null)
-                        {
-                            this.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.FetchCurrentArticle);
-                        }
-                        else
-                        {
-                            this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
-                            this.listenToSocket = false;    
-                        }
+                        this.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.FetchCurrentArticle);
                     }
                     else
                     {
-                        // TODO: remove socket from global list
                         this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
-                        this.listenToSocket = false;
+                        this.listenToSocket = false;    
                     }
                 }
             }
@@ -113,7 +101,8 @@ namespace NarcityMedia
         {
             foreach (byte b in bytes)
             {
-                Console.WriteLine(Convert.ToString(b, 2));
+                Console.WriteLine((int)b);
+                // Console.WriteLine(Convert.ToString(b, 2));
             }
         }
 
@@ -232,7 +221,8 @@ namespace NarcityMedia
             return true;
         }
 
-        public bool Negociate101Upgrade() {
+        public bool Negociate101Upgrade()
+        {
             if (this.headersmap.ContainsKey(ClientObject.WEBSOCKET_COOKIE_HEADER))
             {
                 String cookieData = System.Text.Encoding.Default.GetString(this.headersmap[ClientObject.WEBSOCKET_COOKIE_HEADER]);
@@ -360,44 +350,77 @@ namespace NarcityMedia
         /// Tries to parse a byte[] header into a SocketDataFrame object.
         /// Returns a null reference if object cannot be parsed
         /// </summary>
-        /// <param name="bytes"></param>
+        /// <param name="headerBytes"></param>
         /// <returns>The parsed object if parse is successful or a NULL object if the parse wasn't successful</returns>
         /// <remarks>
         /// This method is not exactly like the Int*.TryParse() functions as it doesn't take an 'out' parameter and return a
         /// boolean value but rather returns either the parsed object or a null reference, which means that callers of this method need to check
         /// for null before using the return value
         /// </remarks>
-        public SocketDataFrame TryParse(byte[] bytes)
+        public SocketDataFrame TryParse(byte[] headerBytes)
         {
-            bool fin = (bytes[0] >> 7) != 0;
-            byte opcode = (byte) (bytes[0] & 0b00001111);
-            bool masked = (bytes[1] & 0b10000000) != 0;
-            ushort contentLength = (ushort) (bytes[1] & 0b01111111);
+            int headerSize = headerBytes.Length;
+            bool fin = (headerBytes[0] >> 7) != 0;
+            byte opcode = (byte) (headerBytes[0] & 0b00001111);
+            bool masked = (headerBytes[1] & 0b10000000) != 0;
+            ushort contentLength = (ushort) (headerBytes[1] & 0b01111111);
 
-            if (contentLength == 126)
+            if (contentLength <= 126)
             {
-                if (contentLength <= this.frameBuffer.Length)
+                if (contentLength == 126)
                 {
-                    this.socket.Receive(bytes, 2, 2, SocketFlags.None);
-                    contentLength = (ushort) (bytes[2] << 8 | bytes[3]);
-
-                    // Resize this instance's buffer according to the length of the content that is being received
-                    // (content length) + 2 (header base length) + 2 (extended payload length)
-                    byte[] largerBuffer = new byte[contentLength + 2 + 2];
-                    this.frameBuffer.CopyTo(largerBuffer, 0);
-                    this.frameBuffer = largerBuffer;
+                    headerSize = 4;
+                    byte[] largerHeader = new byte[headerSize];
+                    headerBytes.CopyTo(largerHeader, 0);
+                    // Read next two bytes and interpret them as the content length
+                    this.socket.Receive(largerHeader, 2, 2, SocketFlags.None);
+                    contentLength = (ushort) (largerHeader[2] << 8 | largerHeader[3]);
                 }
 
-                this.socket.Receive(this.frameBuffer);
+                // if (totalFrameSize > this.frameHeaderBuffer.Length)
+                // {
+                //     // Resize this instance's buffer according to the length of the content that is being received
+                //     byte[] largerBuffer = new byte[contentLength + headerSize];
+                //     this.frameHeaderBuffer.CopyTo(largerBuffer, 0);
+                //     this.frameHeaderBuffer = largerBuffer;
+                // }
 
-                SocketDataFrame frame = new SocketDataFrame(fin, masked, contentLength, (SocketDataFrame.DataFrameType)opcode, this.frameBuffer);
+                byte[] maskingKey = new byte[4];
+                this.socket.Receive(maskingKey);
+
+                byte[] contentBuffer = new byte[contentLength];
+                if (contentLength > 0) this.socket.Receive(contentBuffer);
+
+                SocketDataFrame frame = new SocketDataFrame(fin, masked, contentLength, (SocketDataFrame.DataFrameType)opcode, UnmaskContent(contentBuffer, maskingKey));
                 return new SocketDataFrame();
             }
-            
+
             return null;
         }
 
-        public void Dispose() {
+        private static byte[] UnmaskContent(byte[] masked, byte[] maskingKey)
+        {
+            if (maskingKey.Length != 4) throw new ArgumentException("Masking key must always be of length 4");
+
+            if (masked.Length == 0) return new byte[0];
+
+            byte[] unmasked = new byte[masked.Length];
+
+            for (int i = 0; i < masked.Length; i++)
+            {
+                byte j = (byte) (i % 4); // Always either 0, 1, 2 or 3
+                unmasked[i] = (byte) (masked[i] ^ maskingKey[j]);
+            }
+
+            Console.WriteLine(System.Text.Encoding.ASCII.GetString(unmasked));
+            Array.Reverse(unmasked);
+            Console.WriteLine(System.Text.Encoding.ASCII.GetString(unmasked));
+
+            return unmasked;
+        }
+
+        public void Dispose()
+        {
             if (this.socket != null) {
                 this.socket.Dispose();
             }

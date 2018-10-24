@@ -118,7 +118,7 @@ namespace NarcityMedia.Net
             this.DataType = dataType;
             this.InitOPCode();
 
-            if (message.Length <= 126)
+            if (message.Length <= 65536)
             {
                 this.data = message;
             }
