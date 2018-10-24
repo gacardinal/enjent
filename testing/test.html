@@ -26,6 +26,12 @@
             border: 0.5px solid white;
         }
 
+        button#close {
+            background: #ff2634;
+            color: white;
+            border-color: #da1c29
+        }
+
         .log-entry {
             width: 100%;
         }
@@ -34,6 +40,12 @@
         }
         .log-entry.error {
             color: #F00;
+        }
+        .log-entry.warn {
+            color: yellow;
+        }
+        .log-entry.info {
+            color: rgb(111, 111, 255);
         }
     </style>
 
@@ -55,6 +67,14 @@
             return true;
         }
 
+        let closeSocket = () => {
+            if (socket) {
+                socket.close();
+                log("Socket closed normally", 'info');
+            } else {
+                log("Can't close an uninitialized socket", 'warn');
+            }
+        }
 
         let strToAB = str =>
             new Uint8Array(str.split('')
@@ -71,7 +91,7 @@
                     console.log(e);
                     let dv = new DataView(e.data, 0);
                     document.getElementById("app-code").innerHTML = dv.getInt8(0);
-                    log('Socket got message : ' + dv.getInt8(0));
+                    log('Socket got message : ' + dv.getInt8(0), 'info');
                 };
                 socket.onclose = () => {
                     log("Socket was closed!", "error");
@@ -103,7 +123,9 @@
         <h1 id="app-code">-</h1>
         <button id='refresh' onclick="init()">(Re)initlalize Socket</button>
         <button id='navigate' onclick="navigate()">Simulate user navigation</button>
-        <input type="text" id="url" placeholder="Navigate To" />
+        <input type="text" id="url" placeholder="Navigate to" />
+        <br />
+        <button id='close' onclick="closeSocket()">Close Socket</button>
 
         <div id="console">
         </div>
