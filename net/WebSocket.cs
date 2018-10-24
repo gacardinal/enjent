@@ -32,7 +32,7 @@ namespace NarcityMedia.Net
                 this.Plaintext = System.Text.Encoding.UTF8.GetString(value);
             }
         }
-        protected byte opcode;
+        public byte opcode;
         protected ushort contentLength;
 
         public string Plaintext;
