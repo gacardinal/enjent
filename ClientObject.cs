@@ -74,13 +74,31 @@ namespace NarcityMedia
                     SocketFrame frame = this.TryParse(frameHeaderBuffer);
                     if (frame != null)
                     {
-                        Console.WriteLine(frame.Plaintext);
-                        this.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.FetchCurrentArticle);
+                        if (frame is SocketControlFrame)
+                        {
+                            Console.WriteLine("Received Control frame");
+                            switch (frame.opcode)
+                            {
+                                case 0: // Continuation
+                                    this.listenToSocket = false;
+                                    break;
+                                case 8: // Close
+                                    this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
+                                    this.listenToSocket = false;
+                                    break;
+                            }
+                        }
+                        else
+                        {
+                            Console.WriteLine("Received data frame");
+                            Console.WriteLine(frame.Plaintext);
+                            this.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.FetchCurrentArticle);
+                        }
                     }
                     else
                     {
-                        this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
-                        this.listenToSocket = false;    
+                        if (!this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close)))
+                            this.listenToSocket = false;
                     }
                 }
             }
@@ -89,6 +107,7 @@ namespace NarcityMedia
                 Logger.Log(e.Message, Logger.LogType.Error);
             }
 
+            Logger.Log("SOcket closing", Logger.LogType.Info);
             // End thread execution
             return;
         }
@@ -338,11 +357,12 @@ namespace NarcityMedia
         /// Sends a websocket control frame such as a 'pong' or a 'close' frame
         /// </summary>
         /// <param name="frame">The control frame to send</param>
-        public void SendControlFrame(SocketFrame frame)
+        public bool SendControlFrame(SocketFrame frame)
         {
             List<SocketFrame> frames = new List<SocketFrame>(1);
             frames.Add(frame);
-            this.SendFrames(frames);
+            
+            return this.SendFrames(frames);
         }
 
         
@@ -351,13 +371,17 @@ namespace NarcityMedia
         /// Returns a null reference if object cannot be parsed
         /// </summary>
         /// <param name="headerBytes"></param>
-        /// <returns>The parsed object if parse is successful or a NULL object if the parse wasn't successful</returns>
+        /// <returns>
+        /// If pasrse is successful, an Object of a type that is derived from SocketFrame.abstract Returns a null pointer otherwise.
+        /// </returns>
         /// <remarks>
         /// This method is not exactly like the Int*.TryParse() functions as it doesn't take an 'out' parameter and return a
         /// boolean value but rather returns either the parsed object or a null reference, which means that callers of this method need to check
-        /// for null before using the return value
+        /// for null before using the return value.
+        /// Furthermore, if the parse is successful, a caller should check the type of the object that is returned to, for example,
+        /// differenciate between a SocketDataFrame and a SocketControlFrame, which are both derived from SocketFrame.
         /// </remarks>
-        public SocketDataFrame TryParse(byte[] headerBytes)
+        public SocketFrame TryParse(byte[] headerBytes)
         {
             int headerSize = headerBytes.Length;
             bool fin = (headerBytes[0] >> 7) != 0;
@@ -385,7 +409,16 @@ namespace NarcityMedia
                 byte[] contentBuffer = new byte[contentLength];
                 if (contentLength > 0) this.socket.Receive(contentBuffer);
 
-                SocketDataFrame frame = new SocketDataFrame(fin, masked, contentLength, (SocketDataFrame.DataFrameType)opcode, UnmaskContent(contentBuffer, maskingKey));
+                SocketFrame frame;
+                if (opcode == 1 || opcode == 2)
+                {
+                    frame = new SocketDataFrame(fin, masked, contentLength, (SocketDataFrame.DataFrameType)opcode, UnmaskContent(contentBuffer, maskingKey));
+                }
+                else
+                {
+                    frame = new SocketControlFrame(fin, masked, (SocketFrame.OPCodes)opcode);
+                }
+
                 return frame;
             }
 
