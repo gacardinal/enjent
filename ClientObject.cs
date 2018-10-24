@@ -377,6 +377,8 @@ namespace NarcityMedia
                     contentLength = (ushort) (largerHeader[2] << 8 | largerHeader[3]);
                 }
 
+                Console.WriteLine("Content Length: " + contentLength);
+
                 byte[] maskingKey = new byte[4];
                 this.socket.Receive(maskingKey);
 

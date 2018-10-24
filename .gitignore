@@ -6,6 +6,8 @@ bin
 obj/*
 obj
 
+testing/string.txt
+
 # Compiled Object files
 *.slo
 *.lo
