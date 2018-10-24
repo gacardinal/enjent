@@ -41,9 +41,11 @@
         let socket;
 
         let send = message => {
+            alert(message.length);
+            alert(message);
             if (socket) {
                 try {
-                    socket.send(message);
+                    socket.send(strToAB(message));
                 } catch (e) {
                     log("Error sending data - " + e.message);
                 }
@@ -54,6 +56,12 @@
 
             return true;
         }
+
+
+        let strToAB = str =>
+            new Uint8Array(str.split('')
+                .map(c => c.charCodeAt(0))).buffer;
+
 
         let init = () => {
             log('Initializing socket connection...');
