@@ -260,7 +260,7 @@ namespace NarcityMedia
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("HTTP/1.1 101 Switching Protocols\n"));
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Connection: upgrade\n"));
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Upgrade: websocket\n"));
-                this.socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Extensions: permessage-deflate\n"));
+                // this.socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Extensions: permessage-deflate\n"));
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Accept: " + negociatedkey + "\n\n"));
             
                 return true;
@@ -406,15 +406,23 @@ namespace NarcityMedia
 
             byte[] unmasked = new byte[masked.Length];
 
+            Console.Write("Unmasking " + masked.Length + " bytes : ");
             for (int i = 0; i < masked.Length; i++)
             {
-                byte j = (byte) (i % 4); // Always either 0, 1, 2 or 3
-                unmasked[i] = (byte) (masked[i] ^ maskingKey[j]);
+                unmasked[i] = (byte) (masked[i] ^ maskingKey[i % 4]);
+                Console.Write(masked[i]);
+                Console.Write(" => ");
+                Console.Write(unmasked[i]);
+                Console.Write(i != masked.Length - 1 ? ", " : "");
             }
 
-            Console.WriteLine(System.Text.Encoding.ASCII.GetString(unmasked));
-            Array.Reverse(unmasked);
-            Console.WriteLine(System.Text.Encoding.ASCII.GetString(unmasked));
+            Console.WriteLine("");
+            Console.WriteLine("Masked UTF8 : " + System.Text.Encoding.UTF8.GetString(masked));
+            Console.WriteLine("Unmask UTF8 : " + System.Text.Encoding.UTF8.GetString(unmasked));
+            
+            Console.WriteLine("");            
+            Console.WriteLine("Masked ASCII : " + System.Text.Encoding.ASCII.GetString(masked));
+            Console.WriteLine("Unmask ASCII : " + System.Text.Encoding.ASCII.GetString(unmasked));
 
             return unmasked;
         }

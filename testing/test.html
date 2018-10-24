@@ -41,11 +41,9 @@
         let socket;
 
         let send = message => {
-            alert(message.length);
-            alert(message);
             if (socket) {
                 try {
-                    socket.send(strToAB(message));
+                    socket.send((message));
                 } catch (e) {
                     log("Error sending data - " + e.message);
                 }
@@ -68,11 +66,13 @@
 
             try {
                 socket = new WebSocket("ws://127.0.0.1:13003?www.test.narcity.com/test");
-                socket.binaryType = 'arraybuffer';
+                // socket.binaryType = 'arraybuffer';
                 socket.onmessage = e => {
-                    let dv = new DataView(e.data, 0);
-                    document.getElementById("app-code").innerHTML = dv.getInt8(0);
-                    log('Socket got message : ' + dv.getInt8(0));
+                    console.log(e);
+                    window.LASTMESSAGE = e;
+                    // let dv = new DataView(e.data, 0);
+                    // document.getElementById("app-code").innerHTML = dv.getInt8(0);
+                    // log('Socket got message : ' + dv.getInt8(0));
                 };
                 socket.onclose = () => {
                     log("Socket was closed!", "error");
