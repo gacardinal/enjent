@@ -74,6 +74,7 @@ namespace NarcityMedia
                     SocketFrame frame = this.TryParse(frameHeaderBuffer);
                     if (frame != null)
                     {
+                        Console.WriteLine(frame.Plaintext);
                         this.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.FetchCurrentArticle);
                     }
                     else
@@ -260,7 +261,6 @@ namespace NarcityMedia
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("HTTP/1.1 101 Switching Protocols\n"));
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Connection: upgrade\n"));
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Upgrade: websocket\n"));
-                // this.socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Extensions: permessage-deflate\n"));
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Accept: " + negociatedkey + "\n\n"));
             
                 return true;
@@ -377,14 +377,6 @@ namespace NarcityMedia
                     contentLength = (ushort) (largerHeader[2] << 8 | largerHeader[3]);
                 }
 
-                // if (totalFrameSize > this.frameHeaderBuffer.Length)
-                // {
-                //     // Resize this instance's buffer according to the length of the content that is being received
-                //     byte[] largerBuffer = new byte[contentLength + headerSize];
-                //     this.frameHeaderBuffer.CopyTo(largerBuffer, 0);
-                //     this.frameHeaderBuffer = largerBuffer;
-                // }
-
                 byte[] maskingKey = new byte[4];
                 this.socket.Receive(maskingKey);
 
@@ -392,7 +384,7 @@ namespace NarcityMedia
                 if (contentLength > 0) this.socket.Receive(contentBuffer);
 
                 SocketDataFrame frame = new SocketDataFrame(fin, masked, contentLength, (SocketDataFrame.DataFrameType)opcode, UnmaskContent(contentBuffer, maskingKey));
-                return new SocketDataFrame();
+                return frame;
             }
 
             return null;
@@ -406,23 +398,10 @@ namespace NarcityMedia
 
             byte[] unmasked = new byte[masked.Length];
 
-            Console.Write("Unmasking " + masked.Length + " bytes : ");
             for (int i = 0; i < masked.Length; i++)
             {
                 unmasked[i] = (byte) (masked[i] ^ maskingKey[i % 4]);
-                Console.Write(masked[i]);
-                Console.Write(" => ");
-                Console.Write(unmasked[i]);
-                Console.Write(i != masked.Length - 1 ? ", " : "");
             }
-
-            Console.WriteLine("");
-            Console.WriteLine("Masked UTF8 : " + System.Text.Encoding.UTF8.GetString(masked));
-            Console.WriteLine("Unmask UTF8 : " + System.Text.Encoding.UTF8.GetString(unmasked));
-            
-            Console.WriteLine("");            
-            Console.WriteLine("Masked ASCII : " + System.Text.Encoding.ASCII.GetString(masked));
-            Console.WriteLine("Unmask ASCII : " + System.Text.Encoding.ASCII.GetString(unmasked));
 
             return unmasked;
         }

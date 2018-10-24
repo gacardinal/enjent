@@ -22,9 +22,20 @@ namespace NarcityMedia.Net
 
         protected bool fin;
         protected bool masked;
-        protected byte[] data;
+        protected byte[] _data;
+        protected byte[] data
+        {
+            get { return this._data; }
+            set
+            {
+                this._data = value;
+                this.Plaintext = System.Text.Encoding.UTF8.GetString(value);
+            }
+        }
         protected byte opcode;
         protected ushort contentLength;
+
+        public string Plaintext;
 
         public SocketFrame(bool fin, bool masked, ushort length)
         {
@@ -132,23 +143,6 @@ namespace NarcityMedia.Net
         {
             if (this.DataType == DataFrameType.Text) this.opcode = (byte) SocketFrame.OPCodes.Text;
             else this.opcode = (byte) SocketFrame.OPCodes.Binary;
-        }
-
-        protected static SocketDataFrame FromBytes(byte[] bytes)
-        {
-            SocketDataFrame frame = new SocketDataFrame();
-
-            return frame;
-        }
-
-        public static bool IsValidHeader(byte[] bytes)
-        {
-            return (
-                bytes.Length >= 2 && bytes.Length <= 4
-                && Enum.IsDefined(typeof(SocketFrame.OPCodes), bytes[0] & 0b00001111) // Valid OP Code
-                && (bytes[1] & 0b10000000) == 0b10000000                             // Mask is true
-                && (bytes[1] & 0b01111111) <= 0b01111110                             // Don't allow content length values above 126 (very large frames not supproted)
-            );
         }
     }
 
