@@ -51,6 +51,7 @@
 
     <script>
         let socket;
+        let pingInterval;
 
         let send = message => {
             if (socket) {
@@ -69,6 +70,7 @@
 
         let closeSocket = () => {
             if (socket) {
+                if (pingInterval) window.clearInterval(pingInterval);
                 socket.close();
                 log("Socket closed normally", 'info');
             } else {
@@ -80,11 +82,12 @@
             new Uint8Array(str.split('')
                 .map(c => c.charCodeAt(0))).buffer;
 
-
         let init = () => {
             log('Initializing socket connection...');
 
             try {
+                if (pingInterval) window.clearInterval(pingInterval);
+
                 socket = new WebSocket("ws://127.0.0.1:13003?www.test.narcity.com/test");
                 socket.binaryType = 'arraybuffer';
                 socket.onmessage = e => {
@@ -96,6 +99,11 @@
                 socket.onclose = () => {
                     log("Socket was closed!", "error");
                 };
+
+                pingInterval = setInterval(() => {
+                    log('Sending ping', 'info');
+                    send(new Uint8Array([0b00001111])); // Ping 0b00001110 = 14  /  Pong 0b00001111 = 15  subject to change
+                }, 2000);
             } catch (e) {
                 log("Couldn't initialize socket - " + e.message, 'error');
             }
