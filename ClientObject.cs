@@ -86,6 +86,13 @@ namespace NarcityMedia
                                     this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
                                     this.listenToSocket = false;
                                     break;
+                                case 9:
+                                    Logger.Log("Received ping", Logger.LogType.Info);
+                                    this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Pong));
+                                    break;
+                                default:
+                                    this.listenToSocket = false;
+                                    break;
                             }
                         }
                         else
