@@ -148,6 +148,11 @@ namespace NarcityMedia.Net
 
     class SocketControlFrame : SocketDataFrame
     {
+        public SocketControlFrame(SocketFrame.OPCodes controlOpCode) :base(true, false, 0,SocketDataFrame.DataFrameType.Binary)
+        {
+            this.opcode = (byte) controlOpCode;
+        }
+
         public SocketControlFrame(bool fin, bool masked, SocketFrame.OPCodes controlOpCode)
                 : base(true, false, 0, SocketDataFrame.DataFrameType.Binary)
         {
