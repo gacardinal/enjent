@@ -14,7 +14,7 @@ namespace NarcityMedia
         GET, POST, DELETE, PUT
     }
 
-    class ClientObject : IDisposable {
+    public class ClientObject : IDisposable {
         public bool Authenticated
         {
             get { return String.IsNullOrEmpty(this.lmlTk); }
@@ -54,7 +54,7 @@ namespace NarcityMedia
             get { return this._url; }
             set{
                 this._url = value;
-                this.currentUrl = System.Text.Encoding.Default.GetString(result);
+                this.currentUrl = System.Text.Encoding.Default.GetString(value);
             }
         }
 
@@ -204,6 +204,7 @@ namespace NarcityMedia
                 {
                     this.url = new byte[i - urlStartImdex];
                     Array.Copy(this.requestheaders, urlStartImdex, this.url, 0, i - urlStartImdex);
+                    this.currentUrl = System.Text.Encoding.Default.GetString(this.url);
                     buildingQueryString = false;
                 }
             }
@@ -471,8 +472,8 @@ namespace NarcityMedia
     /// Represents an application message that is to be sent via WebSocket.
     /// A message is composed of frames
     /// </summary>
-    /// <remarks>This class only support messages that can fit in a single frame for now</remarks>
-    class WebSocketMessage
+    /// <remarks>This public class only support messages that can fit in a single frame for now</remarks>
+    public class WebSocketMessage
     {
         // Start values at value 1 to avoid sending empty application data
         public enum ApplicationMessageCode { Greeting = 1, FetchNOtifications, FetchCurrentArticle, FetchComments }

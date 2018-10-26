@@ -8,7 +8,7 @@ namespace NarcityMedia.Net
     /// Represents a general concept of a WebSocket frame described by the 
     /// WebSocket standard
     /// </summary>
-    abstract partial class SocketFrame
+    public abstract partial class SocketFrame
     {
         public enum OPCodes
         {
@@ -47,7 +47,7 @@ namespace NarcityMedia.Net
         /// <summary>
         /// Initializes the OPCode of the frame, the frame must decide it's own opcode
         /// </summary>
-        /// <remarks>Derived classes MUST override</remarks>
+        /// <remarks>Derived public classes MUST override</remarks>
         protected abstract void InitOPCode();
 
         /// <summary>
@@ -107,7 +107,7 @@ namespace NarcityMedia.Net
     /// <summary>
     /// Represents a WebSocket frame that contains data
     /// </summary>
-    class SocketDataFrame : SocketFrame
+    public class SocketDataFrame : SocketFrame
     {
         public enum DataFrameType { Text, Binary }
         public DataFrameType DataType;
@@ -135,7 +135,7 @@ namespace NarcityMedia.Net
             }
             else
             {
-                throw new ArgumentOutOfRangeException("This class does not support frames that have a content length value that is greater than 126");
+                throw new ArgumentOutOfRangeException("This public class does not support frames that have a content length value that is greater than 126");
             }
         }
 
@@ -146,7 +146,7 @@ namespace NarcityMedia.Net
         }
     }
 
-    class SocketControlFrame : SocketDataFrame
+    public class SocketControlFrame : SocketDataFrame
     {
         public SocketControlFrame(SocketFrame.OPCodes controlOpCode) :base(true, false, 0,SocketDataFrame.DataFrameType.Binary)
         {

@@ -1,15 +1,16 @@
 using System.Collections.Generic;
+using NarcityMedia.Net;
 
 namespace NarcityMedia
 {
     /// <summary>
-    /// Class that acts as a Proxy to manage the list of sockets.
+    /// public class that acts as a Proxy to manage the list of sockets.
     /// This pattern ensures the thread safety of the socket lists
     /// </summary>
     /// <remarks>See http://csharpindepth.com/Articles/General/Singleton.aspx</remarks>
-    class SocketManager
+    public class SocketManager
     {
-        private static SocketManager instance = new SocketManager();
+        private static readonly SocketManager instance = new SocketManager();
 
         /// <summary>
         /// A list of all the rooms (one roomv per website endpoint)
@@ -37,16 +38,15 @@ namespace NarcityMedia
 
         private SocketManager()
         {
-            this.url_sockets = new Dictionary<string, ClientObject[]>(200);
-            this.session_Socket = new Dictionary<string, ClientObject>(2000);
+            this.Rooms = new List<Room>(60);
+            this.Clients = new Dictionary<string, ClientObject>(2000);
         }
 
-        private Room GetRoomByName(string roomName)
-        {
-            return this.Rooms.Find(name => name == roomName);
-        }
-
-        public static SocketManager Singleton
+        /// <summary>
+        /// Returns the SocketManager singleton instance
+        /// </summary>
+        /// <value>Singleton instance</value>
+        public static SocketManager Instance
         {
             get
             {
@@ -54,19 +54,32 @@ namespace NarcityMedia
             }
         }
 
-        public bool AddClient(ClientObject client, string endpoint)
+        public Room GetRoomByName(string name)
         {
-            Room room = GetRoomByName(endpoint);
+            return this.Rooms.Find(room => room.Name == name);
+        }
+
+        /// <summary>
+        /// Adds a given client to a specified room instance.
+        /// If the room can't be found, it will be created.
+        /// </summary>
+        /// <param name="client">The client object to insert</param>
+        public void AddClient(ClientObject client)
+        {
+            Room room = GetRoomByName(client.currentUrl);
             
             if (room != null)
             {
                 room.Clients.Add(client);
-                return true;
             }
-            
-            return false;
-        }
+            else
+            {
+                room = new Room(client.currentUrl);
+                this.Rooms.Add(room);
+            }
 
+            room.Clients.Add(client);
+        }
         public List<ClientObject> GetClientsByEndpoint(string endpoint)
         {
             List<ClientObject> clients = new List<ClientObject>();
@@ -80,14 +93,19 @@ namespace NarcityMedia
             return clients;
         }
 
-        public bool RemoveClientByEndpoint(ClientObject client, string endpont)
+        public bool RemoveClient(ClientObject client)
         {
-            Room room = GetRoomByName(endpoint);
+            // Find client in <string, client> dictionary
+            // Get client.currentUrl and store in variable
+            // Delete referebce ub dictionary
+            // Go delete reference in the Room with name found earlier
 
-            if (room != null)
-            {
-                return room.Clients.Remove(client);
-            }
+            // Room room = GetRoomByName(endpoint);
+
+            // if (room != null)
+            // {
+            //     return room.Clients.Remove(client);
+            // }
 
             return false;
         }
@@ -96,7 +114,7 @@ namespace NarcityMedia
     /// <summary>
     /// Represent a group of client object that should all receive the same WebSOcket events
     /// </summary>
-    class Room
+    public class Room
     {
         public string Name;
 
@@ -104,8 +122,25 @@ namespace NarcityMedia
 
         public Room(string name)
         {
-            this.name = name;
+            this.Name = name;
             this.Clients = new List<ClientObject>(50);
+        }
+
+        /// <summary>
+        /// Sends a given application message to the websocket associated to every client in the room
+        /// </summary>
+        /// <param name="messageCode">The application message code t send</param>
+        /// <returns>The number of messages sent</returns>
+        public int Broadcast(WebSocketMessage.ApplicationMessageCode messageCode)
+        {
+            int messagesSent = 0;
+
+            lock (this.Clients)
+            {
+                this.Clients.ForEach(client => client.SendApplicationMessage(messageCode));
+            }
+
+            return messagesSent;
         }
     }
 }

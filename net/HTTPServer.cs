@@ -8,9 +8,9 @@ using NarcityMedia.Log;
 namespace NarcityMedia.Net
 {
     /// <summary>
-    /// Acts as a decorator on the <see cref="HttpListener" /> class
+    /// Acts as a decorator on the <see cref="HttpListener" /> public class
     /// </summary>
-    class HTTPServer
+    public class HTTPServer
     {
         private HttpListener listener;
         private Uri rootEndpoint;

@@ -2,7 +2,7 @@ using System;
 
 namespace NarcityMedia.Log
 {
-    static class Logger
+    static public class Logger
     {
         public enum LogType
         {

@@ -9,15 +9,14 @@ using NarcityMedia.Log;
 
 namespace dotnet_core_socket_server
 {
-    class Program
+    public class Program
     {
         public static List<ClientObject> Connections = new List<ClientObject>();
         private static Boolean exit = false;
         private static Mutex mutex = new Mutex();
-        private static List<Socket> socketList = new List<Socket>(2000);
         private const int MUTEX_TIMEOUT_DELAY = 5000;
         private static HTTPServer httpServer;
-
+        private static SocketManager manager = SocketManager.Instance;
         static void Main(string[] args)
         {
             Thread HTTP = new Thread(Program.DispatchHTTPServer);
@@ -61,12 +60,10 @@ namespace dotnet_core_socket_server
                 {
                     cli.Greet();
                     Logger.Log("Socket connection accepted", Logger.LogType.Success);
-                    Console.WriteLine("ORIGINAL COUNT: " + socketList.Count);
+                    manager.AddClient(cli);
                     // TODO: Add socket to SocketManager
                     // TODO: Dispose of client object on disconnection
-                    socketList.Add(handler);
                     Connections.Add(cli);
-                    Console.WriteLine("NEW COUNT: " + socketList.Count);
                     mutex.ReleaseMutex();
                 }
                 else
@@ -130,6 +127,7 @@ namespace dotnet_core_socket_server
 
         private static void SendNotificationToEndpoint(HttpListenerRequest req, HttpListenerResponse res)
         {
+            manager.GetRoomByName("www.test.narcity.com/test").Broadcast(WebSocketMessage.ApplicationMessageCode.FetchComments);
             Logger.Log("HTTP Request to POST /sendNotificationToEndpoint", Logger.LogType.Success);
             httpServer.SendResponse(res, HttpStatusCode.OK, "GET /notifyendpoint");
         }
