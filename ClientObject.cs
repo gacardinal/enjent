@@ -20,7 +20,7 @@ namespace NarcityMedia
             get { return String.IsNullOrEmpty(this.lmlTk); }
         }
 
-        private string lmlTk;
+        public string lmlTk;
         private const byte NEWLINE_BYTE = (byte)'\n';
         private const byte QUESTION_MARK_BYTE = (byte)'?';
         private const byte COLON_BYTE = (byte)':';
@@ -62,7 +62,8 @@ namespace NarcityMedia
 
         public delegate void SocketMessageCallback(WebSocketMessage message);
 
-        public ClientObject(Socket socket) {
+        public ClientObject(Socket socket)
+        {
             this.socket = socket;
             
             this.listener = new Thread(this.BeginListening);
@@ -94,6 +95,7 @@ namespace NarcityMedia
                                     break;
                                 case 8: // Close
                                     this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
+                                    SocketManager.Instance.RemoveClient(this);
                                     this.listenToSocket = false;
                                     break;
                                 case 9:
@@ -461,7 +463,6 @@ namespace NarcityMedia
 
         public void Dispose()
         {
-            
             if (this.socket != null) {
                 this.socket.Dispose();
             }
