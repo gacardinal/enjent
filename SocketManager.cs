@@ -11,25 +11,23 @@ namespace NarcityMedia
     {
         private static SocketManager instance = new SocketManager();
 
-        private Dictionary<string, ClientObject[]> url_sockets;
-
-        private Dictionary<string, ClientObject> session_Socket;
+        /// <summary>
+        /// A list of all the rooms (one roomv per website endpoint)
+        /// </summary>
+        public List<Room> Rooms;
 
         /// <summary>
-        /// Associates multiple ClientObjects to a URL
+        /// A list of the website's current clients, keyed by their session identifier
         /// </summary>
-        public Dictionary<string, ClientObject[]> URL_Sockets
-        {
-            get { return url_sockets; }
-        }
+        public Dictionary<string, ClientObject> Clients;
 
         /// <summary>
-        /// Associates a socket to a Lilium session string identifier
+        /// A delegate that will be used by multiple Threads to 'schedule' jobs on the ClientObjects.
+        /// This execution of the delegate will be thread safe because the code inside the delegate will not access
+        /// shared data since.
         /// </summary>
-        public Dictionary<string, ClientObject> Session_Socket
-        {
-            get { return session_Socket; }
-        }
+        /// <param name="client"></param>
+        public delegate void ClientObjectOperation(ClientObject client);
 
         // Explicit static constructor to tell C# compiler
         // not to mark type as beforefieldinit
@@ -43,6 +41,11 @@ namespace NarcityMedia
             this.session_Socket = new Dictionary<string, ClientObject>(2000);
         }
 
+        private Room GetRoomByName(string roomName)
+        {
+            return this.Rooms.Find(name => name == roomName);
+        }
+
         public static SocketManager Singleton
         {
             get
@@ -51,17 +54,58 @@ namespace NarcityMedia
             }
         }
 
-        public void AddClientObject(ClientObject cli)
+        public bool AddClient(ClientObject client, string endpoint)
         {
-            lock (this.url_sockets)
+            Room room = GetRoomByName(endpoint);
+            
+            if (room != null)
             {
-                ;
+                room.Clients.Add(client);
+                return true;
+            }
+            
+            return false;
+        }
+
+        public List<ClientObject> GetClientsByEndpoint(string endpoint)
+        {
+            List<ClientObject> clients = new List<ClientObject>();
+            Room room = GetRoomByName(endpoint);            
+
+            if (room != null)
+            {
+                clients = room.Clients;
             }
 
-            lock (this.session_Socket)
+            return clients;
+        }
+
+        public bool RemoveClientByEndpoint(ClientObject client, string endpont)
+        {
+            Room room = GetRoomByName(endpoint);
+
+            if (room != null)
             {
-                ;
+                return room.Clients.Remove(client);
             }
+
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Represent a group of client object that should all receive the same WebSOcket events
+    /// </summary>
+    class Room
+    {
+        public string Name;
+
+        public List<ClientObject> Clients;
+
+        public Room(string name)
+        {
+            this.name = name;
+            this.Clients = new List<ClientObject>(50);
         }
     }
 }

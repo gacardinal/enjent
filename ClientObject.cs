@@ -47,8 +47,18 @@ namespace NarcityMedia
         private int requestheaderslength;
         private int writeindex = 0;
         private Thread listener;
+        
+        private byte[] _url;
+        private byte[] url
+        {
+            get { return this._url; }
+            set{
+                this._url = value;
+                this.currentUrl = System.Text.Encoding.Default.GetString(result);
+            }
+        }
 
-        public byte[] url;
+        public string currentUrl;
 
         public delegate void SocketMessageCallback(WebSocketMessage message);
 
@@ -450,6 +460,7 @@ namespace NarcityMedia
 
         public void Dispose()
         {
+            
             if (this.socket != null) {
                 this.socket.Dispose();
             }
