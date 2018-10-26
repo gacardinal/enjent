@@ -11,12 +11,9 @@ namespace dotnet_core_socket_server
 {
     public class Program
     {
-        public static List<ClientObject> Connections = new List<ClientObject>();
         private static Boolean exit = false;
-        private static Mutex mutex = new Mutex();
-        private const int MUTEX_TIMEOUT_DELAY = 5000;
         private static HTTPServer httpServer;
-        private static SocketManager manager = SocketManager.Instance;
+        
         static void Main(string[] args)
         {
             Thread HTTP = new Thread(Program.DispatchHTTPServer);
@@ -52,33 +49,31 @@ namespace dotnet_core_socket_server
         {
             Socket handler = (Socket) s;
             ClientObject cli = new ClientObject((Socket) handler);
+            cli.OnMessage = OnSocketMessage;
+            cli.OnClose = OnSocketClose;
             if (cli.ReadRequestHeaders() &&
                 cli.AnalyzeRequestHeaders() &&
                 cli.Negociate101Upgrade() )
             {
-                if (mutex.WaitOne(MUTEX_TIMEOUT_DELAY))
-                {
-                    cli.Greet();
-                    Logger.Log("Socket connection accepted", Logger.LogType.Success);
-                    manager.AddClient(cli);
-                    // TODO: Add socket to SocketManager
-                    // TODO: Dispose of client object on disconnection
-                    Connections.Add(cli);
-                    mutex.ReleaseMutex();
-                }
-                else
-                {
-                    Logger.Log("Main thread was not able to acquire the mutex to push a new socket to the local socket list", Logger.LogType.Error);
-                }
+                cli.Greet();
+                cli.StartListenAsync();
+                Logger.Log("Socket connection accepted", Logger.LogType.Success);
+                SocketManager.Instance.AddClient(cli);
             } else {
                 Logger.Log("Socket connection refused, couldn't parse headers", Logger.LogType.Error);
                 cli.Dispose();
             }
         }
 
-        private static void OnSocketMessage(WebSocketMessage message)
+        private static void OnSocketMessage(SocketDataFrame message)
         {
-            Logger.Log("CLIENT OBJECT RECEIVED A MESSAGE YAY", Logger.LogType.Info);
+            Logger.Log("Received message : " + message.Plaintext, Logger.LogType.Info);
+        }
+
+        private static void OnSocketClose(ClientObject client)
+        {
+            SocketManager.Instance.RemoveClient(client);
+            Logger.Log("Socket is closing", Logger.LogType.Info);
         }
 
         private static void DispatchHTTPServer()
@@ -110,23 +105,19 @@ namespace dotnet_core_socket_server
         private static void Hello(HttpListenerRequest req, HttpListenerResponse res)
         {
             Logger.Log("HTTP Request to GET /hello", Logger.LogType.Success);
-
-            Connections.ForEach(s => s.Greet());
-
             httpServer.SendResponse(res, HttpStatusCode.OK, "GET /hello");
         }
 
         private static void SendNotificationToUser(HttpListenerRequest req, HttpListenerResponse res)
         {
             Logger.Log("HTTP Request to POST /sendNotificationToUser", Logger.LogType.Success);
-            Connections.ForEach(s => s.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.FetchCurrentArticle));
             httpServer.SendResponse(res, HttpStatusCode.OK, "GET /notifyuser");
         }
 
         private static void SendNotificationToEndpoint(HttpListenerRequest req, HttpListenerResponse res)
         {
             Logger.Log("HTTP Request to POST /sendNotificationToEndpoint", Logger.LogType.Success);
-            Room endpointRoom = manager.GetRoomByName("www.test.narcity.com/test");
+            Room endpointRoom = SocketManager.Instance.GetRoomByName("www.test.narcity.com/test");
             if (endpointRoom != null)
             {
                 endpointRoom.Broadcast(WebSocketMessage.ApplicationMessageCode.FetchComments);
