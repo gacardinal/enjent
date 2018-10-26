@@ -1,3 +1,5 @@
+using System;
+using System.Text;
 using System.Collections.Generic;
 using NarcityMedia.Net;
 
@@ -66,48 +68,67 @@ namespace NarcityMedia
         /// <param name="client">The client object to insert</param>
         public void AddClient(ClientObject client)
         {
-            Room room = GetRoomByName(client.currentUrl);
-            
-            if (room != null)
+            lock (this.Rooms)
             {
+                Room room = GetRoomByName(client.currentUrl);
+                
+                if (room == null)
+                {
+                    room = new Room(client.currentUrl);
+                    this.Rooms.Add(room);
+                }
+
                 room.Clients.Add(client);
             }
-            else
-            {
-                room = new Room(client.currentUrl);
-                this.Rooms.Add(room);
-            }
 
-            room.Clients.Add(client);
+            lock (this.Clients)
+            {
+                // this.Clients.Add(client.lmlTk, client);
+                this.Clients.Add(RandomString(32, false), client);
+            }
         }
-        public List<ClientObject> GetClientsByEndpoint(string endpoint)
+
+        /// <summary>
+        /// Here for testing purposes only
+        /// </summary>
+        private string RandomString(int size, bool lowerCase)
         {
-            List<ClientObject> clients = new List<ClientObject>();
-            Room room = GetRoomByName(endpoint);            
-
-            if (room != null)
+            StringBuilder builder = new StringBuilder();
+            Random random = new Random();
+            char ch;
+            for (int i = 1; i < size+1; i++)
             {
-                clients = room.Clients;
+                ch = Convert.ToChar(Convert.ToInt32(Math.Floor(26 * random.NextDouble() + 65)));
+                builder.Append(ch);
             }
-
-            return clients;
+            if (lowerCase)
+                return builder.ToString().ToLower();
+            else
+                return builder.ToString();
         }
 
         public bool RemoveClient(ClientObject client)
         {
-            // Find client in <string, client> dictionary
-            // Get client.currentUrl and store in variable
-            // Delete referebce ub dictionary
-            // Go delete reference in the Room with name found earlier
+            bool success = false;
 
-            // Room room = GetRoomByName(endpoint);
+            lock (this.Rooms)
+            {
+                Room room = GetRoomByName(client.currentUrl);
 
-            // if (room != null)
-            // {
-            //     return room.Clients.Remove(client);
-            // }
+                lock (room)
+                {
+                    if (room != null)
+                    {
+                        lock (this.Clients)
+                        {
+                            success = room.Clients.Remove(client) && this.Clients.Remove(client.currentUrl);
+                            client.Dispose();
+                        }
+                    }
+                }
+            }
 
-            return false;
+            return success;
         }
     }
 
@@ -135,9 +156,12 @@ namespace NarcityMedia
         {
             int messagesSent = 0;
 
-            lock (this.Clients)
+            if (this.Clients != null && this.Clients.Count > 0)
             {
-                this.Clients.ForEach(client => client.SendApplicationMessage(messageCode));
+                lock (this.Clients)
+                {
+                    this.Clients.ForEach(client => client.SendApplicationMessage(messageCode));
+                }
             }
 
             return messagesSent;
