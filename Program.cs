@@ -102,8 +102,6 @@ namespace dotnet_core_socket_server
             httpServer.Start();
         }
 
-
-
         private static void Index(HttpListenerRequest req, HttpListenerResponse res)
         {
             httpServer.SendResponse(res, HttpStatusCode.OK, "GET Index");

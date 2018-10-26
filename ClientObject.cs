@@ -21,6 +21,10 @@ namespace NarcityMedia
         }
 
         public string lmlTk;
+        public delegate void SocketDataFrameHandler(SocketDataFrame frame);
+        public delegate void SocketControlFrameHandler(SocketControlFrame frame);
+        public SocketControlFrameHandler ControlFrameHandler;
+        public SocketDataFrameHandler DataFrameHandler;
         private const byte NEWLINE_BYTE = (byte)'\n';
         private const byte QUESTION_MARK_BYTE = (byte)'?';
         private const byte COLON_BYTE = (byte)':';
@@ -65,10 +69,19 @@ namespace NarcityMedia
         public ClientObject(Socket socket)
         {
             this.socket = socket;
+            this.ControlFrameHandler = DefaultControlFrameHandler;
+            this.DataFrameHandler = DefaultDataFrameHandler;
             
             this.listener = new Thread(this.BeginListening);
             this.listener.Name = "ClientListenerThread";
             this.listener.Start(this.socket);
+        }
+
+        public ClientObject(Socket socket, SocketControlFrameHandler controlFrameHandler, SocketDataFrameHandler dataFrameHandler)
+                        : this(socket)
+        {
+            this.ControlFrameHandler = controlFrameHandler;
+            this.DataFrameHandler = dataFrameHandler;
         }
 
         // See https://docs.microsoft.com/en-us/dotnet/api/system.net.sockets.socketasynceventargs?view=netframework-4.7.2
@@ -87,31 +100,11 @@ namespace NarcityMedia
                     {
                         if (frame is SocketControlFrame)
                         {
-                            Console.WriteLine("Received Control frame");
-                            switch (frame.opcode)
-                            {
-                                case 0: // Continuation
-                                    this.listenToSocket = false;
-                                    break;
-                                case 8: // Close
-                                    this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
-                                    SocketManager.Instance.RemoveClient(this);
-                                    this.listenToSocket = false;
-                                    break;
-                                case 9:
-                                    Logger.Log("Received ping", Logger.LogType.Info);
-                                    this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Pong));
-                                    break;
-                                default:
-                                    this.listenToSocket = false;
-                                    break;
-                            }
+                            this.ControlFrameHandler((SocketControlFrame) frame);
                         }
-                        else
+                        else if (frame is SocketDataFrame)
                         {
-                            Console.WriteLine("Received data frame");
-                            Console.WriteLine(frame.Plaintext);
-                            this.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.FetchCurrentArticle);
+                            this.DataFrameHandler((SocketDataFrame) frame);
                         }
                     }
                     else
@@ -129,6 +122,36 @@ namespace NarcityMedia
             Logger.Log("SOcket closing", Logger.LogType.Info);
             // End thread execution
             return;
+        }
+
+        private void DefaultControlFrameHandler(SocketControlFrame frame)
+        {
+            Console.WriteLine("Received Control frame");
+            switch (frame.opcode)
+            {
+                case 0: // Continuation
+                    this.listenToSocket = false;
+                    break;
+                case 8: // Close
+                    this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
+                    SocketManager.Instance.RemoveClient(this);
+                    this.listenToSocket = false;
+                    break;
+                case 9:
+                    Logger.Log("Received ping", Logger.LogType.Info);
+                    this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Pong));
+                    break;
+                default:
+                    this.listenToSocket = false;
+                    break;
+            }
+        }
+
+        private void DefaultDataFrameHandler(SocketDataFrame frame)
+        {
+            Console.WriteLine("Received data frame");
+            Console.WriteLine(frame.Plaintext);
+            this.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.Greeting);
         }
 
         private static void ReadSocketData(IAsyncResult ar)
