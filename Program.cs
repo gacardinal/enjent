@@ -127,9 +127,17 @@ namespace dotnet_core_socket_server
 
         private static void SendNotificationToEndpoint(HttpListenerRequest req, HttpListenerResponse res)
         {
-            manager.GetRoomByName("www.test.narcity.com/test").Broadcast(WebSocketMessage.ApplicationMessageCode.FetchComments);
             Logger.Log("HTTP Request to POST /sendNotificationToEndpoint", Logger.LogType.Success);
-            httpServer.SendResponse(res, HttpStatusCode.OK, "GET /notifyendpoint");
+            Room endpointRoom = manager.GetRoomByName("www.test.narcity.com/test");
+            if (endpointRoom != null)
+            {
+                endpointRoom.Broadcast(WebSocketMessage.ApplicationMessageCode.FetchComments);
+                httpServer.SendResponse(res, HttpStatusCode.OK, "GET /notifyendpoint");
+            }
+            else
+            {
+                httpServer.SendResponse(res, HttpStatusCode.NotFound, "Couldn't find any room with the specified endpoint");
+            }
         }
         
         private static void on404(HttpListenerRequest req, HttpListenerResponse res)
