@@ -22,9 +22,11 @@ namespace NarcityMedia
 
         public string lmlTk;
         public delegate void SocketDataFrameHandler(SocketDataFrame frame);
-        public delegate void SocketControlFrameHandler(SocketControlFrame frame);
-        public SocketControlFrameHandler ControlFrameHandler;
-        public SocketDataFrameHandler DataFrameHandler;
+        public SocketDataFrameHandler OnMessage;
+        public delegate void ClientEvent(ClientObject client);
+        public ClientEvent OnClose;
+        private delegate void SocketControlFrameHandler(SocketControlFrame frame);
+        private SocketControlFrameHandler OnControlFrame;
         private const byte NEWLINE_BYTE = (byte)'\n';
         private const byte QUESTION_MARK_BYTE = (byte)'?';
         private const byte COLON_BYTE = (byte)':';
@@ -69,19 +71,19 @@ namespace NarcityMedia
         public ClientObject(Socket socket)
         {
             this.socket = socket;
-            this.ControlFrameHandler = DefaultControlFrameHandler;
-            this.DataFrameHandler = DefaultDataFrameHandler;
+            this.OnControlFrame = DefaultControlFrameHandler;
+            this.OnMessage = DefaultDataFrameHandler;
             
             this.listener = new Thread(this.BeginListening);
             this.listener.Name = "ClientListenerThread";
-            this.listener.Start(this.socket);
         }
 
-        public ClientObject(Socket socket, SocketControlFrameHandler controlFrameHandler, SocketDataFrameHandler dataFrameHandler)
-                        : this(socket)
+        /// <summary>
+        /// Starts listenning to the WebSocket associated to the current client object on a separate thread
+        /// </summary>
+        public void StartListenAsync()
         {
-            this.ControlFrameHandler = controlFrameHandler;
-            this.DataFrameHandler = dataFrameHandler;
+            this.listener.Start(this.socket);
         }
 
         // See https://docs.microsoft.com/en-us/dotnet/api/system.net.sockets.socketasynceventargs?view=netframework-4.7.2
@@ -94,17 +96,16 @@ namespace NarcityMedia
                 while (this.listenToSocket)
                 {
                     int received = socket.Receive(frameHeaderBuffer); // Blocking
-                    WriteOctets(frameHeaderBuffer);
                     SocketFrame frame = this.TryParse(frameHeaderBuffer);
                     if (frame != null)
                     {
                         if (frame is SocketControlFrame)
                         {
-                            this.ControlFrameHandler((SocketControlFrame) frame);
+                            this.OnControlFrame((SocketControlFrame) frame);
                         }
                         else if (frame is SocketDataFrame)
                         {
-                            this.DataFrameHandler((SocketDataFrame) frame);
+                            this.OnMessage((SocketDataFrame) frame);
                         }
                     }
                     else
@@ -126,7 +127,6 @@ namespace NarcityMedia
 
         private void DefaultControlFrameHandler(SocketControlFrame frame)
         {
-            Console.WriteLine("Received Control frame");
             switch (frame.opcode)
             {
                 case 0: // Continuation
@@ -134,8 +134,8 @@ namespace NarcityMedia
                     break;
                 case 8: // Close
                     this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
-                    SocketManager.Instance.RemoveClient(this);
                     this.listenToSocket = false;
+                    if (this.OnClose != null) this.OnClose(this);
                     break;
                 case 9:
                     Logger.Log("Received ping", Logger.LogType.Info);
@@ -149,23 +149,7 @@ namespace NarcityMedia
 
         private void DefaultDataFrameHandler(SocketDataFrame frame)
         {
-            Console.WriteLine("Received data frame");
-            Console.WriteLine(frame.Plaintext);
             this.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.Greeting);
-        }
-
-        private static void ReadSocketData(IAsyncResult ar)
-        {
-            Console.WriteLine("Received data");
-        }
-
-        private static void WriteOctets(byte[] bytes)
-        {
-            foreach (byte b in bytes)
-            {
-                Console.WriteLine((int)b);
-                // Console.WriteLine(Convert.ToString(b, 2));
-            }
         }
 
         private bool AppendHeaderChunk(byte[] buffer, int byteRead)
@@ -443,8 +427,6 @@ namespace NarcityMedia
                     this.socket.Receive(largerHeader, 2, 2, SocketFlags.None);
                     contentLength = (ushort) (largerHeader[2] << 8 | largerHeader[3]);
                 }
-
-                Console.WriteLine("Content Length: " + contentLength);
 
                 byte[] maskingKey = new byte[4];
                 this.socket.Receive(maskingKey);
