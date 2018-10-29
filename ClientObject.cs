@@ -21,7 +21,7 @@ namespace NarcityMedia
         }
 
         public string lmlTk;
-        public delegate void SocketDataFrameHandler(SocketDataFrame frame);
+        public delegate void SocketDataFrameHandler(ClientObject client, SocketDataFrame frame);
         public SocketDataFrameHandler OnMessage;
         public delegate void ClientEvent(ClientObject client);
         public ClientEvent OnClose;
@@ -105,7 +105,7 @@ namespace NarcityMedia
                         }
                         else if (frame is SocketDataFrame)
                         {
-                            this.OnMessage((SocketDataFrame) frame);
+                            this.OnMessage(this, (SocketDataFrame) frame);
                         }
                     }
                     else
@@ -147,9 +147,9 @@ namespace NarcityMedia
             }
         }
 
-        private void DefaultDataFrameHandler(SocketDataFrame frame)
+        private static void DefaultDataFrameHandler(ClientObject cli, SocketDataFrame frame)
         {
-            this.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.Greeting);
+            cli.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.Greeting);
         }
 
         private bool AppendHeaderChunk(byte[] buffer, int byteRead)
