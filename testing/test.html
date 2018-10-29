@@ -119,7 +119,7 @@
 
         let navigate = () => {
             if (document.getElementById('url').value) {
-                send(document.getElementById('url').value);
+                send('navigate:' + document.getElementById('url').value);
                 log('"Navigated" to ' + document.getElementById('url').value);
             } else {
                 log("Can't send empty URL", 'error');
