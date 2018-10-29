@@ -126,6 +126,7 @@ namespace dotnet_core_socket_server
         private static void SendNotificationToEndpoint(HttpListenerRequest req, HttpListenerResponse res)
         {
             Logger.Log("HTTP Request to POST /sendNotificationToEndpoint", Logger.LogType.Success);
+            // Hardcoded for testing purposes
             Room endpointRoom = SocketManager.Instance.GetRoomByName("www.test.narcity.com/test");
             if (endpointRoom != null)
             {
