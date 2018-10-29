@@ -122,7 +122,6 @@ namespace NarcityMedia
                         lock (this.Clients)
                         {
                             success = room.Clients.Remove(client) && this.Clients.Remove(client.currentUrl);
-                            client.Dispose();
                         }
                     }
                 }
