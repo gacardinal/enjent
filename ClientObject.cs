@@ -31,7 +31,7 @@ namespace NarcityMedia
         private const byte QUESTION_MARK_BYTE = (byte)'?';
         private const byte COLON_BYTE = (byte)':';
         private const byte SPACE_BYTE = (byte)' ';
-        private const int HEADER_CHUNK_BUFFER_SIZE = 1024;
+        private const int HEADER_CHUNK_BUFFER_SIZE = 1024 * 2;
         private const int MAX_REQUEST_HEADERS_LENGTH = 2048;
         private const string WEBSOCKET_SEC_KEY_HEADER = "Sec-WebSocket-Key";
         private const string WEBSOCKET_COOKIE_HEADER = "Cookie";
@@ -178,6 +178,7 @@ namespace NarcityMedia
             do
             {
                 byteRead = this.socket.Receive(buffer);
+
                 if (!this.AppendHeaderChunk(buffer, byteRead))
                 {
                     return false;
