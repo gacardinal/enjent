@@ -13,7 +13,8 @@ namespace dotnet_core_socket_server
     {
         private static Boolean exit = false;
         private static HTTPServer httpServer;
-        
+        const string NAVIGATE_MARKER = "navigate:";
+
         static void Main(string[] args)
         {
             Thread HTTP = new Thread(Program.DispatchHTTPServer);
@@ -65,14 +66,22 @@ namespace dotnet_core_socket_server
             }
         }
 
-        private static void OnSocketMessage(SocketDataFrame message)
+        private static void OnSocketMessage(ClientObject client, SocketDataFrame message)
         {
+            if (message.Plaintext.StartsWith(NAVIGATE_MARKER))
+            {
+                string newUrl = message.Plaintext.Substring(NAVIGATE_MARKER.Length);
+                SocketManager.Instance.RemoveClient(client);
+                client.currentUrl = newUrl;
+                SocketManager.Instance.AddClient(client);
+            }
             Logger.Log("Received message : " + message.Plaintext, Logger.LogType.Info);
         }
 
         private static void OnSocketClose(ClientObject client)
         {
             SocketManager.Instance.RemoveClient(client);
+            client.Dispose();
             Logger.Log("Socket is closing", Logger.LogType.Info);
         }
 
