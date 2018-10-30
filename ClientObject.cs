@@ -21,6 +21,10 @@ namespace NarcityMedia
             get { return String.IsNullOrEmpty(this.lmlTk); }
         }
 
+        /// <summary>
+        /// Unix timestamp (32 bits unsigned) that represents the time at which the current object was created
+        /// </summary>
+        public DateTime InitTime = DateTime.Now;
         public string lmlTk;
         public delegate void SocketDataFrameHandler(ClientObject client, SocketDataFrame frame);
         public SocketDataFrameHandler OnMessage;
@@ -54,7 +58,7 @@ namespace NarcityMedia
         private int requestheaderslength;
         private int writeindex = 0;
         private Thread listener;
-        
+
         private byte[] _url;
         private byte[] url
         {
