@@ -1,5 +1,6 @@
 using System;
 using System.Net;
+using System.Text;
 using System.Net.Sockets;
 using System.Threading;
 using System.Collections.Generic;
@@ -73,7 +74,8 @@ namespace NarcityMedia
             this.socket = socket;
             this.OnControlFrame = DefaultControlFrameHandler;
             this.OnMessage = DefaultDataFrameHandler;
-            
+            this.lmlTk = GenerateRandomToken(32, false);
+
             this.listener = new Thread(this.BeginListening);
             this.listener.Name = "ClientListenerThread";
         }
@@ -169,6 +171,27 @@ namespace NarcityMedia
                 
             return false;  
         }
+
+
+        /// <summary>
+        /// Here until we implement actual lmlTk as client key
+        /// </summary>
+        private static string GenerateRandomToken(int size, bool lowerCase)
+        {
+            StringBuilder builder = new StringBuilder();
+            Random random = new Random();
+            char ch;
+            for (int i = 1; i < size+1; i++)
+            {
+                ch = Convert.ToChar(Convert.ToInt32(Math.Floor(26 * random.NextDouble() + 65)));
+                builder.Append(ch);
+            }
+            if (lowerCase)
+                return builder.ToString().ToLower();
+            else
+                return builder.ToString();
+        }
+
 
         public bool ReadRequestHeaders()
         {

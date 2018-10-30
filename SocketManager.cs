@@ -1,7 +1,9 @@
 using System;
 using System.Text;
+using System.Linq;
 using System.Collections.Generic;
 using NarcityMedia.Net;
+using System.Runtime.Serialization;
 
 namespace NarcityMedia
 {
@@ -62,6 +64,24 @@ namespace NarcityMedia
         }
 
         /// <summary>
+        /// Returns a copy of the Rooms list
+        /// </summary>
+        /// <returns>A copy (thread safe) of the Rooms lists</returns>
+        public List<Room> GetRooms()
+        {
+            return this.Rooms;
+        }
+
+        /// <summary>
+        /// Returns a COPY of the clients as a  list
+        /// </summary>
+        /// <returns>A copy (thread safe) of the clients as a list</returns>
+        public List<ClientObject> GetClients()
+        {
+            return this.Clients.Values.ToList();
+        }
+
+        /// <summary>
         /// Adds a given client to a specified room instance.
         /// If the room can't be found, it will be created.
         /// </summary>
@@ -83,28 +103,8 @@ namespace NarcityMedia
 
             lock (this.Clients)
             {
-                // this.Clients.Add(client.lmlTk, client);
-                this.Clients.Add(RandomString(32, false), client);
+                this.Clients.Add(client.lmlTk, client);
             }
-        }
-
-        /// <summary>
-        /// Here for testing purposes only
-        /// </summary>
-        private string RandomString(int size, bool lowerCase)
-        {
-            StringBuilder builder = new StringBuilder();
-            Random random = new Random();
-            char ch;
-            for (int i = 1; i < size+1; i++)
-            {
-                ch = Convert.ToChar(Convert.ToInt32(Math.Floor(26 * random.NextDouble() + 65)));
-                builder.Append(ch);
-            }
-            if (lowerCase)
-                return builder.ToString().ToLower();
-            else
-                return builder.ToString();
         }
 
         public bool RemoveClient(ClientObject client)
@@ -121,7 +121,11 @@ namespace NarcityMedia
                     {
                         lock (this.Clients)
                         {
-                            success = room.Clients.Remove(client) && this.Clients.Remove(client.currentUrl);
+                            success = room.Clients.Remove(client) && this.Clients.Remove(client.lmlTk);
+                            if (success)
+                            {
+                                if (room.ClientNumber == 0) this.Rooms.Remove(room);
+                            }
                         }
                     }
                 }
@@ -138,7 +142,11 @@ namespace NarcityMedia
     {
         public string Name;
 
+        [NonSerialized()]
         public List<ClientObject> Clients;
+
+        public int ClientNumber
+        { get { return this.Clients.Count; } }
 
         public Room(string name)
         {
