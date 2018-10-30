@@ -185,7 +185,7 @@ namespace dotnet_core_socket_server
 
             public Stats(List<Room> rooms)
             {
-                this.rooms = rooms.OrderBy(room => room.Clients.Count).ToList();
+                this.rooms = rooms.OrderByDescending(room => room.Clients.Count).ToList();
                 this.ActiveEndpointsNumber = rooms.Count;
             }
 
