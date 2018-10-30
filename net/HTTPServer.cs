@@ -116,6 +116,21 @@ namespace NarcityMedia.Net
             response.StatusCode = statusCode;
             response.AddHeader("Content-Type", "text/plain");
 
+            SendBytes(response, buffer);
+        }
+
+        public void SendJSON(HttpListenerResponse response, int statusCode, string jsonString)
+        {
+            byte[] buffer = System.Text.Encoding.UTF8.GetBytes(jsonString);
+            response.ContentLength64 = buffer.Length;
+            response.StatusCode = statusCode;
+            response.AddHeader("Content-Type", "text/json");
+
+            SendBytes(response, buffer);
+        }
+
+        private static void SendBytes(HttpListenerResponse response, byte[] buffer)
+        {
             System.IO.Stream output = response.OutputStream;
             output.Write(buffer, 0, buffer.Length);
             output.Close();

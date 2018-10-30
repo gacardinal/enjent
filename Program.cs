@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Net;
+using System.Diagnostics;
 using System.Net.Sockets;
 using System.Threading;
 using System.Collections.Generic;
 using NarcityMedia;
 using NarcityMedia.Net;
 using NarcityMedia.Log;
+using Newtonsoft.Json;
+using System.Linq;
 
 namespace dotnet_core_socket_server
 {
@@ -94,11 +97,13 @@ namespace dotnet_core_socket_server
 
             HTTPServer.EndpointCallback index = Index;
             HTTPServer.EndpointCallback hello = Hello;
+            HTTPServer.EndpointCallback stats = GetStats;
             HTTPServer.EndpointCallback sendNotificationToUser = SendNotificationToUser;
             HTTPServer.EndpointCallback sendnotificationToEndpoint = SendNotificationToEndpoint;
 
             httpServer.Get("/", index);
             httpServer.Get("/hello", hello);
+            httpServer.Get("/stats", stats);
             httpServer.Get("/notifyuser", SendNotificationToUser);
             httpServer.Get("/notifyendpoint", SendNotificationToEndpoint);
 
@@ -109,6 +114,21 @@ namespace dotnet_core_socket_server
         private static void Index(HttpListenerRequest req, HttpListenerResponse res)
         {
             httpServer.SendResponse(res, HttpStatusCode.OK, "GET Index");
+        }
+
+        private static void GetStats(HttpListenerRequest req, HttpListenerResponse res)
+        {
+            List<ClientObject> clients = SocketManager.Instance.GetClients();
+            List<Room> rooms = SocketManager.Instance.GetRooms();
+            int connections = clients.Count;
+
+            // Process currentProcess = Process.GetCurrentProcess();
+            // long ramBytesUsed = currentProcess.PagedMemorySize64;
+
+            Stats stats = new Stats(rooms, connections);
+            string serialized = JsonConvert.SerializeObject(stats, Formatting.None);
+
+            httpServer.SendJSON(res, 200, serialized);
         }
 
         private static void Hello(HttpListenerRequest req, HttpListenerResponse res)
@@ -149,6 +169,24 @@ namespace dotnet_core_socket_server
         {
             Logger.Log("HTTP 500 - Internal Server Error", Logger.LogType.Error);
             httpServer.SendResponse(res, HttpStatusCode.NotFound, "Internal Server Error");
+        }
+
+        private class Stats
+        {
+            public int RealtimeSessionsNumber;
+            public int ActiveEndpointsNumber;
+            public List<Room> rooms;
+
+            public Stats(List<Room> rooms)
+            {
+                this.rooms = rooms.OrderBy(room => room.Clients.Count).ToList();
+                this.ActiveEndpointsNumber = rooms.Count;
+            }
+
+            public Stats(List<Room> rooms, int realtimeSessionsNumber) : this(rooms)
+            {
+                this.RealtimeSessionsNumber = realtimeSessionsNumber;
+            }
         }
     }
 }
