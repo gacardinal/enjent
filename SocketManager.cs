@@ -86,7 +86,7 @@ namespace NarcityMedia
         /// If the room can't be found, it will be created.
         /// </summary>
         /// <param name="client">The client object to insert</param>
-        public void AddClient(ClientObject client)
+        public bool AddClient(ClientObject client)
         {
             lock (this.Rooms)
             {
@@ -103,8 +103,19 @@ namespace NarcityMedia
 
             lock (this.Clients)
             {
-                this.Clients.Add(client.lmlTk, client);
+                try
+                {
+                    this.Clients.Add(client.lmlTk, client);
+                }
+                catch (ArgumentException e)
+                {
+                    // Rollback
+                    RemoveClient(client);
+                    return false;
+                }
             }
+
+            return true;
         }
 
         public bool RemoveClient(ClientObject client)
