@@ -124,9 +124,10 @@ namespace NarcityMedia
             catch (Exception e)
             {
                 Logger.Log(e.Message, Logger.LogType.Error);
+                this.Dispose();
             }
 
-            Logger.Log("SOcket closing", Logger.LogType.Info);
+            Logger.Log("Socket closing", Logger.LogType.Info);
             // End thread execution
             return;
         }
@@ -212,7 +213,7 @@ namespace NarcityMedia
                 }
             }
             while ( byteRead != 0 && buffer[byteRead - 1] != NEWLINE_BYTE && buffer[byteRead - 2] != NEWLINE_BYTE );
-        
+
             return true;
         }
 
@@ -335,7 +336,16 @@ namespace NarcityMedia
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("HTTP/1.1 101 Switching Protocols\n"));
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Connection: upgrade\n"));
                 this.socket.Send(System.Text.Encoding.Default.GetBytes("Upgrade: websocket\n"));
-                this.socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Accept: " + negociatedkey + "\n\n"));
+                this.socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Accept: " + negociatedkey));
+
+                if (this.headersmap.ContainsKey("Sec-WebSocket-Protocol"))
+                {
+                    byte[] protocol = new byte[0];
+                    this.headersmap.TryGetValue("Sec-WebSocket-Protocol", out protocol);
+                    this.socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Protocol: " + protocol));
+                }
+
+                this.socket.Send(System.Text.Encoding.Default.GetBytes("\n\n"));
             
                 return true;
             }
@@ -496,6 +506,7 @@ namespace NarcityMedia
 
         public void Dispose()
         {
+            this.listenToSocket = false;
             if (this.socket != null) {
                 this.socket.Dispose();
             }

@@ -88,7 +88,8 @@ namespace dotnet_core_socket_server
 
         private static void OnSocketClose(ClientObject client)
         {
-            SocketManager.Instance.RemoveClient(client);
+            Logger.Log("Socket removed : " + SocketManager.Instance.RemoveClient(client), Logger.LogType.Info);
+            // SocketManager.Instance.RemoveClient(client);
             double socketDuration = Math.Round(DateTime.Now.Subtract(client.InitTime).TotalSeconds, 2);
             Logger.Log(String.Format("Socket is closing after {0} seconds", socketDuration), Logger.LogType.Info);
             client.Dispose();
