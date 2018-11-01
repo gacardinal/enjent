@@ -102,7 +102,7 @@
 
                 pingInterval = setInterval(() => {
                     log('Sending ping', 'info');
-                    send(new Uint8Array([0b00001111])); // Ping 0b00001110 = 14  /  Pong 0b00001111 = 15  subject to change
+                    send("PING");
                 }, 2000);
             } catch (e) {
                 log("Couldn't initialize socket - " + e.message, 'error');

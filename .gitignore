@@ -8,6 +8,8 @@ obj
 
 testing/string.txt
 
+*node_modules
+
 # Compiled Object files
 *.slo
 *.lo

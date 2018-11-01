@@ -62,7 +62,12 @@ namespace dotnet_core_socket_server
                 cli.Greet();
                 cli.StartListenAsync();
                 Logger.Log("Socket connection accepted", Logger.LogType.Success);
-                SocketManager.Instance.AddClient(cli);
+                if (!SocketManager.Instance.AddClient(cli))
+                {
+                    Logger.Log("The new client couldn't be added to the Socket Manager and will be disposed of", Logger.LogType.Error);
+                    cli.SendControlFrame(new SocketControlFrame(SocketFrame.OPCodes.Close));
+                    cli.Dispose();
+                }
             } else {
                 Logger.Log("Socket connection refused, couldn't parse headers", Logger.LogType.Error);
                 cli.Dispose();
@@ -78,14 +83,20 @@ namespace dotnet_core_socket_server
                 client.currentUrl = newUrl;
                 SocketManager.Instance.AddClient(client);
             }
+            else if (message.Plaintext == "PING")
+            {
+                // TODO: Send PONG
+            }
             Logger.Log("Received message : " + message.Plaintext, Logger.LogType.Info);
         }
 
         private static void OnSocketClose(ClientObject client)
         {
-            SocketManager.Instance.RemoveClient(client);
+            Logger.Log("Socket removed : " + SocketManager.Instance.RemoveClient(client), Logger.LogType.Info);
+            // SocketManager.Instance.RemoveClient(client);
+            double socketDuration = Math.Round(DateTime.Now.Subtract(client.InitTime).TotalSeconds, 2);
+            Logger.Log(String.Format("Socket is closing after {0} seconds", socketDuration), Logger.LogType.Info);
             client.Dispose();
-            Logger.Log("Socket is closing", Logger.LogType.Info);
         }
 
         private static void DispatchHTTPServer()
@@ -179,7 +190,7 @@ namespace dotnet_core_socket_server
 
             public Stats(List<Room> rooms)
             {
-                this.rooms = rooms.OrderBy(room => room.Clients.Count).ToList();
+                this.rooms = rooms.OrderByDescending(room => room.Clients.Count).ToList();
                 this.ActiveEndpointsNumber = rooms.Count;
             }
 
