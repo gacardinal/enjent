@@ -91,35 +91,38 @@ namespace NarcityMedia
         // See https://docs.microsoft.com/en-us/dotnet/api/system.net.sockets.socketasynceventargs?view=netframework-4.7.2
         protected void BeginListening(Object state) 
         {
-            Socket socket = (Socket) state;
+            // Socket socket = (Socket) state;
             byte[] frameHeaderBuffer = new byte[2];
-            try
+            using (Socket socket = (Socket) state)
             {
-                while (this.listenToSocket)
+                try
                 {
-                    int received = socket.Receive(frameHeaderBuffer); // Blocking
-                    SocketFrame frame = this.TryParse(frameHeaderBuffer);
-                    if (frame != null)
+                    while (this.listenToSocket)
                     {
-                        if (frame is SocketControlFrame)
+                        int received = socket.Receive(frameHeaderBuffer); // Blocking
+                        SocketFrame frame = this.TryParse(frameHeaderBuffer);
+                        if (frame != null)
                         {
-                            this.OnControlFrame((SocketControlFrame) frame);
+                            if (frame is SocketControlFrame)
+                            {
+                                this.OnControlFrame((SocketControlFrame) frame);
+                            }
+                            else if (frame is SocketDataFrame)
+                            {
+                                this.OnMessage(this, (SocketDataFrame) frame);
+                            }
                         }
-                        else if (frame is SocketDataFrame)
+                        else
                         {
-                            this.OnMessage(this, (SocketDataFrame) frame);
+                            if (!this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close)))
+                                this.listenToSocket = false;
                         }
-                    }
-                    else
-                    {
-                        if (!this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close)))
-                            this.listenToSocket = false;
                     }
                 }
-            }
-            catch (Exception e)
-            {
-                Logger.Log(e.Message, Logger.LogType.Error);
+                catch (Exception e)
+                {
+                    Logger.Log(e.Message, Logger.LogType.Error);
+                }
             }
 
             Logger.Log("SOcket closing", Logger.LogType.Info);
@@ -492,6 +495,7 @@ namespace NarcityMedia
 
         public void Dispose()
         {
+            Console.WriteLine("Dispose method called");
             if (this.socket != null) {
                 this.socket.Dispose();
             }
