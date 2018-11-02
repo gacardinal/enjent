@@ -110,16 +110,30 @@ namespace NarcityMedia
                     while (this.listenToSocket)
                     {
                         int received = socket.Receive(frameHeaderBuffer); // Blocking
+                        if (received == 0) {
+                            Logger.Log("Socket connection was closed after reading a null byte", Logger.LogType.Info);
+                            this.listenToSocket = false;
+                            break;
+                        }
+
                         SocketFrame frame = this.TryParse(frameHeaderBuffer);
                         if (this.lastMessageReceivedOn != null && DateTime.Now.Subtract(this.lastMessageReceivedOn).TotalMilliseconds < MIN_MESSAGE_INTERVAL)
                         {
                             Logger.Log("Terminating socket because two messages wwere sent too close to each other", Logger.LogType.Warning);
+
                             byte[] useragent;
                             if (this.headersmap.TryGetValue("User-Agent", out useragent))
                             {
-                                Logger.Log("User-Agenr: " + System.Text.Encoding.UTF8.GetString(useragent), Logger.LogType.Warning);
+                                Logger.Log("User-Agent: " + System.Text.Encoding.UTF8.GetString(useragent), Logger.LogType.Warning);
+                            }
+
+                            byte[] secproto;
+                            if (this.headersmap.TryGetValue("Sec-WebSocket-Protocol", out secproto))
+                            {
+                                Logger.Log("SubProtocol: " + System.Text.Encoding.UTF8.GetString(secproto), Logger.LogType.Warning);
                             }
                             this.listenToSocket = false;
+
                             break;
                         }
 
