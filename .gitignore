@@ -8,6 +8,8 @@ obj
 
 testing/string.txt
 
+.config
+
 *node_modules
 
 # Compiled Object files
