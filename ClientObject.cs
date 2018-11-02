@@ -125,12 +125,12 @@ namespace NarcityMedia
                 }
                 catch (Exception e)
                 {
-                    Logger.Log(e.Message, Logger.LogType.Error);
+                    Logger.Log("Socket closing, encountered error - " + e.Message, Logger.LogType.Error);
                 }
             }
 
-            Logger.Log("Socket closing", Logger.LogType.Info);
             // End thread execution
+            this.Dispose();
             return;
         }
 
@@ -508,7 +508,6 @@ namespace NarcityMedia
 
         public void Dispose()
         {
-            Console.WriteLine("Dispose method called");
             if (this.socket != null) {
                 this.socket.Dispose();
             }
