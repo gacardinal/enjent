@@ -114,6 +114,7 @@ namespace NarcityMedia
                         if (this.lastMessageReceivedOn != null && DateTime.Now.Subtract(this.lastMessageReceivedOn).TotalMilliseconds < MIN_MESSAGE_INTERVAL)
                         {
                             Logger.Log("Terminating socket because two messages wwere sent too close to each other", Logger.LogType.Warning);
+                            Console.WriteLine(System.Text.Encoding.UTF8.GetString(this.headersmap));
                             this.listenToSocket = false;
                             break;
                         }
