@@ -113,11 +113,12 @@ namespace NarcityMedia
                         SocketFrame frame = this.TryParse(frameHeaderBuffer);
                         if (this.lastMessageReceivedOn != null && DateTime.Now.Subtract(this.lastMessageReceivedOn).TotalMilliseconds < MIN_MESSAGE_INTERVAL)
                         {
+                            Logger.Log("Terminating socket because two messages wwere sent too close to each other", Logger.LogType.Warning);
                             this.listenToSocket = false;
                             break;
                         }
 
-                        this.lastMessageReceivedOn = DateTime.Now();
+                        this.lastMessageReceivedOn = DateTime.Now;
                         if (frame != null)
                         {
                             if (frame is SocketControlFrame)
