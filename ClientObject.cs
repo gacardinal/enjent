@@ -37,7 +37,7 @@ namespace NarcityMedia
         private const byte COLON_BYTE = (byte)':';
         private const byte SPACE_BYTE = (byte)' ';
         private const int HEADER_CHUNK_BUFFER_SIZE = 1024 * 2;
-        private const int MAX_REQUEST_HEADERS_LENGTH = 2048;
+        private const int MAX_REQUEST_HEADERS_LENGTH = 1024 * 8;
         private const string WEBSOCKET_SEC_KEY_HEADER = "Sec-WebSocket-Key";
         private const string WEBSOCKET_COOKIE_HEADER = "Cookie";
         private static readonly byte[] RFC6455_CONCAT_GUID = new byte[] {
@@ -52,7 +52,7 @@ namespace NarcityMedia
 
         private Socket socket;
         private byte[] methodandpath;
-        private byte[] requestheaders = new byte[ClientObject.MAX_REQUEST_HEADERS_LENGTH];
+        public byte[] requestheaders = new byte[ClientObject.MAX_REQUEST_HEADERS_LENGTH];
         private Dictionary<string, byte[]> headersmap = new Dictionary<string, byte[]>();
         private bool listenToSocket = true;
         private int requestheaderslength;
@@ -177,7 +177,6 @@ namespace NarcityMedia
                 case 8: // Close
                     this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
                     this.listenToSocket = false;
-                    if (this.OnClose != null) this.OnClose(this);
                     break;
                 case 9:
                     Logger.Log("Received ping", Logger.LogType.Info);

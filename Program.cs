@@ -70,6 +70,7 @@ namespace dotnet_core_socket_server
                 }
             } else {
                 Logger.Log("Socket connection refused, couldn't parse headers", Logger.LogType.Error);
+		Logger.Log(System.Text.Encoding.UTF8.GetString(cli.requestheaders), Logger.LogType.Error);
                 cli.Dispose();
             }
         }
@@ -82,13 +83,13 @@ namespace dotnet_core_socket_server
                 SocketManager.Instance.RemoveClient(client);
                 client.currentUrl = newUrl;
                 SocketManager.Instance.AddClient(client);
+
+	        Logger.Log("Received text frame with content length: " + message.contentLength, Logger.LogType.Info);
             }
             else if (message.Plaintext == "1")
             {
                 client.SendApplicationMessage((WebSocketMessage.ApplicationMessageCode)2);
             }
-
-            Logger.Log("Received frame with content length: " + message.contentLength, Logger.LogType.Info);
         }
 
         private static void OnSocketClose(ClientObject client)
