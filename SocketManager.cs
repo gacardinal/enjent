@@ -131,10 +131,10 @@ namespace NarcityMedia
             {
                 Room room = GetRoomByName(client.currentUrl);
 
-                lock (room)
+                if (room != null)
                 {
-                    if (room != null)
-                    {
+		    lock (room)
+		    {
                         lock (this.Clients)
                         {
                             success = room.Clients.Remove(client) && this.Clients.Remove(client.lmlTk);
