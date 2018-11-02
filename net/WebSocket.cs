@@ -20,7 +20,7 @@ namespace NarcityMedia.Net
             Pong = 0xA
         }
 
-        protected bool fin;
+        public bool fin;
         protected bool masked;
         protected byte[] _data;
         public byte[] data

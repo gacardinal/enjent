@@ -37,7 +37,7 @@ namespace NarcityMedia
         private const byte COLON_BYTE = (byte)':';
         private const byte SPACE_BYTE = (byte)' ';
         private const int HEADER_CHUNK_BUFFER_SIZE = 1024 * 2;
-        private const int MAX_REQUEST_HEADERS_LENGTH = 2048;
+        private const int MAX_REQUEST_HEADERS_LENGTH = 1024 * 8;
         private const string WEBSOCKET_SEC_KEY_HEADER = "Sec-WebSocket-Key";
         private const string WEBSOCKET_COOKIE_HEADER = "Cookie";
         private static readonly byte[] RFC6455_CONCAT_GUID = new byte[] {
@@ -52,7 +52,7 @@ namespace NarcityMedia
 
         private Socket socket;
         private byte[] methodandpath;
-        private byte[] requestheaders = new byte[ClientObject.MAX_REQUEST_HEADERS_LENGTH];
+        public byte[] requestheaders = new byte[ClientObject.MAX_REQUEST_HEADERS_LENGTH];
         private Dictionary<string, byte[]> headersmap = new Dictionary<string, byte[]>();
         private bool listenToSocket = true;
         private int requestheaderslength;
@@ -110,16 +110,30 @@ namespace NarcityMedia
                     while (this.listenToSocket)
                     {
                         int received = socket.Receive(frameHeaderBuffer); // Blocking
+                        if (received == 0) {
+                            Logger.Log("Socket connection was closed after reading a null byte", Logger.LogType.Info);
+                            this.listenToSocket = false;
+                            break;
+                        }
+
                         SocketFrame frame = this.TryParse(frameHeaderBuffer);
                         if (this.lastMessageReceivedOn != null && DateTime.Now.Subtract(this.lastMessageReceivedOn).TotalMilliseconds < MIN_MESSAGE_INTERVAL)
                         {
                             Logger.Log("Terminating socket because two messages wwere sent too close to each other", Logger.LogType.Warning);
+
                             byte[] useragent;
                             if (this.headersmap.TryGetValue("User-Agent", out useragent))
                             {
-                                Logger.Log("User-Agenr: " + System.Text.Encoding.UTF8.GetString(useragent), Logger.LogType.Warning);
+                                Logger.Log("User-Agent: " + System.Text.Encoding.UTF8.GetString(useragent), Logger.LogType.Warning);
+                            }
+
+                            byte[] secproto;
+                            if (this.headersmap.TryGetValue("Sec-WebSocket-Protocol", out secproto))
+                            {
+                                Logger.Log("SubProtocol: " + System.Text.Encoding.UTF8.GetString(secproto), Logger.LogType.Warning);
                             }
                             this.listenToSocket = false;
+
                             break;
                         }
 
@@ -163,7 +177,6 @@ namespace NarcityMedia
                 case 8: // Close
                     this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
                     this.listenToSocket = false;
-                    if (this.OnClose != null) this.OnClose(this);
                     break;
                 case 9:
                     Logger.Log("Received ping", Logger.LogType.Info);
