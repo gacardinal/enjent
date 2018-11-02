@@ -69,6 +69,11 @@ namespace NarcityMedia
             }
         }
 
+        // Minimum interval of messages in ms
+        private const int MIN_MESSAGE_INTERVAL = 100;
+
+        private DateTime lastMessageReceivedOn;
+
         public string currentUrl;
 
         public delegate void SocketMessageCallback(WebSocketMessage message);
@@ -106,6 +111,13 @@ namespace NarcityMedia
                     {
                         int received = socket.Receive(frameHeaderBuffer); // Blocking
                         SocketFrame frame = this.TryParse(frameHeaderBuffer);
+                        if (this.lastMessageReceivedOn != null && DateTime.Now.Subtract(this.lastMessageReceivedOn).TotalMilliseconds < MIN_MESSAGE_INTERVAL)
+                        {
+                            this.listenToSocket = false;
+                            break;
+                        }
+
+                        this.lastMessageReceivedOn = DateTime.Now();
                         if (frame != null)
                         {
                             if (frame is SocketControlFrame)
