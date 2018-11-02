@@ -78,6 +78,7 @@ namespace NarcityMedia
             this.socket = socket;
             this.OnControlFrame = DefaultControlFrameHandler;
             this.OnMessage = DefaultDataFrameHandler;
+            this.OnClose = DefaultOnCLose;
             this.lmlTk = GenerateRandomToken(32, false);
 
             this.listener = new Thread(this.BeginListening);
@@ -130,7 +131,7 @@ namespace NarcityMedia
             }
 
             // End thread execution
-            this.Dispose();
+            this.OnClose(this);
             return;
         }
 
@@ -159,6 +160,11 @@ namespace NarcityMedia
         private static void DefaultDataFrameHandler(ClientObject cli, SocketDataFrame frame)
         {
             cli.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.Greeting);
+        }
+
+        private static void DefaultOnCLose(ClientObject client)
+        {
+            client.Dispose();
         }
 
         private bool AppendHeaderChunk(byte[] buffer, int byteRead)

@@ -61,7 +61,7 @@ namespace dotnet_core_socket_server
             {
                 cli.Greet();
                 cli.StartListenAsync();
-                Logger.Log("Socket connection accepted", Logger.LogType.Success);
+                Logger.Log("Socket connection accepted #" + SocketMannager.Instance.ClientsCount, Logger.LogType.Success);
                 if (!SocketManager.Instance.AddClient(cli))
                 {
                     Logger.Log("The new client couldn't be added to the Socket Manager and will be disposed of", Logger.LogType.Error);

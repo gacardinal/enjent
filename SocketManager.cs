@@ -34,6 +34,11 @@ namespace NarcityMedia
         /// <param name="client"></param>
         public delegate void ClientObjectOperation(ClientObject client);
 
+        public int ClientsCount
+        {
+            get { return this.Clients.Count; }
+        }
+
         // Explicit static constructor to tell C# compiler
         // not to mark type as beforefieldinit
         static SocketManager()
