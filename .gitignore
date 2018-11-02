@@ -9,6 +9,7 @@ obj
 testing/string.txt
 
 .config
+output.log
 
 *node_modules
 
