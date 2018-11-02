@@ -23,7 +23,7 @@ namespace NarcityMedia.Net
         protected bool fin;
         protected bool masked;
         protected byte[] _data;
-        protected byte[] data
+        public byte[] data
         {
             get { return this._data; }
             set

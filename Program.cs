@@ -83,11 +83,11 @@ namespace dotnet_core_socket_server
                 client.currentUrl = newUrl;
                 SocketManager.Instance.AddClient(client);
             }
-            else if (message.Plaintext == "PING")
+            else if (message.Plaintext == "1")
             {
-                // TODO: Send PONG
+                client.SendApplicationMessage((WebSocketMessage.ApplicationMessageCode)2);
             }
-            Logger.Log("Received frame : " + message.Plaintext + " OPCode: " + message.opcode + " Content length: " + message.contentLength, Logger.LogType.Info);
+            Logger.Log("Received frame - message:: " + message.Plaintext + " Raw: " + message.data[0] + " OPCode: " + message.opcode + " Content length: " + message.contentLength, Logger.LogType.Info);
         }
 
         private static void OnSocketClose(ClientObject client)
