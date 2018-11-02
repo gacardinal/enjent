@@ -87,7 +87,7 @@ namespace dotnet_core_socket_server
             {
                 // TODO: Send PONG
             }
-            Logger.Log("Received message : " + message.Plaintext, Logger.LogType.Info);
+            Logger.Log("Received frame : " + message.Plaintext + " OPCode: " + message.opcode + " Content length: " + message.contentLength, Logger.LogType.Info);
         }
 
         private static void OnSocketClose(ClientObject client)

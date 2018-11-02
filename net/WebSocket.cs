@@ -33,7 +33,7 @@ namespace NarcityMedia.Net
             }
         }
         public byte opcode;
-        protected ushort contentLength;
+        public ushort contentLength;
 
         public string Plaintext;
 

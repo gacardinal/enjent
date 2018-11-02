@@ -493,10 +493,12 @@ namespace NarcityMedia
                 }
 
                 byte[] maskingKey = new byte[4];
-                this.socket.Receive(maskingKey);
-
                 byte[] contentBuffer = new byte[contentLength];
-                if (contentLength > 0) this.socket.Receive(contentBuffer);
+                if (contentLength > 0) {
+                    this.socket.Receive(maskingKey);
+                    this.socket.Receive(contentBuffer);
+                }
+
 
                 SocketFrame frame;
                 if (opcode == 1 || opcode == 2)
