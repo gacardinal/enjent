@@ -157,7 +157,7 @@ namespace dotnet_core_socket_server
             Room endpointRoom = SocketManager.Instance.GetRoomByName("www.test.narcity.com/test");
             if (endpointRoom != null)
             {
-                endpointRoom.Broadcast(WebSocketMessage.ApplicationMessageCode.FetchComments);
+                endpointRoom.Broadcast(NarcityMedia.WebSocketMessage.ApplicationMessageCode.FetchComments);
                 httpServer.SendResponse(res, HttpStatusCode.OK, "GET /notifyendpoint");
             }
             else

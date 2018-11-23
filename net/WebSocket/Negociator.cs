@@ -6,7 +6,6 @@ namespace NarcityMedia.Net
 {
     public partial class WebSocketServer
     {
-        
         public static void NegociateWebSocketConnection(Object s)
         {
             Socket handler = (Socket) s;
@@ -26,5 +25,7 @@ namespace NarcityMedia.Net
                 cli.Dispose();
             }
         }
+
+        
     }
 }
