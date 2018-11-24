@@ -42,6 +42,26 @@ namespace NarcityMedia.Net
             return;     // End 'listener' Thread execution
         }
 
+        public static void NegociateWebSocketConnection(Object s)
+        {
+            Socket handler = (Socket) s;
+            WebSocketClient cli = new WebSocketClient((Socket) handler);
+            if (cli.ReadRequestHeaders() &&
+                cli.AnalyzeRequestHeaders() &&
+                cli.Negociate101Upgrade() )
+            {
+                cli.Greet();
+                cli.StartListenAsync();
+                // if (!SocketManager.Instance.AddClient(cli))
+                // {
+                //     cli.SendControlFrame(new SocketControlFrame(SocketFrame.OPCodes.Close));
+                //     cli.Dispose();
+                // }
+            } else {
+                cli.Dispose();
+            }
+        }
+    
         /// <summary>
         /// Executed by the 'listener' Thread, used to perform cleanup operation before quitting
         /// </summary>
@@ -84,10 +104,6 @@ namespace NarcityMedia.Net
         {
             this.listening = false;  // Listener Thread will exit when safe to do so
         }
-    }
-
-    internal static class WebSocketNegociator
-    {
     }
 
     internal class WebSocketPool
