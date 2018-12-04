@@ -14,64 +14,36 @@ namespace dotnet_core_socket_server
 {
     public class Program
     {
-        private static Boolean exit = false;
+        private static bool exit = false;
         private static HTTPServer httpServer;
         const string NAVIGATE_MARKER = "navigate:";
 
         static void Main(string[] args)
         {
-            Thread HTTP = new Thread(Program.DispatchHTTPServer);
-            HTTP.Start();
-
-            Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            IPEndPoint endpoint = new IPEndPoint(IPAddress.Loopback, 13003);
-
-            try {
-                socket.Bind(endpoint);
-                socket.Listen(200);
-                Logger.Log(String.Format("Listening for Web Socket connections at endpoint {0}:{1}", endpoint.Address, endpoint.Port), Logger.LogType.Success);
-            } catch (SocketException) {
-                Logger.Log(String.Format("Couldn't bind on endpoint {0}:{1} the port might already be in use", endpoint.Address, endpoint.Port),
-                            Logger.LogType.Error);
-                Environment.Exit(1);
-            } catch {
-                Logger.Log("Unknown error while trying to bind socket", Logger.LogType.Error);
-                Environment.Exit(1);
-            }
-
             int workerThreads, portThreads;
             ThreadPool.GetMaxThreads(out workerThreads, out portThreads);
             Logger.Log("The process Thread Pool has a mixaimum of " + workerThreads.ToString() + " worker threads", Logger.LogType.Info);
-            while (!Program.exit) {
-                // MAIN THREAD blocks here and resumes on each new Socket connection
-                Socket handler = socket.Accept();
-                ThreadPool.QueueUserWorkItem(NegotiateSocketConnection, handler);
+
+            Thread HTTP = new Thread(Program.DispatchHTTPServer);
+            HTTP.Name = "HTTP Localhost Listener";
+            HTTP.Start();
+
+            WebSocketServer socketServer = new WebSocketServer();
+            socketServer.OnConnect += OnSocketMessage;
+
+            try
+            {
+                socketServer.Start(new IPEndPoint(IPAddress.Loopback, 13003));
+            }
+            catch (WebSocketServerException e)
+            {
+                Logger.Log("An error occured when starting the WebSocket server - " + e.Message, Logger.LogType.Error);
             }
         }
 
-        private static void NegotiateSocketConnection(Object s)
+        private static void OnSocketMessage(object sender, WebSocketServerEventArgs args)
         {
-            Socket handler = (Socket) s;
-            ClientObject cli = new ClientObject((Socket) handler);
-            cli.OnMessage = OnSocketMessage;
-            cli.OnClose = OnSocketClose;
-            if (cli.ReadRequestHeaders() &&
-                cli.AnalyzeRequestHeaders() &&
-                cli.Negociate101Upgrade() )
-            {
-                cli.Greet();
-                cli.StartListenAsync();
-                Logger.Log("Socket connection accepted", Logger.LogType.Success);
-                if (!SocketManager.Instance.AddClient(cli))
-                {
-                    Logger.Log("The new client couldn't be added to the Socket Manager and will be disposed of", Logger.LogType.Error);
-                    cli.SendControlFrame(new SocketControlFrame(SocketFrame.OPCodes.Close));
-                    cli.Dispose();
-                }
-            } else {
-                Logger.Log("Socket connection refused, couldn't parse headers", Logger.LogType.Error);
-                cli.Dispose();
-            }
+            
         }
 
         private static void OnSocketMessage(ClientObject client, SocketDataFrame message)
