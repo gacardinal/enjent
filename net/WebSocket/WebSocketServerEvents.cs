@@ -8,7 +8,6 @@ namespace NarcityMedia.Net
 
         public delegate void WebSocketServerEvent(object sender, WebSocketServerEventArgs a);
 
-        
     }
 
     /// <summary>

@@ -7,7 +7,12 @@ using System.Security.Cryptography;
 namespace NarcityMedia.Net
 {
     public partial class WebSocketClient : IDisposable {
-        
+        private const int HEADER_CHUNK_BUFFER_SIZE = 1024 * 2;
+        private const byte NEWLINE_BYTE = (byte)'\n';
+        private const byte QUESTION_MARK_BYTE = (byte)'?';
+        private const byte COLON_BYTE = (byte)':';
+        private const byte SPACE_BYTE = (byte)' ';
+
         private bool AppendHeaderChunk(byte[] buffer, int byteRead)
         {
             if (this.writeindex + byteRead <= WebSocketClient.HEADER_CHUNK_BUFFER_SIZE)

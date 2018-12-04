@@ -1,10 +1,8 @@
 using System;
 using System.Net;
-using System.Text;
 using System.Net.Sockets;
 using System.Threading;
 using System.Collections.Generic;
-using System.Security.Cryptography;
 using System.Runtime.InteropServices;
 using NarcityMedia.Net;
 using NarcityMedia.Log;
@@ -32,11 +30,6 @@ namespace NarcityMedia.Net
         public ClientEvent OnClose;
         private delegate void SocketControlFrameHandler(SocketControlFrame frame);
         private SocketControlFrameHandler OnControlFrame;
-        private const byte NEWLINE_BYTE = (byte)'\n';
-        private const byte QUESTION_MARK_BYTE = (byte)'?';
-        private const byte COLON_BYTE = (byte)':';
-        private const byte SPACE_BYTE = (byte)' ';
-        private const int HEADER_CHUNK_BUFFER_SIZE = 1024 * 2;
         private const int MAX_REQUEST_HEADERS_LENGTH = 2048;
         private const string WEBSOCKET_SEC_KEY_HEADER = "Sec-WebSocket-Key";
         private const string WEBSOCKET_COOKIE_HEADER = "Cookie";
@@ -232,7 +225,7 @@ namespace NarcityMedia.Net
         {
             List<SocketFrame> frames = new List<SocketFrame>(1);
             frames.Add(frame);
-            
+
             return this.SendFrames(frames);
         }
 
