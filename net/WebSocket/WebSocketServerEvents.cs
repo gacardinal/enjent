@@ -15,6 +15,11 @@ namespace NarcityMedia.Net
     /// </summary>
     public class WebSocketServerEventArgs
     {
-        
+        public WebSocketClient cli;
+
+        public WebSocketServerEventArgs(WebSocketClient cli)
+        {
+            this.cli = cli;
+        }
     }
 }

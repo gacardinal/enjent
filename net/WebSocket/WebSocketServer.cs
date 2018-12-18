@@ -27,6 +27,21 @@ namespace NarcityMedia.Net
             }
         }
 
+
+        private class SocketNegotiationState
+        {
+            public ManualResetEvent waitHandle;
+            public Socket handler;
+            public WebSocketClient cli;
+            public WebSocketNegotiationException exception;
+
+            public SocketNegotiationState(Socket handler)
+            {
+                this.waitHandle = new ManualResetEvent(false);
+                this.handler = handler;
+            }
+        }
+
         /// <summary>
         /// Executed by a dedicated Thread, in charge of listening for HTTP requests and handle WebSocket negociation
         /// </summary>
@@ -35,7 +50,14 @@ namespace NarcityMedia.Net
             while (this.listening)
             {
                 Socket handler = this.socket.Accept();  // Blocking
-                ThreadPool.QueueUserWorkItem(WebSocketServer.NegociateWebSocketConnection, handler);
+                SocketNegotiationState state = new SocketNegotiationState(handler);
+                ThreadPool.QueueUserWorkItem(WebSocketServer.NegociateWebSocketConnection, state);
+                state.waitHandle.WaitOne();
+                
+                if (state.exception == null)
+                {
+                    this.OnConnect.Invoke(this, new WebSocketServerEventArgs(state.cli));
+                }
             }
 
             this.Quit();
@@ -44,20 +66,17 @@ namespace NarcityMedia.Net
 
         public static void NegociateWebSocketConnection(Object s)
         {
-            Socket handler = (Socket) s;
-            WebSocketClient cli = new WebSocketClient((Socket) handler);
+            SocketNegotiationState state = (SocketNegotiationState) s;
+            WebSocketClient cli = new WebSocketClient(state.handler);
             if (cli.ReadRequestHeaders() &&
                 cli.AnalyzeRequestHeaders() &&
                 cli.Negociate101Upgrade() )
             {
-                cli.Greet();
                 cli.StartListenAsync();
-                // if (!SocketManager.Instance.AddClient(cli))
-                // {
-                //     cli.SendControlFrame(new SocketControlFrame(SocketFrame.OPCodes.Close));
-                //     cli.Dispose();
-                // }
+                state.cli = cli;
+                state.waitHandle.Set();
             } else {
+                state.exception = new WebSocketNegotiationException("WebSocket negotiation failed");
                 cli.Dispose();
             }
         }
@@ -83,6 +102,7 @@ namespace NarcityMedia.Net
                 {
                     this.socket.Bind(endpoint);
                     this.socket.Listen(200);
+                    this.listening = true;
                     this.listener.Start();
                 }
                 catch (SocketException e)

@@ -29,7 +29,9 @@ namespace dotnet_core_socket_server
             HTTP.Start();
 
             WebSocketServer socketServer = new WebSocketServer();
-            socketServer.OnConnect += OnSocketMessage;
+            socketServer.OnConnect += OnSocketConnect;
+            socketServer.OnMessage += OnSocketMessage;
+            socketServer.OnDisconnect += OnSocketDisconnect;
 
             try
             {
@@ -43,7 +45,17 @@ namespace dotnet_core_socket_server
 
         private static void OnSocketMessage(object sender, WebSocketServerEventArgs args)
         {
-            
+            Console.WriteLine("Got Message!");
+        }
+
+        private static void OnSocketConnect(object sender, WebSocketServerEventArgs args)
+        {
+            Console.WriteLine("Got new socket at : " + args.cli.InitTime);
+        }
+
+        private static void OnSocketDisconnect(object sender, WebSocketServerEventArgs args)
+        {
+            Console.WriteLine("Socket closing");
         }
 
         private static void OnSocketMessage(ClientObject client, SocketDataFrame message)
