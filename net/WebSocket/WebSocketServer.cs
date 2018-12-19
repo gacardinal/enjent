@@ -26,60 +26,6 @@ namespace NarcityMedia.Net
                 this.socketPools.Add(new WebSocketPool());
             }
         }
-
-
-        private class SocketNegotiationState
-        {
-            public ManualResetEvent waitHandle;
-            public Socket handler;
-            public WebSocketClient cli;
-            public WebSocketNegotiationException exception;
-
-            public SocketNegotiationState(Socket handler)
-            {
-                this.waitHandle = new ManualResetEvent(false);
-                this.handler = handler;
-            }
-        }
-
-        /// <summary>
-        /// Executed by a dedicated Thread, in charge of listening for HTTP requests and handle WebSocket negociation
-        /// </summary>
-        private void NegociationLoop()
-        {
-            while (this.listening)
-            {
-                Socket handler = this.socket.Accept();  // Blocking
-                SocketNegotiationState state = new SocketNegotiationState(handler);
-                ThreadPool.QueueUserWorkItem(WebSocketServer.NegociateWebSocketConnection, state);
-                state.waitHandle.WaitOne();
-                
-                if (state.exception == null)
-                {
-                    this.OnConnect.Invoke(this, new WebSocketServerEventArgs(state.cli));
-                }
-            }
-
-            this.Quit();
-            return;     // End 'listener' Thread execution
-        }
-
-        public static void NegociateWebSocketConnection(Object s)
-        {
-            SocketNegotiationState state = (SocketNegotiationState) s;
-            WebSocketClient cli = new WebSocketClient(state.handler);
-            if (cli.ReadRequestHeaders() &&
-                cli.AnalyzeRequestHeaders() &&
-                cli.Negociate101Upgrade() )
-            {
-                cli.StartListenAsync();
-                state.cli = cli;
-                state.waitHandle.Set();
-            } else {
-                state.exception = new WebSocketNegotiationException("WebSocket negotiation failed");
-                cli.Dispose();
-            }
-        }
     
         /// <summary>
         /// Executed by the 'listener' Thread, used to perform cleanup operation before quitting
@@ -123,6 +69,64 @@ namespace NarcityMedia.Net
         public void Stop()
         {
             this.listening = false;  // Listener Thread will exit when safe to do so
+        }
+
+
+        private class SocketNegotiationState
+        {
+            public Socket handler;
+            public WebSocketClient cli;
+            public WebSocketNegotiationException exception;
+            public delegate void NegotiationCallback(WebSocketClient cli);
+            public NegotiationCallback done;
+
+            public SocketNegotiationState(Socket handler)
+            {
+                this.handler = handler;
+            }
+        }
+        
+        /// <summary>
+        /// Executed by a dedicated Thread, in charge of listening for HTTP requests and handle WebSocket negociation
+        /// </summary>
+        private void NegociationLoop()
+        {
+            while (this.listening)
+            {
+                Socket handler = this.socket.Accept();  // Blocking
+                SocketNegotiationState state = new SocketNegotiationState(handler);
+                state.done = cli => {
+                    Console.WriteLine("Hi from delegate");
+                    // Executed async once the negotiation is done
+                    if (state.exception == null)
+                    {
+                        this.OnConnect.Invoke(this, new WebSocketServerEventArgs(state.cli));
+                    }
+                };
+
+                // 'WebSocketServerHTTPListener' threaad can move on and accept other requests
+                ThreadPool.QueueUserWorkItem(WebSocketServer.NegociateWebSocketConnection, state);
+            }
+
+            this.Quit();
+            return;     // End 'listener' Thread execution
+        }
+
+        public static void NegociateWebSocketConnection(Object s)
+        {
+            SocketNegotiationState state = (SocketNegotiationState) s;
+            WebSocketClient cli = new WebSocketClient(state.handler);
+            if (cli.ReadRequestHeaders() &&
+                cli.AnalyzeRequestHeaders() &&
+                cli.Negociate101Upgrade() )
+            {
+                cli.StartListenAsync();
+                state.cli = cli;
+                state.done(cli);
+            } else {
+                state.exception = new WebSocketNegotiationException("WebSocket negotiation failed");
+                cli.Dispose();
+            }
         }
     }
 
