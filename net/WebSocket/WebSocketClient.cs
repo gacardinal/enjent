@@ -99,13 +99,9 @@ namespace NarcityMedia.Net
                     if (frame != null)
                     {
                         if (frame is SocketControlFrame)
-                        {
                             this.OnControlFrame((SocketControlFrame) frame);
-                        }
                         else if (frame is SocketDataFrame)
-                        {
                             this.OnMessage(this, (SocketDataFrame) frame);
-                        }
                     }
                     else
                     {
@@ -240,7 +236,7 @@ namespace NarcityMedia.Net
         /// </returns>
         /// <remarks>
         /// This method is not exactly like the Int*.TryParse() methods as it doesn't take an 'out' parameter and return a
-        /// boolean value but rather returns either the parsed object or a null reference, which means that callers of this method need to check
+        /// boolean value but rather returns either the parsed object reference or a null reference, which means that callers of this method need to check
         /// for null before using the return value.
         /// Furthermore, if the parse is successful, a caller should check the type of the object that is returned to, for example,
         /// differenciate between a SocketDataFrame and a SocketControlFrame, which are both derived from SocketFrame.
@@ -273,13 +269,9 @@ namespace NarcityMedia.Net
 
                 SocketFrame frame;
                 if (opcode == 1 || opcode == 2)
-                {
                     frame = new SocketDataFrame(fin, masked, contentLength, (SocketDataFrame.DataFrameType) opcode, UnmaskContent(contentBuffer, maskingKey));
-                }
                 else
-                {
                     frame = new SocketControlFrame(fin, masked, (SocketFrame.OPCodes)opcode);
-                }
 
                 return frame;
             }
