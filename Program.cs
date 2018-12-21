@@ -67,6 +67,7 @@ namespace dotnet_core_socket_server
                 client.currentUrl = newUrl;
                 SocketManager.Instance.AddClient(client);
             }
+
             Logger.Log("Received message : " + message.Plaintext, Logger.LogType.Info);
         }
 

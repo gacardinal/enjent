@@ -50,7 +50,6 @@ namespace NarcityMedia.Net
         private bool listenToSocket = true;
         private int requestheaderslength;
         private int writeindex = 0;
-        private Thread listener;
 
         private byte[] _url;
         private byte[] url
@@ -72,9 +71,6 @@ namespace NarcityMedia.Net
             this.OnControlFrame = DefaultControlFrameHandler;
             this.OnMessage = DefaultDataFrameHandler;
             this.lmlTk = GenerateRandomToken(32, false);
-
-            this.listener = new Thread(this.BeginListening);
-            this.listener.Name = "ClientListenerThread";
         }
 
         /// <summary>
