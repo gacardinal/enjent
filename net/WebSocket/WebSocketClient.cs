@@ -73,14 +73,6 @@ namespace NarcityMedia.Net
             this.lmlTk = GenerateRandomToken(32, false);
         }
 
-        /// <summary>
-        /// Starts listenning to the WebSocket associated to the current client object on a separate thread
-        /// </summary>
-        public void StartListenAsync()
-        {
-            this.listener.Start(this.socket);
-        }
-
         // See https://docs.microsoft.com/en-us/dotnet/api/system.net.sockets.socketasynceventargs?view=netframework-4.7.2
         protected void BeginListening(Object state) 
         {

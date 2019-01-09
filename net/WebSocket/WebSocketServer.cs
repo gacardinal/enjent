@@ -173,11 +173,11 @@ namespace NarcityMedia.Net
             }
         }
 
-        public bool RemoveCLient(WebSocketClient cli)
+        public bool RemoveClient(WebSocketClient cli)
         {
             lock (this.clients)
             {
-                this.clients.Remove(cli);
+                return this.clients.Remove(cli);
             }
         }
     }
@@ -186,12 +186,12 @@ namespace NarcityMedia.Net
     {
         private List<WebSocketPool> socketPools;
         private const int INITIAL_POOL_COUNT = 2;
-        private List<ClientPoolAssoc> clientPoolsAssoc;
+        private List<ClientPoolAssoc> clientPoolsAssociations;
 
         public WebSocketPoolManager()
         {
             this.socketPools = new List<WebSocketPool>(INITIAL_POOL_COUNT);
-            this.clientPoolsAssoc = new List<ClientPoolAssoc>(this.INITIAL_POOL_COUNT * 1024);
+            this.clientPoolsAssociations = new List<ClientPoolAssoc>(INITIAL_POOL_COUNT * 1024);
             for (int i = 0; i < INITIAL_POOL_COUNT; i++)
             {
                 this.socketPools.Add(new WebSocketPool());
@@ -207,7 +207,7 @@ namespace NarcityMedia.Net
         {
             WebSocketPool pool = this.socketPools.OrderByDescending(x => x.clients.Count).First();
             if (pool != null) {
-                this.clientPoolsAssoc.Add(new ClientPoolAssoc(cli, pool));
+                this.clientPoolsAssociations.Add(new ClientPoolAssoc(cli, pool));
                 pool.AddClient(cli);
             }
         }
@@ -219,8 +219,8 @@ namespace NarcityMedia.Net
         /// <returns>Whether the remove operation was successful</returns>
         public bool RemoveClient(WebSocketClient cli)
         {
-            ClientPoolAssoc cliAssoc = this.clientPoolsAssoc.Find(x => x.client == cli);
-            this.clientPoolsAssoc.Remove(cliAssoc);
+            ClientPoolAssoc cliAssoc = this.clientPoolsAssociations.Find(x => x.client == cli);
+            this.clientPoolsAssociations.Remove(cliAssoc);
             return cliAssoc.pool.Remove(cli);
         }
 
@@ -231,7 +231,7 @@ namespace NarcityMedia.Net
         private struct ClientPoolAssoc
         {
             public WebSocketClient client;
-            public WebsSocketPool pool;
+            public WebSocketPool pool;
 
             public ClientPoolAssoc(WebSocketClient client, WebSocketPool pool)
             {
