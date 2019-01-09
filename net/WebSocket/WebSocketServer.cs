@@ -9,17 +9,38 @@ namespace NarcityMedia.Net
 {
     public partial class WebSocketServer
     {
+        /// <summary>
+        /// Thread that will listen for incoming connections
+        /// </summary>
         private Thread listener;
+
+        /// <summary>
+        /// The socket that will be bound on the endpoint passed to the WebSocketServer.Start() method
+        /// </summary>
         private Socket socket;
+
+        /// <summary>
+        /// Indicates whether the server is listening for incoming connections
+        /// </summary>
         private bool listening;
+
+        /// <summary>
+        /// A WebSocketPoolManager instance to which all new WebSockets clients will be added
+        /// </summary>
+        private WebSocketPoolManager poolManager;
+        
+        /// <summary>
+        /// Instantiates a new instance of the WebSocketServer class
+        /// </summary>
         public WebSocketServer()
         {
             this.listener = new Thread(this.NegociationLoop);
             this.listener.IsBackground = false;
             this.listener.Name = "WebSocketServerHTTPListener";
             this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            this.poolManager = new WebSocketPoolManager();
         }
-    
+
         /// <summary>
         /// Executed by the 'listener' Thread, used to perform cleanup operation before quitting
         /// </summary>
@@ -92,7 +113,7 @@ namespace NarcityMedia.Net
                     // Executed async once the negotiation is done
                     if (state.exception == null)
                     {
-
+                        this.poolManager.AddClient(cli);
                         this.OnConnect.Invoke(this, new WebSocketServerEventArgs(state.cli));
                     }
                 };
@@ -113,7 +134,6 @@ namespace NarcityMedia.Net
                 cli.AnalyzeRequestHeaders() &&
                 cli.Negociate101Upgrade() )
             {
-                cli.StartListenAsync();
                 state.cli = cli;
                 state.done(cli);
             } else {
@@ -155,11 +175,40 @@ namespace NarcityMedia.Net
         {
             while (true)
             {
-                lock (this.clients)
+                foreach (WebSocketClient cli in this.clients)
                 {
-                    foreach (WebSocketClient cli in this.clients)
+                    // WebSocket frames are 2 bytes minimum
+                    if (cli.socket.Available >= 2)
                     {
-                        
+                        // The try / catch clause inside a for inside a while shouldn't affectr performances.
+                        // The only performance hit should occur when an Exception is thrown by the listening logic but that's, well, exceptionnal
+                        try
+                        {
+                            byte[] frameHeaderBuffer = new byte[2];
+                            int received = cli.socket.Receive(frameHeaderBuffer); // Blocking
+                            SocketFrame frame = SocketFrame.TryParse(frameHeaderBuffer, cli.socket);
+                            if (frame != null)
+                            {
+                                if (frame is SocketControlFrame)
+                                    ;
+                                else if (frame is SocketDataFrame)
+                                    ;
+                            }
+                            else
+                            {
+                                // Parsing error
+                            }
+
+                        }
+                        catch (Exception e)
+                        {
+                            // Move on with iterating over the other sockets to make sure none are left unattended
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        continue;
                     }
                 }
             }
@@ -182,7 +231,14 @@ namespace NarcityMedia.Net
         }
     }
 
-    public class WebSocketPoolManager
+    /// <summary>
+    /// Maintains a collection of WebSOcketPool objects.
+    /// Each WebSocketPool within the WebSocketPoolManager gets assigned a Thread that will constantly
+    /// check the buffer of each WebSocket within the WebSocketPool and takes actions according to the state of the buffer.
+    /// The WebSocketPoolManager ensures that all WebSocketPools contain a balanced number of WebSockets to maintain
+    /// consistent performances.
+    /// </summary>
+    internal class WebSocketPoolManager
     {
         private List<WebSocketPool> socketPools;
         private const int INITIAL_POOL_COUNT = 2;
@@ -221,7 +277,7 @@ namespace NarcityMedia.Net
         {
             ClientPoolAssoc cliAssoc = this.clientPoolsAssociations.Find(x => x.client == cli);
             this.clientPoolsAssociations.Remove(cliAssoc);
-            return cliAssoc.pool.Remove(cli);
+            return cliAssoc.pool.RemoveClient(cli);
         }
 
         /// <summary>
