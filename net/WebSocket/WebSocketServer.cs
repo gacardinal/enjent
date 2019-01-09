@@ -35,10 +35,12 @@ namespace NarcityMedia.Net
         public WebSocketServer()
         {
             this.listener = new Thread(this.NegociationLoop);
+            // Set Thread as foreground to prevent program execution finishing
             this.listener.IsBackground = false;
             this.listener.Name = "WebSocketServerHTTPListener";
             this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.poolManager = new WebSocketPoolManager();
+            this.poolManager.OnFrame = this.FrameHandler;
         }
 
         /// <summary>
@@ -49,11 +51,19 @@ namespace NarcityMedia.Net
 
         }
 
+        private void FrameHandler(WebSocketClient cli, SocketFrame frame)
+        {
+            if (frame is SocketControlFrame)
+                ;
+            else if (frame is SocketDataFrame)
+                ;
+        }
+
         /// <summary>
         /// Starts listenning for incomming HTTP WebSocket connections
         /// </summary>
         /// <param name="endpoint">The endpoint at which the WebSocketServer should listen for incomming WebSocket HTTP connections</param>
-        /// <exception cref="WebSocketServerException">Thros any exception that might occur while trying to bing the socket as an inner exception</exception>
+        /// <exception cref="WebSocketServerException">Thros any exception that might occur while trying to bind the socket as an inner exception</exception>
         public void Start(IPEndPoint endpoint)
         {
             if (!this.listening)
@@ -155,15 +165,15 @@ namespace NarcityMedia.Net
         private static int POOL_ID = 0;
         public List<WebSocketClient> clients { get; }
 
+        public FrameHandler OnFrame;
+        public delegate void FrameHandler(WebSocketClient cli, SocketFrame frame);
+
         public WebSocketPool()
         {
             this.clients = new List<WebSocketClient>(this.POOL_SIZE);
-            
             this.worker = new Thread(ListenLoop);
             this.worker.Name = "ThreadPoolWorker_" + WebSocketPool.POOL_ID++;
-            // Make thread foreground to prevent program execution ending
-            this.worker.IsBackground = false;
-
+            this.worker.Start();
         }
 
         public WebSocketPool(int poolSize) : this()
@@ -175,45 +185,54 @@ namespace NarcityMedia.Net
         {
             while (true)
             {
-                foreach (WebSocketClient cli in this.clients)
+                lock (this.clients)
                 {
-                    // WebSocket frames are 2 bytes minimum
-                    if (cli.socket.Available >= 2)
+                    foreach (WebSocketClient cli in this.clients)
                     {
-                        // The try / catch clause inside a for inside a while shouldn't affectr performances.
-                        // The only performance hit should occur when an Exception is thrown by the listening logic but that's, well, exceptionnal
-                        try
+                        // WebSocket frames are 2 bytes minimum
+                        if (cli.socket.Available >= 2)
                         {
-                            byte[] frameHeaderBuffer = new byte[2];
-                            int received = cli.socket.Receive(frameHeaderBuffer); // Blocking
-                            SocketFrame frame = SocketFrame.TryParse(frameHeaderBuffer, cli.socket);
-                            if (frame != null)
+                            // The try / catch clause inside a for inside a while shouldn't affectr performances.
+                            // The only performance hit should occur when an Exception is thrown by the listening logic but that's, well, exceptionnal
+                            try
                             {
-                                if (frame is SocketControlFrame)
-                                    ;
-                                else if (frame is SocketDataFrame)
-                                    ;
+                                byte[] frameHeaderBuffer = new byte[2];
+                                int received = cli.socket.Receive(frameHeaderBuffer); // Blocking
+                                SocketFrame frame = SocketFrame.TryParse(frameHeaderBuffer, cli.socket);
+                                if (frame != null)
+                                {
+                                    if (this.OnFrame != null)
+                                    {
+                                        this.OnFrame.Invoke(cli, frame);
+                                    }
+                                }
+                                else
+                                {
+                                    // Parsing error
+                                }
                             }
-                            else
+                            catch (Exception e)
                             {
-                                // Parsing error
+                                // Move on with iterating over the other sockets to make sure none are left unattended
+                                continue;
                             }
-
                         }
-                        catch (Exception e)
+                        else
                         {
-                            // Move on with iterating over the other sockets to make sure none are left unattended
                             continue;
                         }
-                    }
-                    else
-                    {
-                        continue;
                     }
                 }
             }
         }
 
+        /// <summary>
+        /// Adds a WebSocketClient to the current WebSocketPool
+        /// </summary>
+        /// <param name="cli">A reference to the client to add</param>
+        /// <remarks>
+        /// This method is to be executed by the same thread that executes the ThreadPoolManager logic
+        /// </remarks>
         public void AddClient(WebSocketClient cli)
         {
             lock (this.clients)
@@ -222,6 +241,16 @@ namespace NarcityMedia.Net
             }
         }
 
+        /// <summary>
+        /// Removes a WebSocketClient from the current WebSocketPool
+        /// </summary>
+        /// <param name="cli">A reference to the client to remove</param>
+        /// <returns>
+        /// Returns a boolean that represents whether the operation was successful
+        /// </returns>
+        /// <remarks>
+        /// This method is to be executed by the same thread that executes the ThreadPoolManager logic
+        /// </remarks>
         public bool RemoveClient(WebSocketClient cli)
         {
             lock (this.clients)
@@ -240,9 +269,12 @@ namespace NarcityMedia.Net
     /// </summary>
     internal class WebSocketPoolManager
     {
-        private List<WebSocketPool> socketPools;
         private const int INITIAL_POOL_COUNT = 2;
+        private List<WebSocketPool> socketPools;
         private List<ClientPoolAssoc> clientPoolsAssociations;
+
+        public FrameHandler OnFrame;
+        public delegate void FrameHandler(WebSocketClient cli, SocketFrame frame);
 
         public WebSocketPoolManager()
         {
@@ -250,7 +282,25 @@ namespace NarcityMedia.Net
             this.clientPoolsAssociations = new List<ClientPoolAssoc>(INITIAL_POOL_COUNT * 1024);
             for (int i = 0; i < INITIAL_POOL_COUNT; i++)
             {
+                WebSocketPool pool = new WebSocketPool();
+                pool.OnFrame = this.FrameHandlerCallback;
                 this.socketPools.Add(new WebSocketPool());
+            }
+        }
+
+        /// <summary>
+        /// Callback that is executed when a WebSocketPool parses a WebSocketFrame comming from a client
+        /// </summary>
+        /// <param name="cli">The client that sent the frame</param>
+        /// <param name="frame">The frame that was sent</param>
+        /// <remarks>
+        /// This method will invoke the meth
+        /// </remarks>
+        private void FrameHandlerCallback(WebSocketClient cli, SocketFrame frame)
+        {
+            if (this.OnFrame != null)
+            {
+                this.OnFrame.Invoke(cli, frame);
             }
         }
 

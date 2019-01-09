@@ -18,17 +18,23 @@ namespace NarcityMedia.Net
     /// </summary>
     public class WebSocketServerEventArgs
     {
-        public WebSocketClient cli;
-        public Exception exception;
+        public WebSocketClient Cli;
+        public Exception Exception;
+        public SocketDataFrame DataFrame;
 
         public WebSocketServerEventArgs(WebSocketClient cli)
         {
-            this.cli = cli;
+            this.Cli = cli;
+        }
+
+        public WebSocketServerEventArgs(WebSocketClient cli, SocketDataFrame dataFrame) : this(cli)
+        {
+            this.DataFrame = dataFrame;
         }
 
         public WebSocketServerEventArgs(Exception innerException)
         {
-            this.exception = innerException;
+            this.Exception = innerException;
         }
     }
 }

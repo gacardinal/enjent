@@ -50,7 +50,7 @@ namespace dotnet_core_socket_server
 
         private static void OnSocketConnect(object sender, WebSocketServerEventArgs args)
         {
-            Console.WriteLine("Got new socket at : " + args.cli.InitTime);
+            Console.WriteLine("Got new socket at : " + args.Cli.InitTime);
         }
 
         private static void OnSocketDisconnect(object sender, WebSocketServerEventArgs args)
