@@ -152,7 +152,7 @@ namespace NarcityMedia.Net
             {
                 WebSocketPool pool = new WebSocketPool();
                 pool.OnPoolFrame += this.FrameHandlerCallback;
-                this.socketPools.Add(new WebSocketPool());
+                this.socketPools.Add(pool);
                 pool.StartListening();
             }
         }
