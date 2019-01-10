@@ -39,45 +39,13 @@ namespace dotnet_core_socket_server
             }
             catch (WebSocketServerException e)
             {
-<<<<<<< HEAD
-                cli.Greet();
-                cli.StartListenAsync();
-                Logger.Log("Socket connection accepted #" + SocketManager.Instance.ClientsCount, Logger.LogType.Success);
-                if (!SocketManager.Instance.AddClient(cli))
-                {
-                    Logger.Log("The new client couldn't be added to the Socket Manager and will be disposed of", Logger.LogType.Error);
-                    cli.SendControlFrame(new SocketControlFrame(SocketFrame.OPCodes.Close));
-                    cli.Dispose();
-                }
-            } else {
-                Logger.Log("Socket connection refused, couldn't parse headers", Logger.LogType.Error);
-		Logger.Log(System.Text.Encoding.UTF8.GetString(cli.requestheaders), Logger.LogType.Error);
-                cli.Dispose();
-=======
                 Logger.Log("An error occured when starting the WebSocket server - " + e.Message, Logger.LogType.Error);
->>>>>>> isolate-websocket-server
             }
         }
 
         private static void OnSocketConnect(object sender, WebSocketServerEventArgs args)
         {
-<<<<<<< HEAD
-            if (message.Plaintext.StartsWith(NAVIGATE_MARKER))
-            {
-                string newUrl = message.Plaintext.Substring(NAVIGATE_MARKER.Length);
-                SocketManager.Instance.RemoveClient(client);
-                client.currentUrl = newUrl;
-                SocketManager.Instance.AddClient(client);
-
-	        Logger.Log("Received text frame with content length: " + message.contentLength, Logger.LogType.Info);
-            }
-            else if (message.Plaintext == "1")
-            {
-                client.SendApplicationMessage((WebSocketMessage.ApplicationMessageCode)2);
-            }
-=======
             Console.WriteLine("Got new socket at : " + args.Cli.InitTime);
->>>>>>> isolate-websocket-server
         }
 
         private static void OnSocketDisconnect(object sender, WebSocketServerEventArgs args)
