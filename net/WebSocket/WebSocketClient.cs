@@ -25,11 +25,6 @@ namespace NarcityMedia.Net
         public DateTime InitTime = DateTime.Now;
         public string lmlTk;
         public delegate void SocketDataFrameHandler(WebSocketClient client, SocketDataFrame frame);
-        public SocketDataFrameHandler OnMessage;
-        public delegate void ClientEvent(WebSocketClient client);
-        public ClientEvent OnClose;
-        private delegate void SocketControlFrameHandler(SocketControlFrame frame);
-        private SocketControlFrameHandler OnControlFrame;
         private const int MAX_REQUEST_HEADERS_LENGTH = 2048;
         private const string WEBSOCKET_SEC_KEY_HEADER = "Sec-WebSocket-Key";
         private const string WEBSOCKET_COOKIE_HEADER = "Cookie";
@@ -67,8 +62,6 @@ namespace NarcityMedia.Net
         public WebSocketClient(Socket socket)
         {
             this.socket = socket;
-            this.OnControlFrame = DefaultControlFrameHandler;
-            this.OnMessage = DefaultDataFrameHandler;
             this.lmlTk = GenerateRandomToken(32, false);
         }
 
@@ -108,37 +101,11 @@ namespace NarcityMedia.Net
             return;
         }
 
-        private void DefaultControlFrameHandler(SocketControlFrame frame)
+        public void Dispose()
         {
-            switch (frame.opcode)
-            {
-                case 0: // Continuation
-                    break;
-                case 8: // Close
-                    this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
-                    if (this.OnClose != null) this.OnClose(this);
-                    break;
-                case 9:
-                    Logger.Log("Received ping", Logger.LogType.Info);
-                    this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Pong));
-                    break;
-                default:
-                    break;
+            if (this.socket != null) {
+                this.socket.Dispose();
             }
-        }
-
-        private static void DefaultDataFrameHandler(WebSocketClient cli, SocketDataFrame frame)
-        {
-            cli.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.Greeting);
-        }
-
-        /// <summary>
-        /// Greets the client by sending the SocketMessage.ApplicationMessageCode.Greeting code.
-        /// </summary>
-        /// <remarks>Calls <see cref="SendApplicationMessage" /></remarks>
-        public void Greet()
-        {
-            this.SendApplicationMessage(WebSocketMessage.ApplicationMessageCode.Greeting);
         }
 
         /// <summary>
@@ -178,23 +145,10 @@ namespace NarcityMedia.Net
 
                 return true;
             }
-            catch (ArgumentNullException e)
+            catch (Exception e)
             {
-                Logger.Log("Attempted to send null value to socket - " + e.Message, Logger.LogType.Error);
+                throw new WebSocketServerException("Error while sending frame to socket", e);
             }
-            catch (SocketException e)
-            {
-                Logger.Log("A SocketException occured, this could be due to a network problem or to the socket being closed by the OS - " + e.Message, Logger.LogType.Error);
-                Logger.Log("SocketException.ErrorCode: " + e.ErrorCode, Logger.LogType.Error);
-                Logger.Log("For SocketException error codes see https://bit.ly/2OsLovc", Logger.LogType.Info);
-                Logger.Log("The closed socket will be disposed of", Logger.LogType.Info);
-            }
-            catch (ObjectDisposedException e)
-            {
-                Logger.Log("Message couldn't be sent, the socket was likely closed before attempting to send the message" + e.Message, Logger.LogType.Error);
-            }
-
-            return false;
         }
 
         /// <summary>
@@ -209,12 +163,6 @@ namespace NarcityMedia.Net
             return this.SendFrames(frames);
         }
 
-        public void Dispose()
-        {
-            if (this.socket != null) {
-                this.socket.Dispose();
-            }
-        }
     }
     
     /// <summary>
