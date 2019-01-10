@@ -39,8 +39,7 @@ namespace NarcityMedia.Net
             this.listener.IsBackground = false;
             this.listener.Name = "WebSocketServerHTTPListener";
             this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            this.poolManager = new WebSocketPoolManager();
-            this.poolManager.OnFrame = this.FrameHandler;
+            this.poolManager = new WebSocketPoolManager(this.FrameHandler);
         }
 
         /// <summary>
@@ -94,7 +93,6 @@ namespace NarcityMedia.Net
         {
             this.listening = false;  // Listener Thread will exit when safe to do so
         }
-
 
         private class SocketNegotiationState
         {
