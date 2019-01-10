@@ -53,7 +53,7 @@ namespace NarcityMedia.Net
         private void FrameHandler(WebSocketClient cli, SocketFrame frame)
         {
             if (frame is SocketControlFrame)
-                ;
+                this.DefaultControlFrameHandler(cli, (SocketControlFrame) frame);
             else if (frame is SocketDataFrame)
                 this.OnMessage.Invoke(this, new WebSocketServerEventArgs(cli, (SocketDataFrame) frame));
         }
@@ -92,6 +92,26 @@ namespace NarcityMedia.Net
         public void Stop()
         {
             this.listening = false;  // Listener Thread will exit when safe to do so
+        }
+
+        private void DefaultControlFrameHandler(WebSocketClient cli, SocketControlFrame cFrame)
+        {
+            switch (cFrame.opcode)
+            {
+                case 0: // Continuation
+                    break;
+                case 8: // Close
+                    cli.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
+                    this.poolManager.RemoveClient(cli);
+                    this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, cFrame));
+                    cli.Dispose();
+                    break;
+                case 9:
+                    cli.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Pong));
+                    break;
+                default:
+                    break;
+            }
         }
 
         private class SocketNegotiationState
