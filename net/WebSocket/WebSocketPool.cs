@@ -19,6 +19,15 @@ namespace NarcityMedia.Net
         private static int POOL_ID = 0;
         public List<WebSocketClient> clients { get; }
 
+        public event FrameHandler OnPoolFrame;
+
+        /// <summary>
+        /// An event delegate that is raised by the WebSocketPool when it detects that one of its sockets received a WebSocket frame.
+        /// This event does not implement the 'Microsoft .NET standard' f(object sender, EventArgs e) signature because this
+        /// event is very custom to the WebSocketServer application and also, it is internal to the namespace.
+        /// </summary>
+        /// <param name="cli">The WebSocketCLient object that receives the frame</param>
+        /// <param name="frame">The frame that was received by the WebSocketClient</param>
         public delegate void FrameHandler(WebSocketClient cli, SocketFrame frame);
 
         public WebSocketPool()
@@ -26,12 +35,16 @@ namespace NarcityMedia.Net
             this.clients = new List<WebSocketClient>(this.POOL_SIZE);
             this.worker = new Thread(ListenLoop);
             this.worker.Name = "ThreadPoolWorker_" + WebSocketPool.POOL_ID++;
-            this.worker.Start();
         }
 
         public WebSocketPool(int poolSize) : this()
         {
             this.POOL_SIZE = poolSize;
+        }
+
+        public void StartListening()
+        {
+            this.worker.Start();
         }
 
         private void ListenLoop()
@@ -54,9 +67,9 @@ namespace NarcityMedia.Net
                                 SocketFrame frame = SocketFrame.TryParse(frameHeaderBuffer, cli.socket);
                                 if (frame != null)
                                 {
-                                    if (this.OnFrame != null)
+                                    if (this.OnPoolFrame != null)
                                     {
-                                        this.OnFrame.Invoke(cli, frame);
+                                        this.OnPoolFrame.Invoke(cli, frame);
                                     }
                                 }
                                 else
@@ -67,6 +80,7 @@ namespace NarcityMedia.Net
                             catch (Exception e)
                             {
                                 // Move on with iterating over the other sockets to make sure none are left unattended
+                                throw e;
                                 continue;
                             }
                         }
@@ -126,18 +140,20 @@ namespace NarcityMedia.Net
         private List<WebSocketPool> socketPools;
         private List<ClientPoolAssoc> clientPoolsAssociations;
 
-        public FrameHandler OnFrame;
+        public event FrameHandler OnManagerFrame;
         public delegate void FrameHandler(WebSocketClient cli, SocketFrame frame);
 
-        public WebSocketPoolManager()
+        public WebSocketPoolManager(FrameHandler f)
         {
             this.socketPools = new List<WebSocketPool>(INITIAL_POOL_COUNT);
             this.clientPoolsAssociations = new List<ClientPoolAssoc>(INITIAL_POOL_COUNT * 1024);
+            this.OnManagerFrame += f;
             for (int i = 0; i < INITIAL_POOL_COUNT; i++)
             {
                 WebSocketPool pool = new WebSocketPool();
-                pool.OnFrame = this.FrameHandlerCallback;
+                pool.OnPoolFrame += this.FrameHandlerCallback;
                 this.socketPools.Add(new WebSocketPool());
+                pool.StartListening();
             }
         }
 
@@ -147,14 +163,10 @@ namespace NarcityMedia.Net
         /// <param name="cli">The client that sent the frame</param>
         /// <param name="frame">The frame that was sent</param>
         /// <remarks>
-        /// This method will invoke the meth
         /// </remarks>
         private void FrameHandlerCallback(WebSocketClient cli, SocketFrame frame)
         {
-            if (this.OnFrame != null)
-            {
-                this.OnFrame.Invoke(cli, frame);
-            }
+            this.OnManagerFrame.Invoke(cli, frame);
         }
 
         /// <summary>
