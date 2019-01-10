@@ -55,7 +55,7 @@ namespace NarcityMedia.Net
             if (frame is SocketControlFrame)
                 ;
             else if (frame is SocketDataFrame)
-                ;
+                this.OnMessage.Invoke(this, new WebSocketServerEventArgs(cli, (SocketDataFrame) frame));
         }
 
         /// <summary>

@@ -16,7 +16,7 @@ namespace NarcityMedia.Net
     {
         private Thread worker;
         public readonly int POOL_SIZE = 1024;
-        private static int POOL_ID = 0;
+        public readonly int POOL_ID = 0;
         public List<WebSocketClient> clients { get; }
 
         public event FrameHandler OnPoolFrame;
@@ -30,14 +30,15 @@ namespace NarcityMedia.Net
         /// <param name="frame">The frame that was received by the WebSocketClient</param>
         public delegate void FrameHandler(WebSocketClient cli, SocketFrame frame);
 
-        public WebSocketPool()
+        public WebSocketPool(int id)
         {
+            this.POOL_ID = id;
             this.clients = new List<WebSocketClient>(this.POOL_SIZE);
             this.worker = new Thread(ListenLoop);
-            this.worker.Name = "ThreadPoolWorker_" + WebSocketPool.POOL_ID++;
+            this.worker.Name = "ThreadPoolWorker_" + this.POOL_ID++;
         }
 
-        public WebSocketPool(int poolSize) : this()
+        public WebSocketPool(int id, int poolSize) : this(id)
         {
             this.POOL_SIZE = poolSize;
         }
@@ -90,6 +91,9 @@ namespace NarcityMedia.Net
                         }
                     }
                 }
+
+                // Avoid capping CPU
+                Thread.Sleep(1);
             }
         }
 
@@ -150,7 +154,7 @@ namespace NarcityMedia.Net
             this.OnManagerFrame += f;
             for (int i = 0; i < INITIAL_POOL_COUNT; i++)
             {
-                WebSocketPool pool = new WebSocketPool();
+                WebSocketPool pool = new WebSocketPool(i);
                 pool.OnPoolFrame += this.FrameHandlerCallback;
                 this.socketPools.Add(pool);
                 pool.StartListening();
@@ -166,6 +170,10 @@ namespace NarcityMedia.Net
         /// </remarks>
         private void FrameHandlerCallback(WebSocketClient cli, SocketFrame frame)
         {
+            foreach (WebSocketPool pool in this.socketPools)
+            {
+                Console.WriteLine("Pool " + pool.POOL_ID + " has " + pool.clients.Count + " clients");
+            }
             this.OnManagerFrame.Invoke(cli, frame);
         }
 
@@ -176,7 +184,7 @@ namespace NarcityMedia.Net
         /// <param name="cli">The client object to insert</param>
         public void AddClient(WebSocketClient cli)
         {
-            WebSocketPool pool = this.socketPools.OrderByDescending(x => x.clients.Count).First();
+            WebSocketPool pool = this.socketPools.Aggregate((a, b) => a.clients.Count < b.clients.Count ? a : b);
             if (pool != null) {
                 this.clientPoolsAssociations.Add(new ClientPoolAssoc(cli, pool));
                 pool.AddClient(cli);

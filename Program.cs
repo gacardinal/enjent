@@ -45,7 +45,7 @@ namespace dotnet_core_socket_server
 
         private static void OnSocketMessage(object sender, WebSocketServerEventArgs args)
         {
-            Console.WriteLine("Got Message!");
+            Console.WriteLine("Got Message: " + args.DataFrame.Plaintext);
         }
 
         private static void OnSocketConnect(object sender, WebSocketServerEventArgs args)
