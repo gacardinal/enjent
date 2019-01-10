@@ -14,51 +14,32 @@ namespace dotnet_core_socket_server
 {
     public class Program
     {
-        private static Boolean exit = false;
+        private static bool exit = false;
         private static HTTPServer httpServer;
         const string NAVIGATE_MARKER = "navigate:";
 
         static void Main(string[] args)
         {
-            Thread HTTP = new Thread(Program.DispatchHTTPServer);
-            HTTP.Start();
-
-            Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            IPEndPoint endpoint = new IPEndPoint(IPAddress.Loopback, 13003);
-
-            try {
-                socket.Bind(endpoint);
-                socket.Listen(200);
-                Logger.Log(String.Format("Listening for Web Socket connections at endpoint {0}:{1}", endpoint.Address, endpoint.Port), Logger.LogType.Success);
-            } catch (SocketException) {
-                Logger.Log(String.Format("Couldn't bind on endpoint {0}:{1} the port might already be in use", endpoint.Address, endpoint.Port),
-                            Logger.LogType.Error);
-                Environment.Exit(1);
-            } catch {
-                Logger.Log("Unknown error while trying to bind socket", Logger.LogType.Error);
-                Environment.Exit(1);
-            }
-
             int workerThreads, portThreads;
             ThreadPool.GetMaxThreads(out workerThreads, out portThreads);
             Logger.Log("The process Thread Pool has a mixaimum of " + workerThreads.ToString() + " worker threads", Logger.LogType.Info);
-            while (!Program.exit) {
-                // MAIN THREAD blocks here and resumes on each new Socket connection
-                Socket handler = socket.Accept();
-                ThreadPool.QueueUserWorkItem(NegotiateSocketConnection, handler);
-            }
-        }
 
-        private static void NegotiateSocketConnection(Object s)
-        {
-            Socket handler = (Socket) s;
-            ClientObject cli = new ClientObject((Socket) handler);
-            cli.OnMessage = OnSocketMessage;
-            cli.OnClose = OnSocketClose;
-            if (cli.ReadRequestHeaders() &&
-                cli.AnalyzeRequestHeaders() &&
-                cli.Negociate101Upgrade() )
+            Thread HTTP = new Thread(Program.DispatchHTTPServer);
+            HTTP.Name = "HTTP Localhost Listener";
+            HTTP.Start();
+
+            WebSocketServer socketServer = new WebSocketServer();
+            socketServer.OnConnect += OnSocketConnect;
+            socketServer.OnMessage += OnSocketMessage;
+            socketServer.OnDisconnect += OnSocketDisconnect;
+
+            try
             {
+                socketServer.Start(new IPEndPoint(IPAddress.Loopback, 13003));
+            }
+            catch (WebSocketServerException e)
+            {
+<<<<<<< HEAD
                 cli.Greet();
                 cli.StartListenAsync();
                 Logger.Log("Socket connection accepted #" + SocketManager.Instance.ClientsCount, Logger.LogType.Success);
@@ -72,11 +53,15 @@ namespace dotnet_core_socket_server
                 Logger.Log("Socket connection refused, couldn't parse headers", Logger.LogType.Error);
 		Logger.Log(System.Text.Encoding.UTF8.GetString(cli.requestheaders), Logger.LogType.Error);
                 cli.Dispose();
+=======
+                Logger.Log("An error occured when starting the WebSocket server - " + e.Message, Logger.LogType.Error);
+>>>>>>> isolate-websocket-server
             }
         }
 
-        private static void OnSocketMessage(ClientObject client, SocketDataFrame message)
+        private static void OnSocketConnect(object sender, WebSocketServerEventArgs args)
         {
+<<<<<<< HEAD
             if (message.Plaintext.StartsWith(NAVIGATE_MARKER))
             {
                 string newUrl = message.Plaintext.Substring(NAVIGATE_MARKER.Length);
@@ -90,15 +75,37 @@ namespace dotnet_core_socket_server
             {
                 client.SendApplicationMessage((WebSocketMessage.ApplicationMessageCode)2);
             }
+=======
+            Console.WriteLine("Got new socket at : " + args.Cli.InitTime);
+>>>>>>> isolate-websocket-server
         }
 
-        private static void OnSocketClose(ClientObject client)
+        private static void OnSocketDisconnect(object sender, WebSocketServerEventArgs args)
         {
-            Logger.Log("Socket removed : " + SocketManager.Instance.RemoveClient(client), Logger.LogType.Info);
-            // SocketManager.Instance.RemoveClient(client);
-            double socketDuration = Math.Round(DateTime.Now.Subtract(client.InitTime).TotalSeconds, 2);
+            double socketDuration = Math.Round(DateTime.Now.Subtract(args.Cli.InitTime).TotalSeconds, 2);
             Logger.Log(String.Format("Socket is closing after {0} seconds", socketDuration), Logger.LogType.Info);
-            client.Dispose();
+        }
+
+        private static void OnSocketMessage(object sender, WebSocketServerEventArgs args)
+        {
+            if (args.DataFrame.Plaintext.StartsWith(NAVIGATE_MARKER))
+            {
+                string newUrl = args.DataFrame.Plaintext.Substring(NAVIGATE_MARKER.Length);
+                args.Cli.currentUrl = newUrl;
+            }
+            else if (args.DataFrame.Plaintext == "1")
+            {
+                args.Cli.SendApplicationMessage((WebSocketMessage.ApplicationMessageCode) 2);
+            }
+
+            if (args.DataFrame.DataType == SocketDataFrame.DataFrameType.Text)
+            {
+                Logger.Log("Received message : " + args.DataFrame.Plaintext, Logger.LogType.Info);
+            }
+            else if (args.DataFrame.DataType == SocketDataFrame.DataFrameType.Binary)
+            {
+                Logger.Log("Received binary frame : " + BitConverter.ToString(args.DataFrame.GetBytes()), Logger.LogType.Info);
+            }
         }
 
         private static void DispatchHTTPServer()
@@ -110,15 +117,15 @@ namespace dotnet_core_socket_server
 
             HTTPServer.EndpointCallback index = Index;
             HTTPServer.EndpointCallback hello = Hello;
-            HTTPServer.EndpointCallback stats = GetStats;
+            // HTTPServer.EndpointCallback stats = GetStats;
             HTTPServer.EndpointCallback sendNotificationToUser = SendNotificationToUser;
-            HTTPServer.EndpointCallback sendnotificationToEndpoint = SendNotificationToEndpoint;
+            // HTTPServer.EndpointCallback sendnotificationToEndpoint = SendNotificationToEndpoint;
 
             httpServer.Get("/", index);
             httpServer.Get("/hello", hello);
-            httpServer.Get("/stats", stats);
+            // httpServer.Get("/stats", stats);
             httpServer.Get("/notifyuser", SendNotificationToUser);
-            httpServer.Get("/notifyendpoint", SendNotificationToEndpoint);
+            // httpServer.Get("/notifyendpoint", SendNotificationToEndpoint);
 
             // .Start() is blocking meaning the thread won't finish until the server stops listenning
             httpServer.Start();
@@ -127,21 +134,6 @@ namespace dotnet_core_socket_server
         private static void Index(HttpListenerRequest req, HttpListenerResponse res)
         {
             httpServer.SendResponse(res, HttpStatusCode.OK, "GET Index");
-        }
-
-        private static void GetStats(HttpListenerRequest req, HttpListenerResponse res)
-        {
-            List<ClientObject> clients = SocketManager.Instance.GetClients();
-            List<Room> rooms = SocketManager.Instance.GetRooms();
-            int connections = clients.Count;
-
-            // Process currentProcess = Process.GetCurrentProcess();
-            // long ramBytesUsed = currentProcess.PagedMemorySize64;
-
-            Stats stats = new Stats(rooms, connections);
-            string serialized = JsonConvert.SerializeObject(stats, Formatting.None);
-
-            httpServer.SendJSON(res, 200, serialized);
         }
 
         private static void Hello(HttpListenerRequest req, HttpListenerResponse res)
@@ -156,50 +148,50 @@ namespace dotnet_core_socket_server
             httpServer.SendResponse(res, HttpStatusCode.OK, "GET /notifyuser");
         }
 
-        private static void SendNotificationToEndpoint(HttpListenerRequest req, HttpListenerResponse res)
-        {
-            Logger.Log("HTTP Request to POST /sendNotificationToEndpoint", Logger.LogType.Success);
-            // Hardcoded for testing purposes
-            Room endpointRoom = SocketManager.Instance.GetRoomByName("www.test.narcity.com/test");
-            if (endpointRoom != null)
-            {
-                endpointRoom.Broadcast(WebSocketMessage.ApplicationMessageCode.FetchComments);
-                httpServer.SendResponse(res, HttpStatusCode.OK, "GET /notifyendpoint");
-            }
-            else
-            {
-                httpServer.SendResponse(res, HttpStatusCode.NotFound, "Couldn't find any room with the specified endpoint");
-            }
-        }
+    //     private static void SendNotificationToEndpoint(HttpListenerRequest req, HttpListenerResponse res)
+    //     {
+    //         Logger.Log("HTTP Request to POST /sendNotificationToEndpoint", Logger.LogType.Success);
+    //         // Hardcoded for testing purposes
+    //         Room endpointRoom = SocketManager.Instance.GetRoomByName("www.test.narcity.com/test");
+    //         if (endpointRoom != null)
+    //         {
+    //             endpointRoom.Broadcast(NarcityMedia.WebSocketMessage.ApplicationMessageCode.FetchComments);
+    //             httpServer.SendResponse(res, HttpStatusCode.OK, "GET /notifyendpoint");
+    //         }
+    //         else
+    //         {
+    //             httpServer.SendResponse(res, HttpStatusCode.NotFound, "Couldn't find any room with the specified endpoint");
+    //         }
+    //     }
         
-        private static void on404(HttpListenerRequest req, HttpListenerResponse res)
-        {
-            Logger.Log(String.Format("HTTP 404 - Couldn't find endpoint {0}", req.Url.ToString()), Logger.LogType.Warning);
-            httpServer.SendResponse(res, HttpStatusCode.NotFound, "Not Found");
-        }
+    //     private static void on404(HttpListenerRequest req, HttpListenerResponse res)
+    //     {
+    //         Logger.Log(String.Format("HTTP 404 - Couldn't find endpoint {0}", req.Url.ToString()), Logger.LogType.Warning);
+    //         httpServer.SendResponse(res, HttpStatusCode.NotFound, "Not Found");
+    //     }
 
-        private static void on500(HttpListenerRequest req, HttpListenerResponse res)
-        {
-            Logger.Log("HTTP 500 - Internal Server Error", Logger.LogType.Error);
-            httpServer.SendResponse(res, HttpStatusCode.NotFound, "Internal Server Error");
-        }
+    //     private static void on500(HttpListenerRequest req, HttpListenerResponse res)
+    //     {
+    //         Logger.Log("HTTP 500 - Internal Server Error", Logger.LogType.Error);
+    //         httpServer.SendResponse(res, HttpStatusCode.NotFound, "Internal Server Error");
+    //     }
 
-        private class Stats
-        {
-            public int RealtimeSessionsNumber;
-            public int ActiveEndpointsNumber;
-            public List<Room> rooms;
+    //     private class Stats
+    //     {
+    //         public int RealtimeSessionsNumber;
+    //         public int ActiveEndpointsNumber;
+    //         public List<Room> rooms;
 
-            public Stats(List<Room> rooms)
-            {
-                this.rooms = rooms.OrderByDescending(room => room.Clients.Count).ToList();
-                this.ActiveEndpointsNumber = rooms.Count;
-            }
+    //         public Stats(List<Room> rooms)
+    //         {
+    //             this.rooms = rooms.OrderByDescending(room => room.Clients.Count).ToList();
+    //             this.ActiveEndpointsNumber = rooms.Count;
+    //         }
 
-            public Stats(List<Room> rooms, int realtimeSessionsNumber) : this(rooms)
-            {
-                this.RealtimeSessionsNumber = realtimeSessionsNumber;
-            }
-        }
+    //         public Stats(List<Room> rooms, int realtimeSessionsNumber) : this(rooms)
+    //         {
+    //             this.RealtimeSessionsNumber = realtimeSessionsNumber;
+    //         }
+    //     }
     }
 }
