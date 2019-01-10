@@ -7,6 +7,7 @@ namespace NarcityMedia.Net
         public event WebSocketServerEvent OnConnect;
         public event WebSocketServerEvent OnDisconnect;
         public event WebSocketServerEvent OnMessage;
+        public event WebSocketServerEvent OnControlFrame;
         public event WebSocketServerEvent OnError;
 
         public delegate void WebSocketServerEvent(object sender, WebSocketServerEventArgs a);
