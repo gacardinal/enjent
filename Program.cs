@@ -51,7 +51,15 @@ namespace dotnet_core_socket_server
         private static void OnSocketDisconnect(object sender, WebSocketServerEventArgs args)
         {
             double socketDuration = Math.Round(DateTime.Now.Subtract(args.Cli.InitTime).TotalSeconds, 2);
-            Logger.Log(String.Format("Socket is closing after {0} seconds", socketDuration), Logger.LogType.Info);
+            if (args.Exception != null)
+            {
+                Logger.Log(String.Format("Socket is closing with exception after {0} seconds - {1}", socketDuration, args.Exception.Message),
+                            Logger.LogType.Info);
+            }
+            else
+            {
+                Logger.Log(String.Format("Socket is closing after {0} seconds", socketDuration), Logger.LogType.Info);
+            }
         }
 
         private static void OnSocketMessage(object sender, WebSocketServerEventArgs args)
