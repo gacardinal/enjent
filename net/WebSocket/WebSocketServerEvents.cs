@@ -33,7 +33,7 @@ namespace NarcityMedia.Net
             this.DataFrame = dataFrame;
         }
 
-        public WebSocketServerEventArgs(Exception innerException)
+        public WebSocketServerEventArgs(WebSocketClient cli, Exception innerException) : this(cli)
         {
             this.Exception = innerException;
         }

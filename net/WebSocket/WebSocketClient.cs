@@ -65,42 +65,6 @@ namespace NarcityMedia.Net
             this.lmlTk = GenerateRandomToken(32, false);
         }
 
-        // See https://docs.microsoft.com/en-us/dotnet/api/system.net.sockets.socketasynceventargs?view=netframework-4.7.2
-        protected void BeginListening(Object state) 
-        {
-            Socket socket = (Socket) state;
-            byte[] frameHeaderBuffer = new byte[2];
-            try
-            {
-                // while (this.listenToSocket)
-                // {
-                //     int received = socket.Receive(frameHeaderBuffer); // Blocking
-                //     SocketFrame frame = this.TryParse(frameHeaderBuffer);
-                //     if (frame != null)
-                //     {
-                //         if (frame is SocketControlFrame)
-                //             this.OnControlFrame((SocketControlFrame) frame);
-                //         else if (frame is SocketDataFrame)
-                //             this.OnMessage(this, (SocketDataFrame) frame);
-                //     }
-                //     else
-                //     {
-                //         if (!this.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close)))
-                //             this.listenToSocket = false;
-                //     }
-                // }
-            }
-            catch (Exception e)
-            {
-                Logger.Log(e.Message, Logger.LogType.Error);
-                this.Dispose();
-            }
-
-            Logger.Log("Socket closing", Logger.LogType.Info);
-            // End thread execution
-            return;
-        }
-
         public void Dispose()
         {
             if (this.socket != null) {
@@ -112,10 +76,17 @@ namespace NarcityMedia.Net
         /// Sends an application message to the socket associated with the current client
         /// </summary>
         /// <param name="message">The socket message to send</param>
-        public bool SendApplicationMessage(WebSocketMessage message)
+        /// <exception cref="SSystem.ArgumentNullException"><exception/>
+        /// <exception cref="SSystem.Net.Sockets.SocketException"><exception/>
+        /// <exception cref="SSystem.ObjectDisposedException"><exception/>
+        /// <remarks>
+        /// Callers must call this method in a try statement because it will not catch exceptions
+        /// raised by this.SendFrames()
+        /// </remarks>
+        public void SendApplicationMessage(WebSocketMessage message)
         {
             List<SocketFrame> frames = message.GetFrames();
-            return SendFrames(frames);
+            SendFrames(frames);
         }
 
         /// <summary>
@@ -123,46 +94,56 @@ namespace NarcityMedia.Net
         /// </summary>
         /// <param name="messageCode">The application message code to send</param>
         /// <remarks>Calls <see cref="SendApplicationMessage" /></remarks>
-        public bool SendApplicationMessage(WebSocketMessage.ApplicationMessageCode messageCode)
+        /// <exception cref="SSystem.ArgumentNullException"><exception/>
+        /// <exception cref="SSystem.Net.Sockets.SocketException"><exception/>
+        /// <exception cref="SSystem.ObjectDisposedException"><exception/>
+        /// <remarks>
+        /// Callers must call this method in a try statement because it will not catch exceptions
+        /// raised by this.SendFrames()
+        /// </remarks>
+        public void SendApplicationMessage(WebSocketMessage.ApplicationMessageCode messageCode)
         {
-            WebSocketMessage message = new WebSocketMessage(messageCode);
-            return this.SendApplicationMessage(message);
+            WebSocketMessage message = new WebSocketMessage(messageCode);            
+            this.SendApplicationMessage(message);
         }
     
+        /// <summary>
+        /// Sends a websocket control frame such as a 'pong' or a 'close' frame
+        /// </summary>
+        /// <param name="frame">The control frame to send</param>
+        /// <exception cref="SSystem.ArgumentNullException"><exception/>
+        /// <exception cref="SSystem.Net.Sockets.SocketException"><exception/>
+        /// <exception cref="SSystem.ObjectDisposedException"><exception/>
+        /// <remarks>
+        /// Callers must call this method in a try statement because it will not catch exceptions
+        /// raised by this.SendFrames()
+        /// </remarks>
+        public void SendControlFrame(SocketFrame frame)
+        {
+            List<SocketFrame> frames = new List<SocketFrame>(1);
+            frames.Add(frame);
+
+            this.SendFrames(frames);
+        }
+
         /// <summary>
         /// Sends Websocket frames via the client socket
         /// </summary>
         /// <param name="frames">The list of frames to send</param>
         /// <returns>A boolean value that indicates whether the send was successful or not</returns>
-        private bool SendFrames(List<SocketFrame> frames)
+        /// <exception cref="SSystem.ArgumentNullException"><exception/>
+        /// <exception cref="SSystem.Net.Sockets.SocketException"><exception/>
+        /// <exception cref="SSystem.ObjectDisposedException"><exception/>
+        /// <remark>
+        /// Any Exception raised by the socket.Send() method are meant to be caught by callers of this method
+        /// </remark>
+        private void SendFrames(List<SocketFrame> frames)
         {
-            try
+            foreach (SocketFrame frame in frames)
             {
-                foreach (SocketFrame frame in frames)
-                {
-                    this.socket.Send(frame.GetBytes());
-                }
-
-                return true;
-            }
-            catch (Exception e)
-            {
-                throw new WebSocketServerException("Error while sending frame to socket", e);
+                this.socket.Send(frame.GetBytes());
             }
         }
-
-        /// <summary>
-        /// Sends a websocket control frame such as a 'pong' or a 'close' frame
-        /// </summary>
-        /// <param name="frame">The control frame to send</param>
-        public bool SendControlFrame(SocketFrame frame)
-        {
-            List<SocketFrame> frames = new List<SocketFrame>(1);
-            frames.Add(frame);
-
-            return this.SendFrames(frames);
-        }
-
     }
     
     /// <summary>

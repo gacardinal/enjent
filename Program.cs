@@ -56,6 +56,7 @@ namespace dotnet_core_socket_server
 
         private static void OnSocketMessage(object sender, WebSocketServerEventArgs args)
         {
+            WebSocketServer server = (WebSocketServer) sender;
             if (args.DataFrame.Plaintext.StartsWith(NAVIGATE_MARKER))
             {
                 string newUrl = args.DataFrame.Plaintext.Substring(NAVIGATE_MARKER.Length);
@@ -63,17 +64,10 @@ namespace dotnet_core_socket_server
             }
             else if (args.DataFrame.Plaintext == "1")
             {
-                args.Cli.SendApplicationMessage((WebSocketMessage.ApplicationMessageCode) 2);
+                server.SendMessage(args.Cli, new WebSocketMessage(WebSocketMessage.ApplicationMessageCode.Greeting));
             }
 
-            if (args.DataFrame.DataType == SocketDataFrame.DataFrameType.Text)
-            {
-                Logger.Log("Received message : " + args.DataFrame.Plaintext, Logger.LogType.Info);
-            }
-            else if (args.DataFrame.DataType == SocketDataFrame.DataFrameType.Binary)
-            {
-                Logger.Log("Received binary frame : " + BitConverter.ToString(args.DataFrame.GetBytes()), Logger.LogType.Info);
-            }
+            Logger.Log("Received message : " + args.DataFrame.Plaintext, Logger.LogType.Info);
         }
 
         private static void DispatchHTTPServer()

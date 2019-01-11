@@ -101,13 +101,31 @@ namespace NarcityMedia.Net
                 case 0: // Continuation
                     break;
                 case 8: // Close
-                    cli.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
-                    this.poolManager.RemoveClient(cli);
-                    this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, cFrame));
-                    cli.Dispose();
+                    try
+                    {
+                        cli.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
+                    }
+                    catch (Exception e)
+                    {
+                        WebSocketServerException ex = new WebSocketServerException("Errpr while sending 'close' control frame", e);
+                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, ex));
+                    }
+                    finally
+                    {
+                        this.poolManager.RemoveClient(cli);
+                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, cFrame));
+                        cli.Dispose();
+                    }
                     break;
                 case 9:
-                    cli.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Pong));
+                    try
+                    {
+                        cli.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Pong));
+                    }
+                    catch (Exception e)
+                    {
+                        WebSocketServerException ex = new WebSocketServerException("Errpr while sending 'pong' control frame", e);
+                    }
                     break;
                 default:
                     break;
@@ -152,6 +170,20 @@ namespace NarcityMedia.Net
 
             this.Quit();
             return;     // End 'listener' Thread execution
+        }
+
+        public bool SendMessage(WebSocketClient cli, WebSocketMessage message)
+        {
+            try
+            {
+                cli.SendApplicationMessage(message);
+                
+                return true;
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
         }
 
         public static void NegociateWebSocketConnection(Object s)
