@@ -177,10 +177,7 @@ namespace NarcityMedia.Net
                 this.clients.Add(cli);
             }
 
-            ReceiveState receiveState = new ReceiveState();
-            receiveState.Cli = cli;
-            cli.socket.BeginReceive(receiveState.buffer, 0, ReceiveState.INIT_BUFFER_SIZE, 0,
-                                    new AsyncCallback(ReceiveCallback), receiveState);
+            this.StartClientReceive(cli);
         }
 
         private void RemoveCLient(WebSocketClient cli)
@@ -194,22 +191,31 @@ namespace NarcityMedia.Net
             }
         }
 
+        private void StartClientReceive(WebSocketClient cli)
+        {
+            ReceiveState receiveState = new ReceiveState();
+            receiveState.Cli = cli;
+            receiveState.Cli.socket.BeginReceive(receiveState.buffer, 0, ReceiveState.INIT_BUFFER_SIZE, 0,
+                                    new AsyncCallback(ReceiveCallback), receiveState);
+        }
+
         private void ReceiveCallback(IAsyncResult iar)
         {
             ReceiveState receiveState = (ReceiveState) iar.AsyncState;
             try
             {
-                byte[] frameHeaderBuffer = new byte[2];
                 int received = receiveState.Cli.socket.EndReceive(iar);
                 if (received != 0)
                 {
-                    SocketFrame frame = SocketFrame.TryParse(frameHeaderBuffer, receiveState.Cli.socket);
+                    SocketFrame frame = SocketFrame.TryParse(receiveState.buffer, receiveState.Cli.socket);
                     if (frame != null)
                     {
                         if (frame is SocketDataFrame)
                             this.OnMessage.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, (SocketDataFrame) frame));
                         else
                             ;
+
+                        StartClientReceive(receiveState.Cli);
                     }
                     else
                     {
@@ -228,8 +234,10 @@ namespace NarcityMedia.Net
             }
             catch (Exception e)
             {
-                // Move on with iterating over the other sockets to make sure none are left unattended
-                throw e;
+                this.RemoveCLient(receiveState.Cli);
+                Exception ex = new WebSocketServerException("An error occured while processing message received from client. See inner exception for additional information", e);
+                this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, ex));
+                receiveState.Cli.Dispose();
             }
         }
 
