@@ -68,7 +68,8 @@ namespace NarcityMedia.Net
         public void Dispose()
         {
             if (this.socket != null) {
-                this.socket.Dispose();
+                // Close method does Dispose of the object
+                this.socket.Close();
             }
         }
 

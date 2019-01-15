@@ -9,7 +9,7 @@ namespace NarcityMedia.Net
     /// </summary>
     internal class ReceiveState
     {
-        public Socket socket;
+        public WebSocketClient Cli;
         public const int INIT_BUFFER_SIZE = 2;
         public byte[] buffer = new byte[INIT_BUFFER_SIZE];
     }

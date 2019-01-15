@@ -35,7 +35,9 @@ namespace NarcityMedia.Net
             // Set Thread as foreground to prevent program execution finishing
             this.listener.IsBackground = false;
             this.listener.Name = "WebSocketServerHTTPListener";
+
             this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+
             this.clients = new List<WebSocketClient>(1024);
         }
 
@@ -59,7 +61,7 @@ namespace NarcityMedia.Net
                 try
                 {
                     this.socket.Bind(endpoint);
-                    this.socket.Listen(200);
+                    this.socket.Listen(1024);
                     this.listening = true;
                     this.listener.Start();
                 }
@@ -155,8 +157,8 @@ namespace NarcityMedia.Net
                     // Executed async once the negotiation is done
                     if (state.exception == null)
                     {
-                        this.OnConnect.Invoke(this, new WebSocketServerEventArgs(state.cli));
                         this.AddClient(cli);
+                        this.OnConnect.Invoke(this, new WebSocketServerEventArgs(state.cli));
                     }
                 };
 
@@ -176,29 +178,52 @@ namespace NarcityMedia.Net
             }
 
             ReceiveState receiveState = new ReceiveState();
-            receiveState.socket = cli.socket;
+            receiveState.Cli = cli;
             cli.socket.BeginReceive(receiveState.buffer, 0, ReceiveState.INIT_BUFFER_SIZE, 0,
                                     new AsyncCallback(ReceiveCallback), receiveState);
         }
 
-        private static void ReceiveCallback(object state)
+        private void RemoveCLient(WebSocketClient cli)
         {
-            ReceiveState receiveState = (ReceiveState) state;
+            if (cli != null)
+            {
+                lock (this.clients)
+                {
+                    this.clients.Remove(cli);
+                }
+            }
+        }
+
+        private void ReceiveCallback(IAsyncResult iar)
+        {
+            ReceiveState receiveState = (ReceiveState) iar.AsyncState;
             try
             {
                 byte[] frameHeaderBuffer = new byte[2];
-                int received = receiveState.socket.Receive(frameHeaderBuffer); // Blocking
-                SocketFrame frame = SocketFrame.TryParse(frameHeaderBuffer, receiveState.socket);
-                if (frame != null)
+                int received = receiveState.Cli.socket.EndReceive(iar);
+                if (received != 0)
                 {
-                    // if (this.OnPoolFrame != null)
-                    // {
-                    //     this.OnPoolFrame.Invoke(cli, frame);
-                    // }
+                    SocketFrame frame = SocketFrame.TryParse(frameHeaderBuffer, receiveState.Cli.socket);
+                    if (frame != null)
+                    {
+                        if (frame is SocketDataFrame)
+                            this.OnMessage.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, (SocketDataFrame) frame));
+                        else
+                            ;
+                    }
+                    else
+                    {
+                        this.RemoveCLient(receiveState.Cli);
+                        Exception e = new WebSocketServerException("Error while parsing an incoming WebSocketFrame");
+                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, e));
+                        receiveState.Cli.Dispose();
+                    }
                 }
                 else
                 {
-                    // Parsing error
+                    this.RemoveCLient(receiveState.Cli);
+                    this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli));
+                    receiveState.Cli.Dispose();                    
                 }
             }
             catch (Exception e)
