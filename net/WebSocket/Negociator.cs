@@ -161,10 +161,8 @@ namespace NarcityMedia.Net
                 if (index != -1)
                 {
                     int nextColon = cookieData.IndexOf(';', index + cookieName.Length);
-                    string lmlTk = (nextColon != -1) ? cookieData.Substring(index + cookieName.Length, nextColon - index + cookieName.Length) 
-                                                    : cookieData.Substring(index + cookieName.Length);
-
-                    this.lmlTk = lmlTk;
+                    // string lmlTk = (nextColon != -1) ? cookieData.Substring(index + cookieName.Length, nextColon - index + cookieName.Length) 
+                    //                                 : cookieData.Substring(index + cookieName.Length);
                 }
             }
 

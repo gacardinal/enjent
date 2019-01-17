@@ -3,7 +3,6 @@ using System.Net;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading;
-using NarcityMedia.Log;
 
 namespace NarcityMedia.Net
 {
@@ -60,7 +59,6 @@ namespace NarcityMedia.Net
 
         public void Start()
         {
-            Logger.Log("HTTP Server is starting to listen on endpoint: " + this.rootEndpoint, Logger.LogType.Success);
             this.listener.Start();
 
             while (this.listener.IsListening)
@@ -89,7 +87,6 @@ namespace NarcityMedia.Net
             }
             catch (Exception e)
             {
-                Logger.Log("5XX Internal server error - " + e.Message, Logger.LogType.Error);
                 this.on500(request, response);
             }
         }

@@ -9,22 +9,24 @@ using NarcityMedia.Log;
 
 namespace NarcityMedia.Net
 {
+    /// <summary>
+    /// Represents supported HTTP methods
+    /// </summary>
     public enum HTTPMethods {
         GET, POST, DELETE, PUT
     }
 
-    public partial class WebSocketClient : IDisposable {
-        public bool Authenticated
-        {
-            get { return String.IsNullOrEmpty(this.lmlTk); }
-        }
-
+    /// <summary>
+    /// Represents a client a.k.a. an end user that connected to the server by the HTTP protocol
+    /// and that has subsequently upgraded to the WebSocket protocol.
+    /// </summary>
+    public partial class WebSocketClient : IDisposable
+    {
         /// <summary>
         /// Unix timestamp (32 bits unsigned) that represents the time at which the current object was created
         /// </summary>
-        public DateTime InitTime = DateTime.Now;
-        public string lmlTk;
-        public delegate void SocketDataFrameHandler(WebSocketClient client, SocketDataFrame frame);
+        public readonly DateTime InitTime;
+        public readonly Guid Id;
         private const int MAX_REQUEST_HEADERS_LENGTH = 2048;
         private const string WEBSOCKET_SEC_KEY_HEADER = "Sec-WebSocket-Key";
         private const string WEBSOCKET_COOKIE_HEADER = "Cookie";
@@ -36,8 +38,6 @@ namespace NarcityMedia.Net
             67, 53, 65, 66, 48, 68, 
             67, 56, 53, 66, 49, 49 
         };
-        private static readonly byte[] GREET_MESSAGE = System.Text.Encoding.Default.GetBytes("Hello!");
-
         public Socket socket;
         private byte[] methodandpath;
         private byte[] requestheaders = new byte[WebSocketClient.MAX_REQUEST_HEADERS_LENGTH];
@@ -61,14 +61,16 @@ namespace NarcityMedia.Net
 
         public WebSocketClient(Socket socket)
         {
+            this.Id = Guid.NewGuid();
+            this.InitTime = DateTime.Now;
             this.socket = socket;
-            this.lmlTk = GenerateRandomToken(32, false);
         }
 
         public void Dispose()
         {
             if (this.socket != null) {
-                this.socket.Dispose();
+                // Close method does Dispose of the object
+                this.socket.Close();
             }
         }
 

@@ -24,11 +24,8 @@ namespace NarcityMedia.Net
         /// </summary>
         private bool listening;
 
-        /// <summary>
-        /// A WebSocketPoolManager instance to which all new WebSockets clients will be added
-        /// </summary>
-        private WebSocketPoolManager poolManager;
-        
+        private List<WebSocketClient> clients;
+
         /// <summary>
         /// Instantiates a new instance of the WebSocketServer class
         /// </summary>
@@ -38,16 +35,10 @@ namespace NarcityMedia.Net
             // Set Thread as foreground to prevent program execution finishing
             this.listener.IsBackground = false;
             this.listener.Name = "WebSocketServerHTTPListener";
+
             this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            this.poolManager = new WebSocketPoolManager(this.FrameHandler);
-        }
 
-        /// <summary>
-        /// Executed by the 'listener' Thread, used to perform cleanup operation before quitting
-        /// </summary>
-        private void Quit()
-        {
-
+            this.clients = new List<WebSocketClient>(1024);
         }
 
         private void FrameHandler(WebSocketClient cli, SocketFrame frame)
@@ -70,7 +61,7 @@ namespace NarcityMedia.Net
                 try
                 {
                     this.socket.Bind(endpoint);
-                    this.socket.Listen(200);
+                    this.socket.Listen(1024);
                     this.listening = true;
                     this.listener.Start();
                 }
@@ -87,6 +78,14 @@ namespace NarcityMedia.Net
                     throw new WebSocketServerException("An error occured while binding the HTTP listener socket", e);
                 }
             }
+        }
+        
+        /// <summary>
+        /// Executed by the 'listener' Thread, used to perform cleanup operation before quitting
+        /// </summary>
+        private void Quit()
+        {
+
         }
 
         public void Stop()
@@ -112,7 +111,6 @@ namespace NarcityMedia.Net
                     }
                     finally
                     {
-                        this.poolManager.RemoveClient(cli);
                         this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, cFrame));
                         cli.Dispose();
                     }
@@ -159,7 +157,7 @@ namespace NarcityMedia.Net
                     // Executed async once the negotiation is done
                     if (state.exception == null)
                     {
-                        this.poolManager.AddClient(cli);
+                        this.AddClient(cli);
                         this.OnConnect.Invoke(this, new WebSocketServerEventArgs(state.cli));
                     }
                 };
@@ -170,6 +168,77 @@ namespace NarcityMedia.Net
 
             this.Quit();
             return;     // End 'listener' Thread execution
+        }
+
+        private void AddClient(WebSocketClient cli)
+        {
+            lock (this.clients)
+            {
+                this.clients.Add(cli);
+            }
+
+            this.StartClientReceive(cli);
+        }
+
+        private void RemoveCLient(WebSocketClient cli)
+        {
+            if (cli != null)
+            {
+                lock (this.clients)
+                {
+                    this.clients.Remove(cli);
+                }
+            }
+        }
+
+        private void StartClientReceive(WebSocketClient cli)
+        {
+            ReceiveState receiveState = new ReceiveState();
+            receiveState.Cli = cli;
+            receiveState.Cli.socket.BeginReceive(receiveState.buffer, 0, ReceiveState.INIT_BUFFER_SIZE, 0,
+                                    new AsyncCallback(ReceiveCallback), receiveState);
+        }
+
+        private void ReceiveCallback(IAsyncResult iar)
+        {
+            ReceiveState receiveState = (ReceiveState) iar.AsyncState;
+            try
+            {
+                int received = receiveState.Cli.socket.EndReceive(iar);
+                if (received != 0)
+                {
+                    SocketFrame frame = SocketFrame.TryParse(receiveState.buffer, receiveState.Cli.socket);
+                    if (frame != null)
+                    {
+                        if (frame is SocketDataFrame)
+                            this.OnMessage.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, (SocketDataFrame) frame));
+                        else
+                            ;
+
+                        StartClientReceive(receiveState.Cli);
+                    }
+                    else
+                    {
+                        this.RemoveCLient(receiveState.Cli);
+                        Exception e = new WebSocketServerException("Error while parsing an incoming WebSocketFrame");
+                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, e));
+                        receiveState.Cli.Dispose();
+                    }
+                }
+                else
+                {
+                    this.RemoveCLient(receiveState.Cli);
+                    this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli));
+                    receiveState.Cli.Dispose();                    
+                }
+            }
+            catch (Exception e)
+            {
+                this.RemoveCLient(receiveState.Cli);
+                Exception ex = new WebSocketServerException("An error occured while processing message received from client. See inner exception for additional information", e);
+                this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, ex));
+                receiveState.Cli.Dispose();
+            }
         }
 
         public bool SendMessage(WebSocketClient cli, WebSocketMessage message)
