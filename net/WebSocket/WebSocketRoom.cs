@@ -4,14 +4,20 @@ using System.Collections.Generic;
 
 namespace NarcityMedia.Net
 {
+    /// <summary>
+    /// A logical way to group <<see cref="WebSocketClient" /> objects together.
+    /// This class implements the ICollection interface for convenience.
+    /// </summary>
+    /// <typeparam name="WebSocketClient">The client objects to hold.true Can be a WebSocketClient or any derived type.</typeparam>
     public class WebSocketRoom : ICollection<WebSocketClient>
     {
+        /// <summary>
+        /// Gets the number of <see cref="WebSocketClient" /> in the current room
+        /// </summary>
+        /// <value>The number of clients in the room</value>
         public int Count
         {
-            get
-            {
-                return this.clients.Count;
-            }
+            get { return this.clients.Count; }
         }
 
         public bool IsReadOnly
@@ -19,6 +25,9 @@ namespace NarcityMedia.Net
             get { return false; }
         }
         
+        /// <summary>
+        /// The inner collection on which the current Room interfaces
+        /// </summary>
         private List<WebSocketClient> clients;
         
         public WebSocketRoom()
@@ -29,6 +38,18 @@ namespace NarcityMedia.Net
         public WebSocketRoom(IEnumerable<WebSocketClient> clients)
         {
             this.clients.AddRange(clients);
+        }
+
+        /// <summary>
+        /// Sends a message to all the clients that are member of the current room
+        /// </summary>
+        /// <param name="message">The message to broadcast</param>
+        public void Broadcast(WebSocketMessage message)
+        {
+            foreach(WebSocketClient cli in this.clients)
+            {
+                cli.Send(message);
+            }
         }
 
         public WebSocketClient this[int index]
@@ -150,7 +171,6 @@ namespace NarcityMedia.Net
         {
             get { return curCli; }
         }
-
 
         object IEnumerator.Current
         {
