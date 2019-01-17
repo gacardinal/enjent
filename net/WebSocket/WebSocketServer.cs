@@ -245,7 +245,7 @@ namespace NarcityMedia.Net
         {
             try
             {
-                cli.SendApplicationMessage(message);
+                cli.Send(message);
                 
                 return true;
             }

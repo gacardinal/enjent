@@ -85,7 +85,7 @@ namespace NarcityMedia.Net
         /// Callers must call this method in a try statement because it will not catch exceptions
         /// raised by this.SendFrames()
         /// </remarks>
-        public void SendApplicationMessage(WebSocketMessage message)
+        public void Send(WebSocketMessage message)
         {
             List<SocketFrame> frames = message.GetFrames();
             SendFrames(frames);
@@ -106,7 +106,7 @@ namespace NarcityMedia.Net
         public void SendApplicationMessage(WebSocketMessage.ApplicationMessageCode messageCode)
         {
             WebSocketMessage message = new WebSocketMessage(messageCode);            
-            this.SendApplicationMessage(message);
+            this.Send(message);
         }
     
         /// <summary>
