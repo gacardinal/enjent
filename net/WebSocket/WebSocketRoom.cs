@@ -52,6 +52,14 @@ namespace NarcityMedia.Net
             }
         }
 
+        public void Broadcast(string message)
+        {
+            foreach(WebSocketClient cli in this.clients)
+            {
+                cli.Send(message);
+            }
+        }
+
         public WebSocketClient this[int index]
         {
             get { return (WebSocketClient) clients[index]; }
@@ -150,14 +158,12 @@ namespace NarcityMedia.Net
 
         public bool MoveNext()
         {
-            //Avoids going beyond the end of the collection.
             if (++curIndex >= room.Count)
             {
                 return false;
             }
             else
             {
-                // Set current box to next item in collection.
                 curCli = room[curIndex];
             }
             return true;
