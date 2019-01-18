@@ -128,6 +128,15 @@
                 log("Can't send empty URL", 'error');
             }
         };
+
+        let saySomething = () => {
+            if (document.getElementById('say').value) {
+                send(document.getElementById('say').value);
+                log('"Said ' + document.getElementById('say').value);
+            } else {
+                log("Wont't send empty string to server", 'error');
+            }
+        }
     </script>
 
     <div id="test-app">
@@ -135,6 +144,9 @@
         <button id='refresh' onclick="init()">(Re)initlalize Socket</button>
         <button id='navigate' onclick="navigate()">Simulate user navigation</button>
         <input type="text" id="url" placeholder="Navigate to" />
+        <br />
+        <input type="text" id="say" placeholder="Say">
+        <button id='saySomething' onclick="saySomething()">Say Something</button>
         <br />
         <button id='close' onclick="closeSocket()">Close Socket</button>
 
