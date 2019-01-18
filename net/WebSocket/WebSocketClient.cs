@@ -27,6 +27,8 @@ namespace NarcityMedia.Net
         /// </summary>
         public readonly DateTime InitTime;
         public readonly Guid Id;
+        public Socket socket;
+
         private const int MAX_REQUEST_HEADERS_LENGTH = 2048;
         private const string WEBSOCKET_SEC_KEY_HEADER = "Sec-WebSocket-Key";
         private const string WEBSOCKET_COOKIE_HEADER = "Cookie";
@@ -38,7 +40,6 @@ namespace NarcityMedia.Net
             67, 53, 65, 66, 48, 68, 
             67, 56, 53, 66, 49, 49 
         };
-        public Socket socket;
         private byte[] methodandpath;
         private byte[] requestheaders = new byte[WebSocketClient.MAX_REQUEST_HEADERS_LENGTH];
         private Dictionary<string, byte[]> headersmap = new Dictionary<string, byte[]>();
@@ -95,7 +96,7 @@ namespace NarcityMedia.Net
         /// Sends an application message to the socket associated with the current client
         /// </summary>
         /// <param name="messageCode">The application message code to send</param>
-        /// <remarks>Calls <see cref="SendApplicationMessage" /></remarks>
+        /// <remarks>Calls <see cref="Send" /></remarks>
         /// <exception cref="SSystem.ArgumentNullException"><exception/>
         /// <exception cref="SSystem.Net.Sockets.SocketException"><exception/>
         /// <exception cref="SSystem.ObjectDisposedException"><exception/>
@@ -103,7 +104,7 @@ namespace NarcityMedia.Net
         /// Callers must call this method in a try statement because it will not catch exceptions
         /// raised by this.SendFrames()
         /// </remarks>
-        public void SendApplicationMessage(WebSocketMessage.ApplicationMessageCode messageCode)
+        public void Send(WebSocketMessage.ApplicationMessageCode messageCode)
         {
             WebSocketMessage message = new WebSocketMessage(messageCode);            
             this.Send(message);
@@ -123,6 +124,17 @@ namespace NarcityMedia.Net
         public void SendControlFrame(SocketFrame frame)
         {
             List<SocketFrame> frames = new List<SocketFrame>(1);
+            frames.Add(frame);
+
+            this.SendFrames(frames);
+        }
+
+        public void Send(string message)
+        {
+            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(message);
+            SocketDataFrame frame = new SocketDataFrame(true, false, (ushort) bytes.Length, SocketDataFrame.DataFrameType.Text, bytes);
+
+            List<SocketFrame> frames = new List<SocketFrame>();
             frames.Add(frame);
 
             this.SendFrames(frames);
