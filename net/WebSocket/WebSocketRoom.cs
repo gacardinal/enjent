@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace NarcityMedia.Net
 {
@@ -11,6 +12,12 @@ namespace NarcityMedia.Net
     /// <typeparam name="WebSocketClient">The client objects to hold.true Can be a WebSocketClient or any derived type.</typeparam>
     public class WebSocketRoom : ICollection<WebSocketClient>
     {
+        /// <summary>
+        /// Indicates the name of the current WebSocketRoom.
+        /// Use this attribute to classify your rooms
+        /// </summary>
+        public string Name;
+
         /// <summary>
         /// Gets the number of <see cref="WebSocketClient" /> in the current room
         /// </summary>
@@ -38,6 +45,36 @@ namespace NarcityMedia.Net
         public WebSocketRoom(IEnumerable<WebSocketClient> clients)
         {
             this.clients.AddRange(clients);
+        }
+
+        /// <summary>
+        /// Aggregates the given range of Rooms by performing a 'union' operation on it.
+        /// This means that the returned WebSocketRoom is one that contains all the WebSocketClients
+        /// contained in all the rooms param without duplicates
+        /// </summary>
+        /// <param name="rooms">The range of WebSocketRoom objects to aggregate</param>
+        /// <returns>
+        /// A new WebSocketRoom containing all the contents of the WebSocketRooms
+        /// in the Rooms param without duplicates
+        /// </returns>
+        /// <remark>
+        /// If parameter rooms is 
+        /// </remark>
+        public static WebSocketRoom Aggregate(IEnumerable<WebSocketRoom> rooms)
+        {
+            if (rooms == null) return new WebSocketRoom();
+
+            int nbRooms = rooms.Count();
+            if (nbRooms == 0) return new WebSocketRoom();
+            if (nbRooms == 1) return rooms.ElementAt(0);
+
+            WebSocketRoom aggregate = rooms.ElementAt(0);
+            for (int i = 1; i < nbRooms; i++)
+            {
+                aggregate.Union(rooms.ElementAt(i));
+            }
+
+            return aggregate;
         }
 
         /// <summary>
