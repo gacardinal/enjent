@@ -11,6 +11,10 @@ namespace NarcityMedia.Net
     /// </summary>
     public class HTTPServer
     {
+        public delegate void EndpointCallback(HttpListenerRequest req, HttpListenerResponse res);
+        public EndpointCallback on404;
+        public EndpointCallback on500;
+
         private HttpListener listener;
         private Uri rootEndpoint;
 
@@ -18,11 +22,6 @@ namespace NarcityMedia.Net
         /// Dictionnary keyed by (string) HTTP method to which a dictionnary of callbacks keyed by endpoint is associated
         /// </summary>
         private Dictionary<string, Dictionary<Uri, EndpointCallback>> methodEndpointsCallbackMap;
-
-        public delegate void EndpointCallback(HttpListenerRequest req, HttpListenerResponse res);
-
-        public EndpointCallback on404;
-        public EndpointCallback on500;
 
         public Uri RootEndpoint {
             get { return this.rootEndpoint; } 
@@ -87,6 +86,7 @@ namespace NarcityMedia.Net
             }
             catch (Exception e)
             {
+
                 this.on500(request, response);
             }
         }
