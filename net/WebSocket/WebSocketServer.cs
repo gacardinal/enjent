@@ -24,6 +24,21 @@ namespace NarcityMedia.Net
         /// </summary>
         private bool listening;
 
+        /// <summary>
+        /// Internal Room that holds every client that is connected to the server
+        /// </summary>
+        private WebSocketRoom _allClients;
+
+        /// <summary>
+        /// Returns a <see cref="WebSocketRoom" /> that contains all the clients currently connected
+        /// to the server
+        /// </summary>
+        /// <value>The returned <see cref="WebSocketRoom" /> is a copy of an internal WebsocketRoom object</value>
+        public WebSocketRoom AllClients
+        {
+            get { return new WebSocketRoom(this._allClients); }
+        }
+
         private List<WebSocketClient> clients;
 
         /// <summary>
@@ -36,17 +51,12 @@ namespace NarcityMedia.Net
             this.listener.IsBackground = false;
             this.listener.Name = "WebSocketServerHTTPListener";
 
+            this._allClients = new WebSocketRoom();
+            this._allClients.Name = "GLOBAL";
+
             this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
             this.clients = new List<WebSocketClient>(1024);
-        }
-
-        private void FrameHandler(WebSocketClient cli, SocketFrame frame)
-        {
-            if (frame is SocketControlFrame)
-                this.DefaultControlFrameHandler(cli, (SocketControlFrame) frame);
-            else if (frame is SocketDataFrame)
-                this.OnMessage.Invoke(this, new WebSocketServerEventArgs(cli, (SocketDataFrame) frame));
         }
 
         /// <summary>
@@ -103,26 +113,26 @@ namespace NarcityMedia.Net
                     try
                     {
                         cli.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
+                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, cFrame));
                     }
                     catch (Exception e)
                     {
-                        WebSocketServerException ex = new WebSocketServerException("Errpr while sending 'close' control frame", e);
+                        WebSocketServerException ex = new WebSocketServerException("Error while sending 'close' control frame", e);
                         this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, ex));
                     }
                     finally
                     {
-                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, cFrame));
                         cli.Dispose();
                     }
                     break;
-                case 9:
+                case 9: // Ping
                     try
                     {
                         cli.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Pong));
                     }
                     catch (Exception e)
                     {
-                        WebSocketServerException ex = new WebSocketServerException("Errpr while sending 'pong' control frame", e);
+                        WebSocketServerException ex = new WebSocketServerException("Error while sending 'pong' control frame", e);
                     }
                     break;
                 default:
@@ -213,7 +223,7 @@ namespace NarcityMedia.Net
                         if (frame is SocketDataFrame)
                             this.OnMessage.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, (SocketDataFrame) frame));
                         else
-                            ;
+                            this.DefaultControlFrameHandler(receiveState.Cli, (SocketControlFrame) frame);
 
                         StartClientReceive(receiveState.Cli);
                     }
@@ -238,20 +248,6 @@ namespace NarcityMedia.Net
                 Exception ex = new WebSocketServerException("An error occured while processing message received from client. See inner exception for additional information", e);
                 this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, ex));
                 receiveState.Cli.Dispose();
-            }
-        }
-
-        public bool SendMessage(WebSocketClient cli, WebSocketMessage message)
-        {
-            try
-            {
-                cli.Send(message);
-                
-                return true;
-            }
-            catch (Exception e)
-            {
-                return false;
             }
         }
 
