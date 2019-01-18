@@ -1,20 +1,59 @@
-# .NET Core Websocket server
-This application's goal is to implement real time functionnalities for the users of the platforms powered by Lilium CMS. It does so by using a custom implementation of the WebSocket protocol and making efficient usage of threads.
-## Architecture
-This application is intended to run on the same computer as a Lilium CMS instance.
-This application is very performance oriented and is designed to handle multiple thousands of concurrent socket connections hence it makes the most out of the features offered by the .NET Core environnement.
+# Introduction
+This repository is a class library that implements the WebSocketProtocol on the server side only. It it very performance focused and is able to handle around 8000 clients with ± 50 MB RAM and ± 1% CPU on a quad core machine in production.
 
-This application comprises:
- - An HTTP server that listens to a loopback endpoint for requests coming from a Lilium CMS instance that indicate WebSockets events that need to be dispatched.
- - A main thread that listens for incomming HTTP requests that come directly from the clients (proxied by a web server like Nginx or Apache) to negotiate and initialize WebSocket connections.
- - A thread safe 'Socket Manager' that holds references to WebSockets connections keyed both by endpoints and by session token.
+# Getting Started
+Follow these steps to start using this library
+1. If you don't already have a dotnet project, start by creating a new one with `dotnet new console` which will create a new blank Console application.
+2. Download and add a reference ot the NuGet package by running `dotnet add reference <path/to/nuget/file>. *Change this step once the classlib is live on nuget.org*
+3. Now you will have to 'use' the `NarcityMedia.Net` namespace which holds the `WebSocketServer` class, among others.
+4. Next, create, configure and start a `WebSocketServer`. Here's an example of a typical use of the `WebSocketServer` class.
+```csharp
+using System;
+using System.Net;
+using NarcityMedia.Net;
 
- The application, in order to be performant is highly multi-threaded and makes use, among other, of the Threadpool class provided by the .NET Core environnement. THe HTTP server handles HTTP requests asynchronously : it has a 'main thread' that listens for incomming HTTP requests and dispatches a thread to handle each incomming requests.
+namespace UseSocketServer
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            // Instantiate a WebSocketServer - it won't be running at this point
+            WebSocketServer Wss = new WebSocketServer();
 
-## Useful Links
+            // Add event handlers
+            Wss.OnConnect += HandleConnect;
+            Wss.OnMessage += HandleMessage;
+            Wss.OnDisconnect += HandleDisconnect;
 
-Some links : 
-http://lucumr.pocoo.org/2012/9/24/websockets-101/
-https://tools.ietf.org/html/rfc6455
-https://developer.mozilla.org/en-US/docs/Web/API/WebSockets_API/Writing_WebSocket_servers
-https://docs.microsoft.com/en-us/dotnet/api/system.threading.threadpool?view=netframework-4.7.2
+            // Start the server
+            try
+            {
+                Wss.Start(new IPEndPoint(IPAddress.Loopback, 13003));
+            }
+            catch (WebSocketServerException e)
+            {
+                Console.WriteLine("An error occured when starting the WebSocket server - " + e.Message);
+            }
+        }
+
+        public static void HandleConnect(object sender, WebSocketServerEventArgs args)
+        {
+            // Execute logic on socket connection
+            Console.WriteLine("Got a new socket ID: " + args.Cli.Id);
+        }
+        
+        public static void HandleMessage(object sender, WebSocketServerEventArgs args)
+        {
+            // Execute logic on socket message
+            Console.WriteLine(String.Format("User {0} says : {1}", args.Cli.Id, args.DataFrame.Plaintext));
+        }
+        
+        public static void HandleDisconnect(object sender, WebSocketServerEventArgs args)
+        {
+            // Execute logic on socket disconnect
+            Console.WriteLine(String.Format("User {0} disconnected", args.Cli.Id));
+        }
+    }
+}
+```
