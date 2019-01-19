@@ -2,7 +2,7 @@ using System;
 
 namespace NarcityMedia.Net
 {
-    public partial class WebSocketServer
+    public partial class WebSocketServer<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {
         public event WebSocketServerEvent OnConnect;
         public event WebSocketServerEvent OnDisconnect;

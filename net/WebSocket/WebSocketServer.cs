@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace NarcityMedia.Net
 {
-    public partial class WebSocketServer
+    public partial class WebSocketServer<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {
         /// <summary>
         /// Thread that will listen for incoming connections
@@ -173,7 +173,7 @@ namespace NarcityMedia.Net
                 };
 
                 // 'WebSocketServerHTTPListener' threaad can move on and accept other requests
-                ThreadPool.QueueUserWorkItem(WebSocketServer.NegociateWebSocketConnection, state);
+                ThreadPool.QueueUserWorkItem(WebSocketServer<TWebSocketClient>.NegociateWebSocketConnection, state);
             }
 
             this.Quit();
