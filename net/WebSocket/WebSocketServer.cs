@@ -9,12 +9,11 @@ namespace NarcityMedia.Net
 {
     public partial class WebSocketServer : WebSocketServer<WebSocketClient>
     {
-        public WebSocketServer()
+        public WebSocketServer() : base(DefaultInitializationStrategy)
         {
-            this.ClientInitializationStrategy = this.DefaultInitializationStrategy;
         }
 
-        private WebSocketClient DefaultInitializationStrategy(Socket socket)
+        private static WebSocketClient DefaultInitializationStrategy(Socket socket)
         {
             return new WebSocketClient(socket);
         }
@@ -53,14 +52,14 @@ namespace NarcityMedia.Net
         }
 
         public delegate TWebSocketClient ClientInitialization(Socket socket);
-        public ClientInitialization ClientInitializationStrategy;
+        private ClientInitialization ClientInitializationStrategy;
 
         private List<TWebSocketClient> clients;
 
         /// <summary>
-        /// Instantiates a new instance of the WebSocketServer class
+        /// Creates a new instance of the WebSocketServer class
         /// </summary>
-        public WebSocketServer()
+        public WebSocketServer(ClientInitialization initStrategy)
         {
             this.listener = new Thread(this.NegociationLoop);
             // Set Thread as foreground to prevent program execution finishing
@@ -325,7 +324,7 @@ namespace NarcityMedia.Net
                 }
                 else
                 {
-                    throw new WebSocketServerException("");
+                    state.exception = new WebSocketNegotiationException("You are using a generic version of the ");
                 }
             }
             else
