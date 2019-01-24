@@ -7,7 +7,7 @@ using System.Linq;
 
 namespace NarcityMedia.Net
 {
-    public class WebSocketServer : WebSocketServer<WebSocketClient>
+    public partial class WebSocketServer : WebSocketServer<WebSocketClient>
     {}
 
     public partial class WebSocketServer<TWebSocketClient> where TWebSocketClient : WebSocketClient
@@ -179,7 +179,7 @@ namespace NarcityMedia.Net
                 };
 
                 // 'WebSocketServerHTTPListener' threaad can move on and accept other requests
-                ThreadPool.QueueUserWorkItem(WebSocketServer<TWebSocketClient>.NegociateWebSocketConnection, state);
+                ThreadPool.QueueUserWorkItem(this.NegociateWebSocketConnection, state);
             }
 
             this.Quit();
@@ -292,14 +292,13 @@ namespace NarcityMedia.Net
         //     args.Cli.SendControlFrame(new SocketControlFrame(SocketControlFrame.OPCodes.Close));
         // }
 
-        public static void NegociateWebSocketConnection(Object s)
+        private void NegociateWebSocketConnection(Object s)
         {
             SocketNegotiationState state = (SocketNegotiationState) s;
-            TWebSocketClient cli = new TWebSocketClient(state.handler);
             // TODO : Implement strategy that will allow the user to create the instance of his generic type
-            if (cli.ReadRequestHeaders() &&
-                cli.AnalyzeRequestHeaders() &&
-                cli.Negociate101Upgrade() )
+            if (this.ReadRequestHeaders(state.handler) &&
+                this.AnalyzeRequestHeaders(state.handler) &&
+                this.Negociate101Upgrade(state.handler) )
             {
                 state.cli = cli;
                 state.done(cli);

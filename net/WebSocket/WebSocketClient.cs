@@ -28,24 +28,6 @@ namespace NarcityMedia.Net
         public readonly DateTime InitTime;
         public readonly Guid Id;
         public Socket socket;
-
-        private const int MAX_REQUEST_HEADERS_LENGTH = 2048;
-        private const string WEBSOCKET_SEC_KEY_HEADER = "Sec-WebSocket-Key";
-        private const string WEBSOCKET_COOKIE_HEADER = "Cookie";
-        private static readonly byte[] RFC6455_CONCAT_GUID = new byte[] {
-            50, 53, 56, 69, 65, 70, 
-            65, 53, 45, 69, 57, 49, 
-            52, 45, 52, 55, 68, 65, 
-            45, 57, 53, 67, 65, 45, 
-            67, 53, 65, 66, 48, 68, 
-            67, 56, 53, 66, 49, 49 
-        };
-        private byte[] methodandpath;
-        private byte[] requestheaders = new byte[WebSocketClient.MAX_REQUEST_HEADERS_LENGTH];
-        private Dictionary<string, byte[]> headersmap = new Dictionary<string, byte[]>();
-        private int requestheaderslength;
-        private int writeindex = 0;
-
         private byte[] _url;
         private byte[] url
         {

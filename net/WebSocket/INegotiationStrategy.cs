@@ -9,7 +9,7 @@ namespace NarcityMedia.Net
     {
         public WebSocketClient Negotiate()
         {
-            return new WebSocketClient();
+            // return new WebSocketClient();
         }
     }
 }
