@@ -8,7 +8,17 @@ using System.Linq;
 namespace NarcityMedia.Net
 {
     public partial class WebSocketServer : WebSocketServer<WebSocketClient>
-    {}
+    {
+        public WebSocketServer()
+        {
+            this.ClientInitializationStrategy = this.DefaultInitializationStrategy;
+        }
+
+        private WebSocketClient DefaultInitializationStrategy(Socket socket)
+        {
+            return new WebSocketClient(socket);
+        }
+    }
 
     public partial class WebSocketServer<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {
@@ -41,6 +51,9 @@ namespace NarcityMedia.Net
         {
             get { return new WebSocketRoom(this._allClients); }
         }
+
+        public delegate TWebSocketClient ClientInitialization(Socket socket);
+        public ClientInitialization ClientInitializationStrategy;
 
         private List<TWebSocketClient> clients;
 
@@ -176,6 +189,10 @@ namespace NarcityMedia.Net
                         this.AddClient(cli);
                         this.OnConnect.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(state.cli));
                     }
+                    else
+                    {
+                        handler.Dispose();
+                    }
                 };
 
                 // 'WebSocketServerHTTPListener' threaad can move on and accept other requests
@@ -300,11 +317,20 @@ namespace NarcityMedia.Net
                 this.AnalyzeRequestHeaders(state.handler) &&
                 this.Negociate101Upgrade(state.handler) )
             {
-                state.cli = cli;
-                state.done(cli);
-            } else {
+                if (this.ClientInitializationStrategy != null)
+                {
+                    TWebSocketClient cli = this.ClientInitializationStrategy(socket);
+                    state.cli = cli;
+                    state.done(cli);
+                }
+                else
+                {
+                    throw new WebSocketServerException("");
+                }
+            }
+            else
+            {
                 state.exception = new WebSocketNegotiationException("WebSocket negotiation failed");
-                cli.Dispose();
             }
         }
     }
