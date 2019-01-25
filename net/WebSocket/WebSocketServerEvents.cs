@@ -37,30 +37,4 @@ namespace NarcityMedia.Net
             }
         }
     }
-
-    public partial class WebSocketServer : WebSocketServer<WebSocketClient>
-    {
-        new public event WebSocketServer.WebSocketServerEvent OnConnect;
-        new public event WebSocketServer.WebSocketServerEvent OnDisconnect;
-        new public event WebSocketServer.WebSocketServerEvent OnMessage;
-        new public event WebSocketServer.WebSocketServerEvent OnControlFrame;
-        new public event WebSocketServer.WebSocketServerEvent OnError;
-        new public delegate void WebSocketServerEvent(object sender, WebSocketServerEventArgs args);
-
-        public class WebSocketServerEventArgs : WebSocketServerEventArgs<WebSocketClient>
-        {
-            public WebSocketServerEventArgs(WebSocketClient cli) : base(cli)
-            {
-            }
-
-            public WebSocketServerEventArgs(WebSocketClient cli, SocketDataFrame dataFrame) : base(cli)
-            {
-            }
-
-            public WebSocketServerEventArgs(WebSocketClient cli, Exception innerException) : base(cli)
-            {
-            }
-        }
-    }
-
 }
