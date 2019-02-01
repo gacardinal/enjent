@@ -16,6 +16,10 @@ namespace NarcityMedia.Net
         private const int MAX_REQUEST_HEADERS_LENGTH = 2048;
         private const string WEBSOCKET_SEC_KEY_HEADER = "Sec-WebSocket-Key";
         private const string WEBSOCKET_COOKIE_HEADER = "Cookie";
+        /// <summary>
+        /// Key defined in RFC 6455 necessary to the negociation of a ne WebSocket conneciton
+        /// </summary>
+        /// <value>Byte array representing the RFC 6455 key</value>
         private static readonly byte[] RFC6455_CONCAT_GUID = new byte[] {
             50, 53, 56, 69, 65, 70, 
             65, 53, 45, 69, 57, 49, 
