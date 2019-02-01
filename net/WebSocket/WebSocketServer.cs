@@ -73,6 +73,8 @@ namespace NarcityMedia.Net
 
             this.clients = new List<TWebSocketClient>(1024);
 
+            this.ClientInitializationStrategy = initStrategy;
+
             // this.OnDisconnect += DisconnectProcedure;
         }
 
@@ -318,7 +320,7 @@ namespace NarcityMedia.Net
             {
                 if (this.ClientInitializationStrategy != null)
                 {
-                    TWebSocketClient cli = this.ClientInitializationStrategy(socket);
+                    TWebSocketClient cli = this.ClientInitializationStrategy(state.handler);
                     state.cli = cli;
                     state.done(cli);
                 }
