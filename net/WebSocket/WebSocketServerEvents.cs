@@ -2,7 +2,7 @@ using System;
 
 namespace NarcityMedia.Net
 {
-    public partial class WebSocketServer
+    public partial class WebSocketServer<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {
         public event WebSocketServerEvent OnConnect;
         public event WebSocketServerEvent OnDisconnect;
@@ -10,32 +10,31 @@ namespace NarcityMedia.Net
         public event WebSocketServerEvent OnControlFrame;
         public event WebSocketServerEvent OnError;
 
-        public delegate void WebSocketServerEvent(object sender, WebSocketServerEventArgs a);
+        public delegate void WebSocketServerEvent(object sender, WebSocketServerEventArgs<TWebSocketClient> a);
 
-    }
-
-    /// <summary>
-    /// 
-    /// </summary>
-    public class WebSocketServerEventArgs
-    {
-        public WebSocketClient Cli;
-        public Exception Exception;
-        public SocketDataFrame DataFrame;
-
-        public WebSocketServerEventArgs(WebSocketClient cli)
+        /// <summary>
+        /// 
+        /// </summary>
+        public class WebSocketServerEventArgs<TWebSocketServerGeneric> where TWebSocketServerGeneric : TWebSocketClient
         {
-            this.Cli = cli;
-        }
+            public TWebSocketClient Cli;
+            public Exception Exception;
+            public SocketDataFrame DataFrame;
 
-        public WebSocketServerEventArgs(WebSocketClient cli, SocketDataFrame dataFrame) : this(cli)
-        {
-            this.DataFrame = dataFrame;
-        }
+            public WebSocketServerEventArgs(TWebSocketClient cli)
+            {
+                this.Cli = cli;
+            }
 
-        public WebSocketServerEventArgs(WebSocketClient cli, Exception innerException) : this(cli)
-        {
-            this.Exception = innerException;
+            public WebSocketServerEventArgs(TWebSocketClient cli, SocketDataFrame dataFrame) : this(cli)
+            {
+                this.DataFrame = dataFrame;
+            }
+
+            public WebSocketServerEventArgs(TWebSocketClient cli, Exception innerException) : this(cli)
+            {
+                this.Exception = innerException;
+            }
         }
     }
 }

@@ -7,7 +7,19 @@ using System.Linq;
 
 namespace NarcityMedia.Net
 {
-    public partial class WebSocketServer
+    public partial class WebSocketServer : WebSocketServer<WebSocketClient>
+    {
+        public WebSocketServer() : base(DefaultInitializationStrategy)
+        {
+        }
+
+        private static WebSocketClient DefaultInitializationStrategy(Socket socket, Dictionary<string, byte[]> headers)
+        {
+            return new WebSocketClient(socket);
+        }
+    }
+
+    public partial class WebSocketServer<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {
         /// <summary>
         /// Thread that will listen for incoming connections
@@ -39,12 +51,15 @@ namespace NarcityMedia.Net
             get { return new WebSocketRoom(this._allClients); }
         }
 
-        private List<WebSocketClient> clients;
+        public delegate TWebSocketClient ClientInitialization(Socket socket, Dictionary<string, byte[]> HTTPhaders);
+        private ClientInitialization ClientInitializationStrategy;
+
+        private List<TWebSocketClient> clients;
 
         /// <summary>
-        /// Instantiates a new instance of the WebSocketServer class
+        /// Creates a new instance of the WebSocketServer class
         /// </summary>
-        public WebSocketServer()
+        public WebSocketServer(ClientInitialization initStrategy)
         {
             this.listener = new Thread(this.NegociationLoop);
             // Set Thread as foreground to prevent program execution finishing
@@ -56,7 +71,11 @@ namespace NarcityMedia.Net
 
             this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
 
-            this.clients = new List<WebSocketClient>(1024);
+            this.clients = new List<TWebSocketClient>(1024);
+
+            this.ClientInitializationStrategy = initStrategy;
+
+            // this.OnDisconnect += DisconnectProcedure;
         }
 
         /// <summary>
@@ -95,7 +114,8 @@ namespace NarcityMedia.Net
         /// </summary>
         private void Quit()
         {
-
+            // TODO: Send a close frame with 1001 "Going Away" closing code to every client as per protocol specifications
+            // TODO: Dispose of every connection cleanly before closing
         }
 
         public void Stop()
@@ -103,7 +123,7 @@ namespace NarcityMedia.Net
             this.listening = false;  // Listener Thread will exit when safe to do so
         }
 
-        private void DefaultControlFrameHandler(WebSocketClient cli, SocketControlFrame cFrame)
+        private void DefaultControlFrameHandler(TWebSocketClient cli, SocketControlFrame cFrame)
         {
             switch (cFrame.opcode)
             {
@@ -113,12 +133,12 @@ namespace NarcityMedia.Net
                     try
                     {
                         cli.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
-                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, cFrame));
+                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(cli, cFrame));
                     }
                     catch (Exception e)
                     {
                         WebSocketServerException ex = new WebSocketServerException("Error while sending 'close' control frame", e);
-                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, ex));
+                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(cli, ex));
                     }
                     finally
                     {
@@ -143,9 +163,9 @@ namespace NarcityMedia.Net
         private class SocketNegotiationState
         {
             public Socket handler;
-            public WebSocketClient cli;
+            public TWebSocketClient cli;
             public WebSocketNegotiationException exception;
-            public delegate void NegotiationCallback(WebSocketClient cli);
+            public delegate void NegotiationCallback(TWebSocketClient cli);
             public NegotiationCallback done;
 
             public SocketNegotiationState(Socket handler)
@@ -168,19 +188,23 @@ namespace NarcityMedia.Net
                     if (state.exception == null)
                     {
                         this.AddClient(cli);
-                        this.OnConnect.Invoke(this, new WebSocketServerEventArgs(state.cli));
+                        this.OnConnect.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(state.cli));
+                    }
+                    else
+                    {
+                        handler.Dispose();
                     }
                 };
 
                 // 'WebSocketServerHTTPListener' threaad can move on and accept other requests
-                ThreadPool.QueueUserWorkItem(WebSocketServer.NegociateWebSocketConnection, state);
+                ThreadPool.QueueUserWorkItem(this.NegociateWebSocketConnection, state);
             }
 
             this.Quit();
             return;     // End 'listener' Thread execution
         }
 
-        private void AddClient(WebSocketClient cli)
+        private void AddClient(TWebSocketClient cli)
         {
             lock (this.clients)
             {
@@ -190,7 +214,7 @@ namespace NarcityMedia.Net
             this.StartClientReceive(cli);
         }
 
-        private void RemoveCLient(WebSocketClient cli)
+        private void RemoveCLient(TWebSocketClient cli)
         {
             if (cli != null)
             {
@@ -201,12 +225,23 @@ namespace NarcityMedia.Net
             }
         }
 
-        private void StartClientReceive(WebSocketClient cli)
+        private void StartClientReceive(TWebSocketClient cli)
         {
             ReceiveState receiveState = new ReceiveState();
             receiveState.Cli = cli;
             receiveState.Cli.socket.BeginReceive(receiveState.buffer, 0, ReceiveState.INIT_BUFFER_SIZE, 0,
                                     new AsyncCallback(ReceiveCallback), receiveState);
+        }
+
+        /// <summary>
+        /// An instance of this class serves as a state object passed to a spcket's
+        /// BeginReceive() method to achieve asynchronous I/O
+        /// </summary>
+        private class ReceiveState
+        {
+            public TWebSocketClient Cli;
+            public const int INIT_BUFFER_SIZE = 2;
+            public byte[] buffer = new byte[INIT_BUFFER_SIZE];
         }
 
         private void ReceiveCallback(IAsyncResult iar)
@@ -221,9 +256,24 @@ namespace NarcityMedia.Net
                     if (frame != null)
                     {
                         if (frame is SocketDataFrame)
-                            this.OnMessage.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, (SocketDataFrame) frame));
+                        {
+                            if (!String.IsNullOrEmpty(frame.Plaintext))
+                            {
+                                this.OnMessage.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(receiveState.Cli, (SocketDataFrame) frame));
+                            }
+                            else
+                            {
+                                // Many browsers and WebSocket client side implementations send an empty frame on disconnection
+                                // for some obscure reason, so if it's the case, we disconnect the client 
+                                this.RemoveCLient(receiveState.Cli);
+                                this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(receiveState.Cli));
+                                receiveState.Cli.Dispose();
+                            }
+                        }
                         else
+                        {
                             this.DefaultControlFrameHandler(receiveState.Cli, (SocketControlFrame) frame);
+                        }
 
                         StartClientReceive(receiveState.Cli);
                     }
@@ -231,39 +281,66 @@ namespace NarcityMedia.Net
                     {
                         this.RemoveCLient(receiveState.Cli);
                         Exception e = new WebSocketServerException("Error while parsing an incoming WebSocketFrame");
-                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, e));
+                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(receiveState.Cli, e));
                         receiveState.Cli.Dispose();
                     }
                 }
                 else
                 {
                     this.RemoveCLient(receiveState.Cli);
-                    this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli));
-                    receiveState.Cli.Dispose();                    
+                    this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(receiveState.Cli));
+                    receiveState.Cli.Dispose();
                 }
             }
             catch (Exception e)
             {
+                // TODO: Send a closing frame with 1011 "Internal Server Error" closing code as per protocol specifications
                 this.RemoveCLient(receiveState.Cli);
                 Exception ex = new WebSocketServerException("An error occured while processing message received from client. See inner exception for additional information", e);
-                this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, ex));
+                this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(receiveState.Cli, ex));
                 receiveState.Cli.Dispose();
             }
         }
 
-        public static void NegociateWebSocketConnection(Object s)
+        /// <summary>
+        /// Upon receiving a close control frame, send a close control frame in return as per protocol specifications
+        /// </summary>
+        // private static void DisconnectProcedure(object sender, WebSocketServerEventArgs<TWebSocketClient> args)
+        // {
+        //     args.Cli.SendControlFrame(new SocketControlFrame(SocketControlFrame.OPCodes.Close));
+        // }
+
+        private void NegociateWebSocketConnection(Object s)
         {
             SocketNegotiationState state = (SocketNegotiationState) s;
-            WebSocketClient cli = new WebSocketClient(state.handler);
-            if (cli.ReadRequestHeaders() &&
-                cli.AnalyzeRequestHeaders() &&
-                cli.Negociate101Upgrade() )
+            bool incomingOK = false;
+            // Keep a COPY of the incoming headers
+            Dictionary<string, byte[]> incomingHeadersMap = null;
+            // TODO : Implement strategy that will allow the user to create the instance of his generic type
+            lock (this.headersmap)
             {
-                state.cli = cli;
-                state.done(cli);
-            } else {
+                incomingOK = this.ReadRequestHeaders(state.handler) &&
+                             this.AnalyzeRequestHeaders(state.handler) &&
+                             this.Negociate101Upgrade(state.handler);
+                incomingHeadersMap = new Dictionary<string, byte[]>(this.headersmap);
+            }
+
+            if (incomingOK)
+            {
+                if (this.ClientInitializationStrategy != null)
+                {
+                    TWebSocketClient cli = this.ClientInitializationStrategy(state.handler, incomingHeadersMap);
+                    state.cli = cli;
+                    state.done(cli);
+                }
+                else
+                {
+                    state.exception = new WebSocketNegotiationException("You are using a generic version of the WebSocketServer class but you did not specify a ClientInitializationStrategy");
+                }
+            }
+            else
+            {
                 state.exception = new WebSocketNegotiationException("WebSocket negotiation failed");
-                cli.Dispose();
             }
         }
     }
