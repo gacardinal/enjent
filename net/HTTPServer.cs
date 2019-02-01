@@ -84,7 +84,7 @@ namespace NarcityMedia.Net
             {
                 this.on404(request, response);
             }
-            catch (Exception e)
+            catch (Exception)
             {
                 this.on500(request, response);
             }
