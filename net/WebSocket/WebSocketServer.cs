@@ -13,7 +13,7 @@ namespace NarcityMedia.Net
         {
         }
 
-        private static WebSocketClient DefaultInitializationStrategy(Socket socket)
+        private static WebSocketClient DefaultInitializationStrategy(Socket socket, Dictionary<string, byte[]> headers)
         {
             return new WebSocketClient(socket);
         }
@@ -51,7 +51,7 @@ namespace NarcityMedia.Net
             get { return new WebSocketRoom(this._allClients); }
         }
 
-        public delegate TWebSocketClient ClientInitialization(Socket socket);
+        public delegate TWebSocketClient ClientInitialization(Socket socket, Dictionary<string, byte[]> HTTPhaders);
         private ClientInitialization ClientInitializationStrategy;
 
         private List<TWebSocketClient> clients;
@@ -313,20 +313,29 @@ namespace NarcityMedia.Net
         private void NegociateWebSocketConnection(Object s)
         {
             SocketNegotiationState state = (SocketNegotiationState) s;
+            bool incomingOK = false;
+            // Keep a COPY of the incoming headers
+            Dictionary<string, byte[]> incomingHeadersMap = null;
             // TODO : Implement strategy that will allow the user to create the instance of his generic type
-            if (this.ReadRequestHeaders(state.handler) &&
-                this.AnalyzeRequestHeaders(state.handler) &&
-                this.Negociate101Upgrade(state.handler) )
+            lock (this.headersmap)
+            {
+                incomingOK = this.ReadRequestHeaders(state.handler) &&
+                             this.AnalyzeRequestHeaders(state.handler) &&
+                             this.Negociate101Upgrade(state.handler);
+                incomingHeadersMap = new Dictionary<string, byte[]>(this.headersmap);
+            }
+
+            if (incomingOK)
             {
                 if (this.ClientInitializationStrategy != null)
                 {
-                    TWebSocketClient cli = this.ClientInitializationStrategy(state.handler);
+                    TWebSocketClient cli = this.ClientInitializationStrategy(state.handler, incomingHeadersMap);
                     state.cli = cli;
                     state.done(cli);
                 }
                 else
                 {
-                    state.exception = new WebSocketNegotiationException("You are using a generic version of the ");
+                    state.exception = new WebSocketNegotiationException("You are using a generic version of the WebSocketServer class but you did not specify a ClientInitializationStrategy");
                 }
             }
             else
