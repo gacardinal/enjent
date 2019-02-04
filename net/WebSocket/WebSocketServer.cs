@@ -13,7 +13,7 @@ namespace NarcityMedia.Net
         {
         }
 
-        private static WebSocketClient DefaultInitializationStrategy(Socket socket, Dictionary<string, byte[]> headers)
+        private static WebSocketClient DefaultInitializationStrategy(Socket socket, HTTPRequest initialWSRequet)
         {
             return new WebSocketClient(socket);
         }
@@ -51,7 +51,7 @@ namespace NarcityMedia.Net
             get { return new WebSocketRoom(this._allClients); }
         }
 
-        public delegate TWebSocketClient ClientInitialization(Socket socket, Dictionary<string, byte[]> HTTPhaders);
+        public delegate TWebSocketClient ClientInitialization(Socket socket, HTTPRequest initialWSRequest);
         private ClientInitialization ClientInitializationStrategy;
 
         private List<TWebSocketClient> clients;
@@ -260,6 +260,7 @@ namespace NarcityMedia.Net
                             if (!String.IsNullOrEmpty(frame.Plaintext))
                             {
                                 this.OnMessage.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(receiveState.Cli, (SocketDataFrame) frame));
+                                StartClientReceive(receiveState.Cli);
                             }
                             else
                             {
@@ -273,9 +274,8 @@ namespace NarcityMedia.Net
                         else
                         {
                             this.DefaultControlFrameHandler(receiveState.Cli, (SocketControlFrame) frame);
+                            StartClientReceive(receiveState.Cli);
                         }
-
-                        StartClientReceive(receiveState.Cli);
                     }
                     else
                     {
@@ -322,6 +322,7 @@ namespace NarcityMedia.Net
                 incomingOK = this.ReadRequestHeaders(state.handler) &&
                              this.AnalyzeRequestHeaders(state.handler) &&
                              this.Negociate101Upgrade(state.handler);
+
                 incomingHeadersMap = new Dictionary<string, byte[]>(this.headersmap);
             }
 
@@ -329,7 +330,8 @@ namespace NarcityMedia.Net
             {
                 if (this.ClientInitializationStrategy != null)
                 {
-                    TWebSocketClient cli = this.ClientInitializationStrategy(state.handler, incomingHeadersMap);
+                    HTTPRequest initialWSReq = new HTTPRequest(this.currentUrl, HTTPMethod.GET, incomingHeadersMap);
+                    TWebSocketClient cli = this.ClientInitializationStrategy(state.handler, initialWSReq);
                     state.cli = cli;
                     state.done(cli);
                 }
