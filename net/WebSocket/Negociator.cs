@@ -8,6 +8,7 @@ using System.Security.Cryptography;
 namespace NarcityMedia.Net
 {
     public partial class WebSocketServer<TWebSocketClient> {
+        private string currentUrl;
         private const int HEADER_CHUNK_BUFFER_SIZE = 1024 * 2;
         private const byte NEWLINE_BYTE = (byte)'\n';
         private const byte QUESTION_MARK_BYTE = (byte)'?';
@@ -94,9 +95,9 @@ namespace NarcityMedia.Net
                 }
                 else if (buildingQueryString && this.requestheaders[i] == WebSocketServer.SPACE_BYTE)
                 {
-                    // this.url = new byte[i - urlStartImdex];
-                    // Array.Copy(this.requestheaders, urlStartImdex, this.url, 0, i - urlStartImdex);
-                    // this.currentUrl = System.Text.Encoding.Default.GetString(this.url);
+                    byte[] bytesURL = new byte[i - urlStartImdex];
+                    Array.Copy(this.requestheaders, urlStartImdex, bytesURL, 0, i - urlStartImdex);
+                    this.currentUrl = System.Text.Encoding.Default.GetString(bytesURL);
                     buildingQueryString = false;
                 }
             }
