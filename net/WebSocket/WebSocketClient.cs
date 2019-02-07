@@ -10,13 +10,6 @@ using NarcityMedia.Log;
 namespace NarcityMedia.Net
 {
     /// <summary>
-    /// Represents supported HTTP methods
-    /// </summary>
-    public enum HTTPMethods {
-        GET, POST, DELETE, PUT
-    }
-
-    /// <summary>
     /// Represents a client a.k.a. an end user that connected to the server by the HTTP protocol
     /// and that has subsequently upgraded to the WebSocket protocol.
     /// </summary>

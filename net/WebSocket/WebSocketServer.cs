@@ -27,8 +27,8 @@ namespace NarcityMedia.Net
         /// Default client initialization strategy
         /// </summary>
         /// <param name="socket">The newly accepted WebSocket connection</param>
-        /// <param name="headers">The original HTTP request headers</param>
-        private static WebSocketClient DefaultInitializationStrategy(Socket socket, Dictionary<string, byte[]> headers)
+        /// <param name="initialWSRequet">The HTTP request that initiated the WebSocket connection</param>
+        private static WebSocketClient DefaultInitializationStrategy(Socket socket, HTTPRequest initialWSRequet)
         {
             return new WebSocketClient(socket);
         }
@@ -71,20 +71,13 @@ namespace NarcityMedia.Net
         }
 
         /// <summary>
-        /// Initializes a new instance of the generic TWebSocketClient type 
-        /// </summary>
-        /// <param name="socket">A reference to the newly created WebSocket connection</param>
-        /// <param name="HTTPhaders">A reference to the HTTP request that initiated the WebSocket connection</param>
-        /// <returns>A new instance of the TWebSocketClient generic type</returns>
-        public delegate TWebSocketClient ClientInitialization(Socket socket, Dictionary<string, byte[]> HTTPhaders);
-
-        /// <summary>
         /// Strategy used to initialize a new instance of the generic TWebSocketClient type when a new WebSocket connection is accepted
         /// </summary>
         /// <remark>
         /// It is mandatory to supply an initialization strategy when using the generic <see cref=" WebSocketServer<TWebSocketClient>" /> class.
         /// If you do not wish to provide such a strategy to initialize a custom type, use the non generic version of this class <see cref="WebSocketServer" />.
         /// </remark>
+        public delegate TWebSocketClient ClientInitialization(Socket socket, HTTPRequest initialWSRequest);
         private ClientInitialization ClientInitializationStrategy;
 
         /// <summary>
@@ -363,6 +356,7 @@ namespace NarcityMedia.Net
                             if (!String.IsNullOrEmpty(frame.Plaintext))
                             {
                                 this.OnMessage.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(receiveState.Cli, (SocketDataFrame) frame));
+                                StartClientReceive(receiveState.Cli);
                             }
                             else
                             {
@@ -376,9 +370,8 @@ namespace NarcityMedia.Net
                         else
                         {
                             this.DefaultControlFrameHandler(receiveState.Cli, (SocketControlFrame) frame);
+                            StartClientReceive(receiveState.Cli);
                         }
-
-                        StartClientReceive(receiveState.Cli);
                     }
                     else
                     {
@@ -420,6 +413,7 @@ namespace NarcityMedia.Net
                 incomingOK = this.ReadRequestHeaders(state.handler) &&
                              this.AnalyzeRequestHeaders(state.handler) &&
                              this.Negociate101Upgrade(state.handler);
+
                 incomingHeadersMap = new Dictionary<string, byte[]>(this.headersmap);
             }
 
@@ -427,7 +421,8 @@ namespace NarcityMedia.Net
             {
                 if (this.ClientInitializationStrategy != null)
                 {
-                    TWebSocketClient cli = this.ClientInitializationStrategy(state.handler, incomingHeadersMap);
+                    HTTPRequest initialWSReq = new HTTPRequest(this.currentUrl, HTTPMethod.GET, incomingHeadersMap);
+                    TWebSocketClient cli = this.ClientInitializationStrategy(state.handler, initialWSReq);
                     state.cli = cli;
                     state.done(cli);
                 }

@@ -15,6 +15,11 @@ namespace NarcityMedia.Net
         private const int HEADER_CHUNK_BUFFER_SIZE = 1024 * 2;
 
         /// <summary>
+        /// The website URL from which the new connection was initiated
+        /// </summary>
+        private string currentUrl;
+
+        /// <summary>
         /// Byte representation of the 'new line' character
         /// </summary>
         private const byte NEWLINE_BYTE = (byte)'\n';
@@ -166,9 +171,9 @@ namespace NarcityMedia.Net
                 }
                 else if (buildingQueryString && this.requestheaders[i] == WebSocketServer.SPACE_BYTE)
                 {
-                    // this.url = new byte[i - urlStartImdex];
-                    // Array.Copy(this.requestheaders, urlStartImdex, this.url, 0, i - urlStartImdex);
-                    // this.currentUrl = System.Text.Encoding.Default.GetString(this.url);
+                    byte[] bytesURL = new byte[i - urlStartImdex];
+                    Array.Copy(this.requestheaders, urlStartImdex, bytesURL, 0, i - urlStartImdex);
+                    this.currentUrl = System.Text.Encoding.Default.GetString(bytesURL);
                     buildingQueryString = false;
                 }
             }
