@@ -10,19 +10,63 @@ namespace NarcityMedia.Net
     /// </summary>
     public abstract partial class SocketFrame
     {
+
+        /// <summary>
+        /// Enumerates the possible OPCodes of a WebSocket frame as described in RFC 6455
+        /// </summary>
         public enum OPCodes
         {
+            /// <summary>
+            /// Represents the continuation of a message that was sent over two WebSocket frames
+            /// </summary>
             Continuation = 0x0,
+
+            /// <summary>
+            /// Indicates a text payload
+            /// </summary>
             Text = 0x1,
+
+            /// <summary>
+            /// Indicates a binary payload
+            /// </summary>
             Binary = 0x2,
+
+            /// <summary>
+            /// Indicates a closing frame
+            /// </summary>
             Close = 0x8,
+
+            /// <summary>
+            /// Indicates a PING frame
+            /// </summary>
             Ping = 0x9,
+
+            /// <summary>
+            /// Indicates a PONG frame
+            /// </summary>
             Pong = 0xA
         }
 
+        /// <summary>
+        /// Indicates whether the current SocketFrame is the last one of a message
+        /// </summary>
         public bool fin;
+
+        /// <summary>
+        /// Indicates whether the current SocketFrame is masked.
+        ///  Frames comming from the client must be masked whereas frames sent from the server must NOT be masked
+        /// </summary>
         protected bool masked;
+
+        /// <summary>
+        /// Payload of the current SocketFrame
+        /// </summary>
         protected byte[] _data;
+
+        /// <summary>
+        /// Payload of the current SocketFrame
+        /// </summary>
+        /// <value></value>
         public byte[] data
         {
             get { return this._data; }
@@ -32,11 +76,28 @@ namespace NarcityMedia.Net
                 this.Plaintext = System.Text.Encoding.UTF8.GetString(value);
             }
         }
-        public byte opcode;
+
+        /// <summary>
+        /// Length of the payload of the current SocketFrame
+        /// </summary>
         public ushort contentLength;
 
+        /// <summary>
+        /// The OPCode of the current SocketFrame
+        /// </summary>
+        public byte opcode;
+
+        /// <summary>
+        /// The plaintext content of the current SocketFrame
+        /// </summary>
         public string Plaintext;
 
+        /// <summary>
+        /// Initializes a new instance of the SocketFrame class
+        /// </summary>
+        /// <param name="fin">Indicates whether the current SocketFrame is the last one of a multi frame message</param>
+        /// <param name="masked">Indicates whether the current SocketFrame is masked</param>
+        /// <param name="length">Length of the content of the current SocketFrame</param>
         public SocketFrame(bool fin, bool masked, ushort length)
         {
             this.fin = fin;
@@ -109,19 +170,47 @@ namespace NarcityMedia.Net
     /// </summary>
     public class SocketDataFrame : SocketFrame
     {
+        /// <summary>
+        /// Represents types of WebSocket data frames
+        /// </summary>
         public enum DataFrameType { Text, Binary }
+
+        /// <summary>
+        /// Represents the type of the current SocketDataFrame
+        /// </summary>
         public DataFrameType DataType;
 
+        /// <summary>
+        /// Initializes a new instance of the SocketDataFrame class
+        /// </summary>
         public SocketDataFrame() : base(true, true, 0)
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the SocketDataFrame class
+        /// </summary>
+        /// <param name="fin">Indicates whether the current SocketDataFrame is the last one of a multi frame message</param>
+        /// <param name="masked">Indicates whether the current SocketDataFrame is masked</param>
+        /// <param name="length">Length of the content of the current SocketDataFrame</param>
+        /// <param name="dataType">The data type of the current SocketDataFrame</param>
         public SocketDataFrame(bool fin, bool masked, ushort length,
                                 DataFrameType dataType) : base(fin, masked, length)
         {
             this.DataType = dataType;
             this.InitOPCode();
         }
+
+        /// <summary>
+        /// Initializes a new instance of the SocketDataFrame class
+        /// </summary>
+        /// <param name="fin">Indicates whether the current SocketDataFrame is the last one of a multi frame message</param>
+        /// <param name="masked">Indicates whether the current SocketDataFrame is masked</param>
+        /// <param name="length">Length of the content of the current SocketDataFrame</param>
+        /// <param name="dataType">The data type of the current SocketDataFrame</param>
+        /// <param name="message">Payload of the current SocketDataFrame</param>
+        /// <exception cref="ArgumentOutOfRangeException">If the length of the message is greater than 65536</exception>
+        /// <remark>This class, for now, only supports messages of length smaller of equal to 65536, that is, messages that can fit in a single frame</remark>
         public SocketDataFrame(bool fin, bool masked, ushort length,
                                 DataFrameType dataType,
                                 byte[] message) : base(fin, masked, length)
@@ -135,10 +224,13 @@ namespace NarcityMedia.Net
             }
             else
             {
-                throw new ArgumentOutOfRangeException("This public class does not support frames that have a content length value that is greater than 126");
+                throw new ArgumentOutOfRangeException("This class does not support frames that have a content length value that is greater than 126");
             }
         }
 
+        /// <summary>
+        /// Determines the correct OPCode according to the data type of the current SocketDataFrame
+        /// </summary>
         protected override void InitOPCode()
         {
             if (this.DataType == DataFrameType.Text) this.opcode = (byte) SocketFrame.OPCodes.Text;
@@ -146,13 +238,26 @@ namespace NarcityMedia.Net
         }
     }
 
+    /// <summary>
+    /// Represents a WebSocket control frame as described in RFC 6455
+    /// </summary>
     public class SocketControlFrame : SocketDataFrame
     {
+        /// <summary>
+        /// Initializes a new instance of the SocketControlFrame class
+        /// </summary>
+        /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
         public SocketControlFrame(SocketFrame.OPCodes controlOpCode) :base(true, false, 0,SocketDataFrame.DataFrameType.Binary)
         {
             this.opcode = (byte) controlOpCode;
         }
 
+        /// <summary>
+        /// Initializes a new instance of the SocketControlFrame class
+        /// </summary>
+        /// <param name="fin"></param>
+        /// <param name="masked"></param>
+        /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
         public SocketControlFrame(bool fin, bool masked, SocketFrame.OPCodes controlOpCode)
                 : base(true, false, 0, SocketDataFrame.DataFrameType.Binary)
         {

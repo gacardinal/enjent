@@ -7,18 +7,37 @@ using System.Linq;
 
 namespace NarcityMedia.Net
 {
+    /// <summary>
+    /// Closed constructed version of the WebSocketServer class
+    /// </summary>
+    /// <typeparam name="WebSocketClient">Default provided type for the client ovject</typeparam>
+    /// <remark>
+    /// When using this closed constructed version derived from the generic <see cref="WebSocketServer<TWebSocketClient>" /> class,
+    /// it is not necessary to provide a custom client initialization strategy because one is provided by the current class.
     public partial class WebSocketServer : WebSocketServer<WebSocketClient>
     {
+        /// <summary>
+        /// Initializes a new instance of the WebSocketServer class
+        /// </summary>
         public WebSocketServer() : base(DefaultInitializationStrategy)
         {
         }
 
+        /// <summary>
+        /// Default client initialization strategy
+        /// </summary>
+        /// <param name="socket">The newly accepted WebSocket connection</param>
+        /// <param name="headers">The original HTTP request headers</param>
         private static WebSocketClient DefaultInitializationStrategy(Socket socket, Dictionary<string, byte[]> headers)
         {
             return new WebSocketClient(socket);
         }
     }
 
+    /// <summary>
+    /// Provides server-side WebSocket functionnalities
+    /// </summary>
+    /// <typeparam name="TWebSocketClient">The type used to represent clients that connect to the current WebSocketServer</typeparam>
     public partial class WebSocketServer<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {
         /// <summary>
@@ -51,9 +70,26 @@ namespace NarcityMedia.Net
             get { return new WebSocketRoom(this._allClients); }
         }
 
+        /// <summary>
+        /// Initializes a new instance of the generic TWebSocketClient type 
+        /// </summary>
+        /// <param name="socket">A reference to the newly created WebSocket connection</param>
+        /// <param name="HTTPhaders">A reference to the HTTP request that initiated the WebSocket connection</param>
+        /// <returns>A new instance of the TWebSocketClient generic type</returns>
         public delegate TWebSocketClient ClientInitialization(Socket socket, Dictionary<string, byte[]> HTTPhaders);
+
+        /// <summary>
+        /// Strategy used to initialize a new instance of the generic TWebSocketClient type when a new WebSocket connection is accepted
+        /// </summary>
+        /// <remark>
+        /// It is mandatory to supply an initialization strategy when using the generic <see cref=" WebSocketServer<TWebSocketClient>" /> class.
+        /// If you do not wish to provide such a strategy to initialize a custom type, use the non generic version of this class <see cref="WebSocketServer" />.
+        /// </remark>
         private ClientInitialization ClientInitializationStrategy;
 
+        /// <summary>
+        /// Holds a reference to every connected client
+        /// </summary>
         private List<TWebSocketClient> clients;
 
         /// <summary>
@@ -118,11 +154,20 @@ namespace NarcityMedia.Net
             // TODO: Dispose of every connection cleanly before closing
         }
 
+        /// <summary>
+        /// Safely stops the current WebSocketServer
+        /// </summary>
         public void Stop()
         {
             this.listening = false;  // Listener Thread will exit when safe to do so
         }
 
+        /// <summary>
+        /// Default handler for WebSocket control frames that is invoked whenever the current WebSocketServer receives
+        /// a WebSocket control frame
+        /// </summary>
+        /// <param name="cli">The client that sent the control frame</param>
+        /// <param name="cFrame">The control frame that was received</param>
         private void DefaultControlFrameHandler(TWebSocketClient cli, SocketControlFrame cFrame)
         {
             switch (cFrame.opcode)
@@ -160,14 +205,37 @@ namespace NarcityMedia.Net
             }
         }
 
+        /// <summary>
+        /// Used to pass context to an Async operation
+        /// </summary>
         private class SocketNegotiationState
         {
+            /// <summary>
+            /// The socket that is currently attempting to open a connection
+            /// </summary>
             public Socket handler;
+            /// <summary>
+            /// The associated client object
+            /// </summary>
             public TWebSocketClient cli;
+            /// <summary>
+            /// Represents an exception that MIGHT have occured during the negotiation
+            /// </summary>
             public WebSocketNegotiationException exception;
+            /// <summary>
+            /// Handles a successful WebSocket negotiation
+            /// </summary>
+            /// <param name="cli">The newly created client object</param>
             public delegate void NegotiationCallback(TWebSocketClient cli);
+            /// <summary>
+            /// Invoked once the WebSocket negotiation has completed
+            /// </summary>
             public NegotiationCallback done;
 
+            /// <summary>
+            /// Initializes a new instance of the SocketNegotiationState class
+            /// </summary>
+            /// <param name="handler">The socket used to negotiate the WebSocket connection</param>
             public SocketNegotiationState(Socket handler)
             {
                 this.handler = handler;
@@ -197,13 +265,20 @@ namespace NarcityMedia.Net
                 };
 
                 // 'WebSocketServerHTTPListener' threaad can move on and accept other requests
-                ThreadPool.QueueUserWorkItem(this.NegociateWebSocketConnection, state);
+                ThreadPool.QueueUserWorkItem(this.NegotiateWebSocketConnection, state);
             }
 
             this.Quit();
             return;     // End 'listener' Thread execution
         }
 
+        /// <summary>
+        /// Adds a client to the connected clients collection in a thread safe manner
+        /// </summary>
+        /// <param name="cli">The client to add to <see cref="this.clients" />.</param>
+        /// <remark>
+        /// Will most likely be executed by a ThreadPool thread during the negotiation of the WebSocket connection
+        /// </remark>
         private void AddClient(TWebSocketClient cli)
         {
             lock (this.clients)
@@ -214,6 +289,13 @@ namespace NarcityMedia.Net
             this.StartClientReceive(cli);
         }
 
+        /// <summary>
+        /// Removes a client from the connected clients collection in a thread safe manner
+        /// </summary>
+        /// <param name="cli">The client to remove from <see cref="this.clients" />.</param>
+        /// <remark>
+        /// Will most likely be executed by a ThreadPool thread which executes the receive logic
+        /// </remark>
         private void RemoveCLient(TWebSocketClient cli)
         {
             if (cli != null)
@@ -225,6 +307,10 @@ namespace NarcityMedia.Net
             }
         }
 
+        /// <summary>
+        /// Starts receiving data from a client in an asynchronous manner
+        /// </summary>
+        /// <param name="cli">The client from which to start receiving</param>
         private void StartClientReceive(TWebSocketClient cli)
         {
             ReceiveState receiveState = new ReceiveState();
@@ -234,16 +320,33 @@ namespace NarcityMedia.Net
         }
 
         /// <summary>
-        /// An instance of this class serves as a state object passed to a spcket's
+        /// An instance of this class serves as a state object passed to a socket's
         /// BeginReceive() method to achieve asynchronous I/O
         /// </summary>
         private class ReceiveState
         {
+            /// <summary>
+            /// The client from which to receive data
+            /// </summary>
             public TWebSocketClient Cli;
+            /// <summary>
+            /// Initial receiving buffer size
+            /// </summary>
+            /// <remark>
+            /// The size of this buffer is two bcause WebSocket frame headers are no more than two bytes
+            /// and there is no point in receiving more until the headers are analyzed
+            /// </remark>
             public const int INIT_BUFFER_SIZE = 2;
+            /// <summary>
+            /// The buffer that holds the received data
+            /// </summary>
             public byte[] buffer = new byte[INIT_BUFFER_SIZE];
         }
 
+        /// <summary>
+        /// Executes logic to receive data from a WebSocket connection
+        /// </summary>
+        /// <param name="iar">The result of the asynchronous receive operation</param>
         private void ReceiveCallback(IAsyncResult iar)
         {
             ReceiveState receiveState = (ReceiveState) iar.AsyncState;
@@ -303,20 +406,15 @@ namespace NarcityMedia.Net
         }
 
         /// <summary>
-        /// Upon receiving a close control frame, send a close control frame in return as per protocol specifications
+        /// Negotiates a WebSocket connection incoming from an HTTP connection
         /// </summary>
-        // private static void DisconnectProcedure(object sender, WebSocketServerEventArgs<TWebSocketClient> args)
-        // {
-        //     args.Cli.SendControlFrame(new SocketControlFrame(SocketControlFrame.OPCodes.Close));
-        // }
-
-        private void NegociateWebSocketConnection(Object s)
+        /// <param name="s">Negotiation state object</param>
+        private void NegotiateWebSocketConnection(Object s)
         {
             SocketNegotiationState state = (SocketNegotiationState) s;
             bool incomingOK = false;
             // Keep a COPY of the incoming headers
             Dictionary<string, byte[]> incomingHeadersMap = null;
-            // TODO : Implement strategy that will allow the user to create the instance of his generic type
             lock (this.headersmap)
             {
                 incomingOK = this.ReadRequestHeaders(state.handler) &&
