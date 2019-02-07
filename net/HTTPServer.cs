@@ -11,8 +11,21 @@ namespace NarcityMedia.Net
     /// </summary>
     public class HTTPServer
     {
+        /// <summary>
+        /// Dlegates of this type handle HTTP requests received by the current HTTPServer
+        /// </summary>
+        /// <param name="req">The request object that represents an HTTP request made by a client</param>
+        /// <param name="res">HTTP Response sent to the client</param>
         public delegate void EndpointCallback(HttpListenerRequest req, HttpListenerResponse res);
+
+        /// <summary>
+        /// Invoked when a resource could not be located
+        /// </summary>
         public EndpointCallback on404;
+        
+        /// <summary>
+        /// Invoked when an internal error occurs 
+        /// </summary>
         public EndpointCallback on500;
 
         private HttpListener listener;
