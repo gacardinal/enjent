@@ -31,6 +31,8 @@ namespace NarcityMedia.Net
             }
         }
 
+        public HTTPRequest InitialRequest;
+
         public string currentUrl;
 
         public delegate void SocketMessageCallback(WebSocketMessage message);
