@@ -15,7 +15,10 @@ namespace NarcityMedia.Net
 
         private static WebSocketClient DefaultInitializationStrategy(Socket socket, HTTPRequest initialWSRequet)
         {
-            return new WebSocketClient(socket);
+            WebSocketClient cli = new WebSocketClient(socket);
+            cli.InitialRequest = initialWSRequet;
+
+            return cli;
         }
     }
 
