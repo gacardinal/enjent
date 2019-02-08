@@ -62,6 +62,12 @@ namespace NarcityMedia.Net
             return null;
         }
 
+        /// <summary>
+        /// Unmasks a masked WebSocket frame payload received from the client as described in section 5.3 of RFC6455
+        /// </summary>
+        /// <param name="masked">Masked payload bytes</param>
+        /// <param name="maskingKey">Unmasking key bytes</param>
+        /// <returns>The unmasked payload data</returns>
         private static byte[] UnmaskContent(byte[] masked, byte[] maskingKey)
         {
             if (maskingKey.Length != 4) throw new ArgumentException("Masking key must always be of length 4");

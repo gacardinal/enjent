@@ -8,15 +8,52 @@ using System.Security.Cryptography;
 namespace NarcityMedia.Net
 {
     public partial class WebSocketServer<TWebSocketClient> {
-        private string currentUrl;
+
+        /// <summary>
+        /// Size of the chunks that will be read in RAM from the incoming socket connection
+        /// </summary>
         private const int HEADER_CHUNK_BUFFER_SIZE = 1024 * 2;
+
+        /// <summary>
+        /// The website URL from which the new connection was initiated
+        /// </summary>
+        private string currentUrl;
+
+        /// <summary>
+        /// Byte representation of the 'new line' character
+        /// </summary>
         private const byte NEWLINE_BYTE = (byte)'\n';
+
+        /// <summary>
+        /// Byte representation of the 'question amrk' character
+        /// </summary>
         private const byte QUESTION_MARK_BYTE = (byte)'?';
+
+        /// <summary>
+        /// Byte representation of the 'colon' character
+        /// </summary>
         private const byte COLON_BYTE = (byte)':';
+
+        /// <summary>
+        /// Byte representation of the 'space' character
+        /// </summary>
         private const byte SPACE_BYTE = (byte)' ';
+
+        /// <summary>
+        /// The maximum accepted header size for the initial HTTP request
+        /// </summary>
         private const int MAX_REQUEST_HEADERS_LENGTH = 2048;
+
+        /// <summary>
+        /// Sec-WebSocket-Key HTTP header name
+        /// </summary>
         private const string WEBSOCKET_SEC_KEY_HEADER = "Sec-WebSocket-Key";
+
+        /// <summary>
+        /// Cookie HTTP header name
+        /// </summary>
         private const string WEBSOCKET_COOKIE_HEADER = "Cookie";
+
         /// <summary>
         /// Key defined in RFC 6455 necessary to the negociation of a ne WebSocket conneciton
         /// </summary>
@@ -29,12 +66,41 @@ namespace NarcityMedia.Net
             67, 53, 65, 66, 48, 68, 
             67, 56, 53, 66, 49, 49 
         };
+
+        /// <summary>
+        /// HTTP method and path of the incoming HTTP request
+        /// </summary>
         private byte[] methodandpath;
+
+        /// <summary>
+        /// Holds the headers of the incoming HTTP request
+        /// </summary>
         private byte[] requestheaders = new byte[WebSocketServer.MAX_REQUEST_HEADERS_LENGTH];
+
+        /// <summary>
+        /// Associative mapping of the headers of the incoming HTTP request
+        /// </summary>
+        /// <typeparam name="string">Name of the HTTP header</typeparam>
+        /// <typeparam name="byte[]">Byte representation of the HTTP header value</typeparam>
+        /// <returns>Associative mapping of the incoming HTTP request's headers</returns>
         private Dictionary<string, byte[]> headersmap = new Dictionary<string, byte[]>();
+
+        /// <summary>
+        /// Length of the incoming HTTP request's headers
+        /// </summary>
         private int requestheaderslength;
+
+        /// <summary>
+        /// Represents the index at which bytes read form the incomming socket should be written in <see cref="this.requestheaders" />
+        /// </summary>
         private int writeindex = 0;
 
+        /// <summary>
+        /// Appends a chunk of bytes read from the incoming HTTP request to a buffer
+        /// </summary>
+        /// <param name="buffer">Buffer holding the chunk to append</param>
+        /// <param name="byteRead">The number of bytes read</param>
+        /// <returns>False if the number of bytes read exceeds the buffer size, true otherwise.</returns>
         private bool AppendHeaderChunk(byte[] buffer, int byteRead)
         {
             if (this.writeindex + byteRead <= WebSocketServer.HEADER_CHUNK_BUFFER_SIZE)
@@ -53,6 +119,11 @@ namespace NarcityMedia.Net
             return false;  
         }
 
+        /// <summary>
+        /// Reads an incoming HTTP request from a given Socket
+        /// </summary>
+        /// <param name="socket">Socket from which to read the incoming HTTP request</param>
+        /// <returns>False if the request exceeded the maximum length allowed, true otherwise</returns>
         private bool ReadRequestHeaders(Socket socket)
         {
             byte[] buffer = new byte[HEADER_CHUNK_BUFFER_SIZE];
@@ -72,6 +143,11 @@ namespace NarcityMedia.Net
             return true;
         }
 
+        /// <summary>
+        /// Analyses the incoming HTTP request to ensure it is proprely formatted for a WebSocket upgrade
+        /// </summary>
+        /// <param name="socket">The socket from which to read the incoming HTTP request</param>
+        /// <returns>Boolean value indicating whether the request was well formatted</returns>
         private bool AnalyzeRequestHeaders(Socket socket)
         {
             bool lookingForQuestionMark = true;
@@ -152,6 +228,11 @@ namespace NarcityMedia.Net
             return true;
         }
 
+        /// <summary>
+        /// Prepares and sends an HTTP 101 upgrade response to finish the WebSocket handshake
+        /// </summary>
+        /// <param name="socket">The socket on which to send the 101 Upgrade</param>
+        /// <returns>Boolean value indicating whether the upgraded was done successfully</returns>
         private bool Negociate101Upgrade(Socket socket)
         {
             if (this.headersmap.ContainsKey(WebSocketServer.WEBSOCKET_COOKIE_HEADER))
