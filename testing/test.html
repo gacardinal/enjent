@@ -88,7 +88,7 @@
             try {
                 if (pingInterval) window.clearInterval(pingInterval);
 
-                socket = new WebSocket("ws://127.0.0.1:13003?www.test.narcity.com/test");
+                socket = new WebSocket("ws://127.0.0.1:13003?url=www.test.narcity.com/test&fingerpring=maosdin9uh78nkfvn822b1bax3&someParam=asd");
                 socket.binaryType = 'arraybuffer';
                 socket.onmessage = e => {
                     console.log(e);
