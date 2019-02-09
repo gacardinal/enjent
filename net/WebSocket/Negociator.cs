@@ -3,6 +3,7 @@ using System.Text;
 using System.Net;
 using System.Net.Sockets;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Security.Cryptography;
 
 namespace NarcityMedia.Net
@@ -13,11 +14,6 @@ namespace NarcityMedia.Net
         /// Size of the chunks that will be read in RAM from the incoming socket connection
         /// </summary>
         private const int HEADER_CHUNK_BUFFER_SIZE = 1024 * 2;
-
-        /// <summary>
-        /// The website URL from which the new connection was initiated
-        /// </summary>
-        private string currentUrl;
 
         /// <summary>
         /// Byte representation of the 'new line' character
@@ -67,6 +63,8 @@ namespace NarcityMedia.Net
             67, 56, 53, 66, 49, 49 
         };
 
+        private string CurrentUrl;
+
         /// <summary>
         /// HTTP method and path of the incoming HTTP request
         /// </summary>
@@ -76,6 +74,11 @@ namespace NarcityMedia.Net
         /// Holds the headers of the incoming HTTP request
         /// </summary>
         private byte[] requestheaders = new byte[WebSocketServer.MAX_REQUEST_HEADERS_LENGTH];
+
+        /// <summary>
+        /// Name value collection that holds the QueryString of the incoming HTTP request
+        /// </summary>
+        private NameValueCollection QueryString;
 
         /// <summary>
         /// Associative mapping of the headers of the incoming HTTP request
@@ -150,9 +153,11 @@ namespace NarcityMedia.Net
         /// <returns>Boolean value indicating whether the request was well formatted</returns>
         private bool AnalyzeRequestHeaders(Socket socket)
         {
+            this.CurrentUrl = String.Empty;
             bool lookingForQuestionMark = true;
             bool buildingQueryString = false;
-            int urlStartImdex = 0;
+            int queryStartIndex = 0;
+            byte[] bytesQueryString = new byte[0];
             // First, read until new line to get method and path
             for (int i = 0; i < this.requestheaderslength; i++)
             {
@@ -165,24 +170,29 @@ namespace NarcityMedia.Net
                 }
                 else if (lookingForQuestionMark && this.requestheaders[i] == WebSocketServer.QUESTION_MARK_BYTE)
                 {
-                    urlStartImdex = i + 1; // +1 to ignore the '?'
+                    queryStartIndex = i + 1; // +1 to ignore the '?'
                     lookingForQuestionMark = false;
                     buildingQueryString = true;
                 }
                 else if (buildingQueryString && this.requestheaders[i] == WebSocketServer.SPACE_BYTE)
                 {
-                    byte[] bytesURL = new byte[i - urlStartImdex];
-                    Array.Copy(this.requestheaders, urlStartImdex, bytesURL, 0, i - urlStartImdex);
-                    this.currentUrl = System.Text.Encoding.Default.GetString(bytesURL);
+                    bytesQueryString = new byte[i - queryStartIndex];
+                    Array.Copy(this.requestheaders, queryStartIndex, bytesQueryString, 0, i - queryStartIndex);
                     buildingQueryString = false;
                 }
             }
-            
-            // If no '? was found request is invalid
-            if (lookingForQuestionMark)
+
+            this.QueryString = new NameValueCollection();
+            string l_queryString = System.Text.Encoding.Default.GetString(bytesQueryString);
+            if (!String.IsNullOrEmpty(l_queryString))
             {
-                socket.Send(System.Text.Encoding.Default.GetBytes("HTTP/1.1 401\n"));
-                return false;
+                foreach (string param in l_queryString.Split('&'))
+                {
+                    string[] keyVal = param.Split('=');
+                    string name = keyVal[0];
+                    string val = keyVal.Length == 2 ? keyVal[1] : name;
+                    this.QueryString.Add(name, val);
+                }
             }
 
             // Read until ":", then read until "new line"

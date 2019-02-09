@@ -411,6 +411,10 @@ namespace NarcityMedia.Net
             bool incomingOK = false;
             // Keep a COPY of the incoming headers
             Dictionary<string, byte[]> incomingHeadersMap = null;
+            // Try to acquire a lock on an object used to parse the HTTP request to ensure only
+            // one request is parsed at a time as for now, the parsing logic is by no mean thread safe
+            // and the current method is executed by multiple ThreadPool threads at once
+            // TODO: Make parsing logic thread safe so it can be executed in parallel; using a dedicated parser class could make sense in this context
             lock (this.headersmap)
             {
                 incomingOK = this.ReadRequestHeaders(state.handler) &&
@@ -418,25 +422,26 @@ namespace NarcityMedia.Net
                              this.Negociate101Upgrade(state.handler);
 
                 incomingHeadersMap = new Dictionary<string, byte[]>(this.headersmap);
-            }
 
-            if (incomingOK)
-            {
-                if (this.ClientInitializationStrategy != null)
+            
+                if (incomingOK)
                 {
-                    HTTPRequest initialWSReq = new HTTPRequest(this.currentUrl, HTTPMethod.GET, incomingHeadersMap);
-                    TWebSocketClient cli = this.ClientInitializationStrategy(state.handler, initialWSReq);
-                    state.cli = cli;
-                    state.done(cli);
+                    if (this.ClientInitializationStrategy != null)
+                    {
+                        HTTPRequest initialWSReq = new HTTPRequest(this.CurrentUrl, HTTPMethod.GET, incomingHeadersMap, this.QueryString);
+                        TWebSocketClient cli = this.ClientInitializationStrategy(state.handler, initialWSReq);
+                        state.cli = cli;
+                        state.done(cli);
+                    }
+                    else
+                    {
+                        state.exception = new WebSocketNegotiationException("You are using a generic version of the WebSocketServer class but you did not specify a ClientInitializationStrategy");
+                    }
                 }
                 else
                 {
-                    state.exception = new WebSocketNegotiationException("You are using a generic version of the WebSocketServer class but you did not specify a ClientInitializationStrategy");
+                    state.exception = new WebSocketNegotiationException("WebSocket negotiation failed");
                 }
-            }
-            else
-            {
-                state.exception = new WebSocketNegotiationException("WebSocket negotiation failed");
             }
         }
     }
