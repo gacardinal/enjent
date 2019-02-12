@@ -129,6 +129,8 @@ namespace NarcityMedia.Net
         /// <returns>False if the request exceeded the maximum length allowed, true otherwise</returns>
         private bool ReadRequestHeaders(Socket socket)
         {
+            this.writeindex = 0;
+            this.requestheaderslength = 0;
             byte[] buffer = new byte[HEADER_CHUNK_BUFFER_SIZE];
             int byteRead = 0;
 
