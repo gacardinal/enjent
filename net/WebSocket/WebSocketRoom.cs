@@ -6,7 +6,7 @@ using System.Linq;
 namespace NarcityMedia.Net
 {
     /// <summary>
-    /// A logical way to group <<see cref="WebSocketClient" /> objects together.
+    /// A logical way to group <see cref="WebSocketClient" /> objects together.
     /// This class implements the ICollection interface for convenience.
     /// </summary>
     /// <typeparam name="WebSocketClient">The client objects to hold.true Can be a WebSocketClient or any derived type.</typeparam>
@@ -83,33 +83,50 @@ namespace NarcityMedia.Net
         /// <param name="message">The message to broadcast</param>
         public void Broadcast(WebSocketMessage message)
         {
-            foreach(WebSocketClient cli in this.clients)
+            lock (this.clients) 
             {
-                cli.Send(message);
+                foreach(WebSocketClient cli in this.clients)
+                {
+                    cli.Send(message);
+                }
             }
         }
 
         public void Broadcast(string message)
         {
-            foreach(WebSocketClient cli in this.clients)
+            lock (this.clients) 
             {
-                cli.Send(message);
+                foreach(WebSocketClient cli in this.clients)
+                {
+                    cli.Send(message);
+                }
             }
         }
 
         public WebSocketClient this[int index]
         {
-            get { return (WebSocketClient) clients[index]; }
-            set { clients[index] = value; }
+            get 
+            { 
+                return (WebSocketClient) clients[index]; 
+            }
+            set { 
+                lock (this.clients) 
+                {
+                    clients[index] = value; 
+                }
+            }
         }
 
         public bool Contains(WebSocketClient client)
         {
-            foreach (WebSocketClient cli in this.clients)
+            lock (this.clients) 
             {
-                if (cli.Equals(client))
+                foreach (WebSocketClient cli in this.clients)
                 {
-                    return true;
+                    if (cli.Equals(client))
+                    {
+                        return true;
+                    }
                 }
             }
 
@@ -118,11 +135,14 @@ namespace NarcityMedia.Net
 
         public bool Contains(WebSocketClient client, EqualityComparer<WebSocketClient> comp)
         {
-            foreach (WebSocketClient cli in this.clients)
+            lock (this.clients) 
             {
-                if (comp.Equals(cli, client))
+                foreach (WebSocketClient cli in this.clients)
                 {
-                    return true;
+                    if (comp.Equals(cli, client))
+                    {
+                        return true;
+                    }
                 }
             }
 
@@ -131,12 +151,18 @@ namespace NarcityMedia.Net
 
         public void Add(WebSocketClient cli)
         {
-            this.clients.Add(cli);
+            lock (this.clients) 
+            {
+                this.clients.Add(cli);
+            }
         }
 
         public void Clear()
         {
-            this.clients.Clear();
+            lock (this.clients) 
+            {
+                this.clients.Clear();
+            }
         }
 
         public void CopyTo(WebSocketClient[] array, int arrayIndex)
@@ -155,14 +181,16 @@ namespace NarcityMedia.Net
 
         public bool Remove(WebSocketClient cli)
         {
-            for (int i = 0; i < this.clients.Count; i++)
-            {
-                WebSocketClient curCli = (WebSocketClient) this.clients[i];
-
-                if (curCli.Equals(cli))
+            lock (this.clients) {
+                for (int i = 0; i < this.clients.Count; i++)
                 {
-                    this.clients.RemoveAt(i);
-                    return true;
+                    WebSocketClient curCli = (WebSocketClient) this.clients[i];
+
+                    if (curCli.Equals(cli))
+                    {
+                        this.clients.RemoveAt(i);
+                        return true;
+                    }
                 }
             }
 
