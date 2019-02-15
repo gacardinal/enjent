@@ -34,7 +34,7 @@ namespace NarcityMedia.Net
             Dictionary<string, string> mappedHeaders = new Dictionary<string, string>(headers.Count);
             foreach (KeyValuePair<string, byte[]> header in headers)
             {
-                mappedHeaders.Add(header.Key, System.Text.Encoding.Default.GetString(header.Value));
+                mappedHeaders.Add(header.Key, System.Text.Encoding.Default.GetString(header.Value).Trim());
             }
 
             this.Headers = mappedHeaders;
