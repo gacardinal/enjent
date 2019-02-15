@@ -418,7 +418,7 @@ namespace NarcityMedia.Net
             lock (this.headersmap)
             {
                 incomingOK = this.ReadRequestHeaders(state.handler) &&
-                             this.AnalyzeRequestHeaders(state.handler) &&
+                             this.AnalyzeRequestHeaders() &&
                              this.Negociate101Upgrade(state.handler);
 
                 incomingHeadersMap = new Dictionary<string, byte[]>(this.headersmap);
