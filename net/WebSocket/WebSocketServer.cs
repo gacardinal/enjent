@@ -174,12 +174,12 @@ namespace NarcityMedia.Net
                     try
                     {
                         cli.SendControlFrame(new SocketControlFrame(true, false, SocketFrame.OPCodes.Close));
-                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(cli, cFrame));
+                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, cFrame));
                     }
                     catch (Exception e)
                     {
                         WebSocketServerException ex = new WebSocketServerException("Error while sending 'close' control frame", e);
-                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(cli, ex));
+                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, ex));
                     }
                     finally
                     {
@@ -252,7 +252,7 @@ namespace NarcityMedia.Net
                     if (state.exception == null)
                     {
                         this.AddClient(cli);
-                        this.OnConnect.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(state.cli));
+                        this.OnConnect.Invoke(this, new WebSocketServerEventArgs(state.cli));
                     }
                     else
                     {
@@ -296,6 +296,7 @@ namespace NarcityMedia.Net
         {
             if (cli != null)
             {
+                
                 lock (this.clients)
                 {
                     this.clients.Remove(cli);
@@ -358,7 +359,7 @@ namespace NarcityMedia.Net
                         {
                             if (!String.IsNullOrEmpty(frame.Plaintext))
                             {
-                                this.OnMessage.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(receiveState.Cli, (SocketDataFrame) frame));
+                                this.OnMessage.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, (SocketDataFrame) frame));
                                 StartClientReceive(receiveState.Cli);
                             }
                             else
@@ -366,7 +367,7 @@ namespace NarcityMedia.Net
                                 // Many browsers and WebSocket client side implementations send an empty frame on disconnection
                                 // for some obscure reason, so if it's the case, we disconnect the client 
                                 this.RemoveCLient(receiveState.Cli);
-                                this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(receiveState.Cli));
+                                this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli));
                                 receiveState.Cli.Dispose();
                             }
                         }
@@ -380,14 +381,14 @@ namespace NarcityMedia.Net
                     {
                         this.RemoveCLient(receiveState.Cli);
                         Exception e = new WebSocketServerException("Error while parsing an incoming WebSocketFrame");
-                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(receiveState.Cli, e));
+                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, e));
                         receiveState.Cli.Dispose();
                     }
                 }
                 else
                 {
                     this.RemoveCLient(receiveState.Cli);
-                    this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(receiveState.Cli));
+                    this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli));
                     receiveState.Cli.Dispose();
                 }
             }
@@ -396,7 +397,7 @@ namespace NarcityMedia.Net
                 // TODO: Send a closing frame with 1011 "Internal Server Error" closing code as per protocol specifications
                 this.RemoveCLient(receiveState.Cli);
                 Exception ex = new WebSocketServerException("An error occured while processing message received from client. See inner exception for additional information", e);
-                this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs<TWebSocketClient>(receiveState.Cli, ex));
+                this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, ex));
                 receiveState.Cli.Dispose();
             }
         }

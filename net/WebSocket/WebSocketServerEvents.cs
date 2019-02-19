@@ -2,20 +2,21 @@ using System;
 
 namespace NarcityMedia.Net
 {
+
     public partial class WebSocketServer<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {
+        public delegate void WebSocketServerEvent(object sender, WebSocketServerEventArgs a);
+
         public event WebSocketServerEvent OnConnect;
         public event WebSocketServerEvent OnDisconnect;
         public event WebSocketServerEvent OnMessage;
         public event WebSocketServerEvent OnControlFrame;
         public event WebSocketServerEvent OnError;
 
-        public delegate void WebSocketServerEvent(object sender, WebSocketServerEventArgs<TWebSocketClient> a);
-
         /// <summary>
         /// 
         /// </summary>
-        public class WebSocketServerEventArgs<TWebSocketServerGeneric> where TWebSocketServerGeneric : TWebSocketClient
+        public class WebSocketServerEventArgs
         {
             public TWebSocketClient Cli;
             public Exception Exception;
