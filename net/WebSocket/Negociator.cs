@@ -134,16 +134,23 @@ namespace NarcityMedia.Net
             byte[] buffer = new byte[HEADER_CHUNK_BUFFER_SIZE];
             int byteRead = 0;
 
-            do
+            try
             {
-                byteRead = socket.Receive(buffer);
-
-                if (!this.AppendHeaderChunk(buffer, byteRead))
+                do
                 {
-                    return false;
+                    byteRead = socket.Receive(buffer);
+
+                    if (!this.AppendHeaderChunk(buffer, byteRead))
+                    {
+                        return false;
+                    }
                 }
+                while ( byteRead != 0 && buffer[byteRead - 1] != NEWLINE_BYTE && buffer[byteRead - 2] != NEWLINE_BYTE );
             }
-            while ( byteRead != 0 && buffer[byteRead - 1] != NEWLINE_BYTE && buffer[byteRead - 2] != NEWLINE_BYTE );
+            catch (Exception)
+            {
+                return false;
+            }
 
             return true;
         }
@@ -153,7 +160,7 @@ namespace NarcityMedia.Net
         /// </summary>
         /// <param name="socket">The socket from which to read the incoming HTTP request</param>
         /// <returns>Boolean value indicating whether the request was well formatted</returns>
-        private bool AnalyzeRequestHeaders(Socket socket)
+        private bool AnalyzeRequestHeaders()
         {
             this.CurrentUrl = String.Empty;
             bool lookingForQuestionMark = true;
@@ -279,20 +286,27 @@ namespace NarcityMedia.Net
                     negociatedkey = Convert.ToBase64String(hash);
                 }
 
-                socket.Send(System.Text.Encoding.Default.GetBytes("HTTP/1.1 101 Switching Protocols\n"));
-                socket.Send(System.Text.Encoding.Default.GetBytes("Connection: upgrade\n"));
-                socket.Send(System.Text.Encoding.Default.GetBytes("Upgrade: websocket\n"));
-                socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Accept: " + negociatedkey));
-
-                if (this.headersmap.ContainsKey("Sec-WebSocket-Protocol"))
+                try
                 {
-                    byte[] protocol = new byte[0];
-                    this.headersmap.TryGetValue("Sec-WebSocket-Protocol", out protocol);
-                    socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Protocol: " + protocol));
+                    socket.Send(System.Text.Encoding.Default.GetBytes("HTTP/1.1 101 Switching Protocols\n"));
+                    socket.Send(System.Text.Encoding.Default.GetBytes("Connection: upgrade\n"));
+                    socket.Send(System.Text.Encoding.Default.GetBytes("Upgrade: websocket\n"));
+                    socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Accept: " + negociatedkey));
+
+                    if (this.headersmap.ContainsKey("Sec-WebSocket-Protocol"))
+                    {
+                        byte[] protocol = new byte[0];
+                        this.headersmap.TryGetValue("Sec-WebSocket-Protocol", out protocol);
+                        socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Protocol: " + protocol));
+                    }
+
+                    socket.Send(System.Text.Encoding.Default.GetBytes("\n\n"));
+                }
+                catch (Exception)
+                {
+                    return false;
                 }
 
-                socket.Send(System.Text.Encoding.Default.GetBytes("\n\n"));
-            
                 return true;
             }
 
