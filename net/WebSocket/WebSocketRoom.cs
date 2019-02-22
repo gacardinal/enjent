@@ -36,7 +36,7 @@ namespace NarcityMedia.Net
 
         public IList Clients
         {
-            get { return this.clients.AsReadOnly() }
+            get { return this.clients.AsReadOnly(); }
         }
         
         /// <summary>
