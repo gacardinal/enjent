@@ -33,6 +33,11 @@ namespace NarcityMedia.Net
         {
             get { return false; }
         }
+
+        public IList Clients
+        {
+            get { return this.clients.AsReadOnly() }
+        }
         
         /// <summary>
         /// The inner collection on which the current Room interfaces
