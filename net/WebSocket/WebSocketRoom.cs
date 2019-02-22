@@ -46,7 +46,7 @@ namespace NarcityMedia.Net
         
         public WebSocketRoom()
         {
-            this.Id = new Guid();
+            this.Id = Guid.NewGuid();
             this.clients = new List<WebSocketClient>(100);
         }
 
