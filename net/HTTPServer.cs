@@ -28,6 +28,7 @@ namespace NarcityMedia.Net
         /// </summary>
         public EndpointCallback on500;
 
+        private Thread HTTPListenerThread;
         private HttpListener listener;
         private Uri rootEndpoint;
 
@@ -54,6 +55,9 @@ namespace NarcityMedia.Net
 
         public HTTPServer(Uri endpoint)
         {
+            this.HTTPListenerThread = new Thread(ListenLoop);
+            this.HTTPListenerThread.Name = "Local HTTP Listener";
+
             this.rootEndpoint = endpoint;
 
             this.on404 = this.Default404;
@@ -72,7 +76,16 @@ namespace NarcityMedia.Net
         public void Start()
         {
             this.listener.Start();
+            this.HTTPListenerThread.Start();
+        }
 
+        public void Stop()
+        {
+            this.listener.Stop();
+        }
+
+        private void ListenLoop()
+        {
             while (this.listener.IsListening)
             {
                 IAsyncResult result = this.listener.BeginGetContext(new AsyncCallback(this.HandleRequestAsync), this.listener);
