@@ -102,6 +102,7 @@ namespace NarcityMedia.Net
             this._allClients.Name = "GLOBAL";
 
             this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            this.socket.ReceiveTimeout = 1000;
 
             this.clients = new List<TWebSocketClient>(1024);
 
@@ -424,7 +425,6 @@ namespace NarcityMedia.Net
 
                 incomingHeadersMap = new Dictionary<string, byte[]>(this.headersmap);
 
-            
                 if (incomingOK)
                 {
                     if (this.ClientInitializationStrategy != null)
