@@ -12,6 +12,8 @@ namespace NarcityMedia.Net
     /// <typeparam name="WebSocketClient">The client objects to hold.true Can be a WebSocketClient or any derived type.</typeparam>
     public class WebSocketRoom : ICollection<WebSocketClient>
     {
+        public readonly Guid Id;
+
         /// <summary>
         /// Indicates the name of the current WebSocketRoom.
         /// Use this attribute to classify your rooms
@@ -39,10 +41,11 @@ namespace NarcityMedia.Net
         
         public WebSocketRoom()
         {
+            this.Id = new Guid();
             this.clients = new List<WebSocketClient>(100);
         }
 
-        public WebSocketRoom(IEnumerable<WebSocketClient> clients)
+        public WebSocketRoom(IEnumerable<WebSocketClient> clients) : this()
         {
             this.clients.AddRange(clients);
         }
@@ -212,7 +215,6 @@ namespace NarcityMedia.Net
         private WebSocketRoom room;
         private int curIndex;
         private WebSocketClient curCli;
-
 
         public WebSocketClientEnumerator(WebSocketRoom room)
         {
