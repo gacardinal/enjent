@@ -34,7 +34,7 @@ namespace NarcityMedia.Net
             get { return false; }
         }
 
-        public IList Clients
+        public System.Collections.ObjectModel.ReadOnlyCollection<WebSocketClient> Clients
         {
             get { return this.clients.AsReadOnly(); }
         }
