@@ -110,7 +110,7 @@ namespace NarcityMedia.Net
             {
                 this.on404(request, response);
             }
-            catch (Exception)
+            catch (Exception e)
             {
                 this.on500(request, response);
             }
