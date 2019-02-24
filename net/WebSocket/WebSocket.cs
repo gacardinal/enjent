@@ -133,23 +133,23 @@ namespace NarcityMedia.Net
     public abstract partial class WebSocketFrame
     {
         /// <summary>
-        /// Indicates whether the current SocketFrame is the last one of a message
+        /// Indicates whether the current WebSocketFrame is the last one of a message
         /// </summary>
         public bool fin;
 
         /// <summary>
-        /// Indicates whether the current SocketFrame is masked.
+        /// Indicates whether the current WebSocketFrame is masked.
         ///  Frames comming from the client must be masked whereas frames sent from the server must NOT be masked
         /// </summary>
         protected bool masked;
 
         /// <summary>
-        /// Payload of the current SocketFrame
+        /// Payload of the current WebSocketFrame
         /// </summary>
         protected byte[] _data;
 
         /// <summary>
-        /// Payload of the current SocketFrame
+        /// Payload of the current WebSocketFrame
         /// </summary>
         /// <value></value>
         public byte[] data
@@ -163,26 +163,26 @@ namespace NarcityMedia.Net
         }
 
         /// <summary>
-        /// Length of the payload of the current SocketFrame
+        /// Length of the payload of the current WebSocketFrame
         /// </summary>
         public ushort contentLength;
 
         /// <summary>
-        /// The OPCode of the current SocketFrame
+        /// The OPCode of the current WebSocketFrame
         /// </summary>
         public byte opcode;
 
         /// <summary>
-        /// The plaintext content of the current SocketFrame
+        /// The plaintext content of the current WebSocketFrame
         /// </summary>
         public string Plaintext;
 
         /// <summary>
-        /// Initializes a new instance of the SocketFrame class
+        /// Initializes a new instance of the WebSocketFrame class
         /// </summary>
-        /// <param name="fin">Indicates whether the current SocketFrame is the last one of a multi frame message</param>
-        /// <param name="masked">Indicates whether the current SocketFrame is masked</param>
-        /// <param name="length">Length of the content of the current SocketFrame</param>
+        /// <param name="fin">Indicates whether the current WebSocketFrame is the last one of a multi frame message</param>
+        /// <param name="masked">Indicates whether the current WebSocketFrame is masked</param>
+        /// <param name="length">Length of the content of the current WebSocketFrame</param>
         public WebSocketFrame(bool fin, bool masked, ushort length)
         {
             this.fin = fin;
@@ -210,7 +210,6 @@ namespace NarcityMedia.Net
 
             byte octet1 = (byte) ((this.masked) ? 0b10000000 : 0b00000000);
             octet1 = (byte) (octet1 | this.contentLength);
-            // octet1 = (byte) (octet1 | this.contentLength);
 
             frameHeader[0] = octet0;
             frameHeader[1] = octet1;
@@ -332,7 +331,7 @@ namespace NarcityMedia.Net
         /// Initializes a new instance of the SocketControlFrame class
         /// </summary>
         /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
-        public WebSocketControlFrame(WebSocketOPCode controlOpCode) :base(true, false, 0,WebSocketDataFrame.DataFrameType.Binary)
+        public WebSocketControlFrame(WebSocketOPCode controlOpCode) : base(true, false, 0,WebSocketDataFrame.DataFrameType.Binary)
         {
             this.opcode = (byte) controlOpCode;
         }
@@ -350,11 +349,27 @@ namespace NarcityMedia.Net
         }
     }
 
+    /// <summary>
+    /// Represents a WebSocket Close Control Frame as defined by RFC 6455
+    /// </summary>
     public class WebSocketCloseFrame : WebSocketControlFrame
     {
-        public WebSocketCloseFrame(WebSocketCloseCode closeCode)
+        public WebSocketCloseFrame(WebSocketCloseCode closeCode) : base(WebSocketOPCode.Close)
         {
+            // Initialize the first two bytes of the close frame body to a 2-byte unsigned integer
+            // as per RFC 6455 section 5.5.1
+            this._data = BitConverter.GetBytes((ushort) closeCode);
+        }
 
+        public WebSocketCloseFrame(WebSocketCloseCode closeCode, string closeReason) : this(closeCode)
+        {
+            byte[] payload = new byte[2 + closeReason.Length];
+            byte[] reason = System.Text.Encoding.UTF8.GetBytes(closeReason);
+
+            this._data.CopyTo(payload, 0);
+            reason.CopyTo(payload, 2);
+
+            this._data = payload;
         }
     }
 }
