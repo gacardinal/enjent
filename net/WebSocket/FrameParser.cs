@@ -54,7 +54,7 @@ namespace NarcityMedia.Net
                 if (opcode == 1 || opcode == 2)
                     frame = new WebSocketDataFrame(fin, masked, contentLength, (WebSocketDataFrame.DataFrameType) opcode, UnmaskContent(contentBuffer, maskingKey));
                 else
-                    frame = new WebSocketControlFrame(fin, masked, (WebSocketFrame.WebSocketOPCode)opcode);
+                    frame = new WebSocketControlFrame(fin, masked, (WebSocketOPCode)opcode);
 
                 return frame;
             }
