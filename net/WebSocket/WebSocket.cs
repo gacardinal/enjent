@@ -13,7 +13,7 @@ namespace NarcityMedia.Net
         /// <summary>
         /// Enumerates the possible OPCodes of a WebSocket frame as described in RFC 6455
         /// </summary>
-        public enum OPCodes
+        public enum WebSocketOPCode
         {
             /// <summary>
             /// Represents the continuation of a message that was sent over two WebSocket frames
@@ -49,7 +49,7 @@ namespace NarcityMedia.Net
         /// <summary>
         /// Represents WebSocket close codes as defined by the RFC 6455 specification
         /// </summary>
-        public enum CloseCodes
+        public enum WebSocketCloseCodes
         {
             /// <summary>
             /// Indicates a normal closure, meaning that the purpose for
@@ -318,8 +318,8 @@ namespace NarcityMedia.Net
         /// </summary>
         protected override void InitOPCode()
         {
-            if (this.DataType == DataFrameType.Text) this.opcode = (byte) WebSocketFrame.OPCodes.Text;
-            else this.opcode = (byte) WebSocketFrame.OPCodes.Binary;
+            if (this.DataType == DataFrameType.Text) this.opcode = (byte) WebSocketFrame.WebSocketOPCode.Text;
+            else this.opcode = (byte) WebSocketFrame.WebSocketOPCode.Binary;
         }
     }
 
@@ -332,7 +332,7 @@ namespace NarcityMedia.Net
         /// Initializes a new instance of the SocketControlFrame class
         /// </summary>
         /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
-        public WebSocketControlFrame(WebSocketFrame.OPCodes controlOpCode) :base(true, false, 0,WebSocketDataFrame.DataFrameType.Binary)
+        public WebSocketControlFrame(WebSocketFrame.WebSocketOPCode controlOpCode) :base(true, false, 0,WebSocketDataFrame.DataFrameType.Binary)
         {
             this.opcode = (byte) controlOpCode;
         }
@@ -343,7 +343,7 @@ namespace NarcityMedia.Net
         /// <param name="fin"></param>
         /// <param name="masked"></param>
         /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
-        public WebSocketControlFrame(bool fin, bool masked, WebSocketFrame.OPCodes controlOpCode)
+        public WebSocketControlFrame(bool fin, bool masked, WebSocketFrame.WebSocketOPCode controlOpCode)
                 : base(true, false, 0, WebSocketDataFrame.DataFrameType.Binary)
         {
             this.opcode = (byte) controlOpCode;
@@ -352,7 +352,7 @@ namespace NarcityMedia.Net
 
     public class WebSocketCloseFrame : WebSocketControlFrame
     {
-
+        public WebSocketCloseFrame(WebSocketCloseCodes)
     }
 }
 

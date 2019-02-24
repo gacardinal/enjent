@@ -174,7 +174,7 @@ namespace NarcityMedia.Net
                 case 8: // Close
                     try
                     {
-                        cli.SendControlFrame(new WebSocketControlFrame(true, false, WebSocketFrame.OPCodes.Close));
+                        cli.SendControlFrame(new WebSocketControlFrame(true, false, WebSocketFrame.WebSocketOPCode.Close));
                         this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, cFrame));
                     }
                     catch (Exception e)
@@ -190,7 +190,7 @@ namespace NarcityMedia.Net
                 case 9: // Ping
                     try
                     {
-                        cli.SendControlFrame(new WebSocketControlFrame(true, false, WebSocketFrame.OPCodes.Pong));
+                        cli.SendControlFrame(new WebSocketControlFrame(true, false, WebSocketFrame.WebSocketOPCode.Pong));
                     }
                     catch (Exception e)
                     {
