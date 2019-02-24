@@ -253,7 +253,7 @@ namespace NarcityMedia.Net
     /// <summary>
     /// Represents a WebSocket frame that contains data
     /// </summary>
-    public class SocketDataFrame : WebSocketFrame
+    public class WebSocketDataFrame : WebSocketFrame
     {
         /// <summary>
         /// Represents types of WebSocket data frames
@@ -268,7 +268,7 @@ namespace NarcityMedia.Net
         /// <summary>
         /// Initializes a new instance of the SocketDataFrame class
         /// </summary>
-        public SocketDataFrame() : base(true, true, 0)
+        public WebSocketDataFrame() : base(true, true, 0)
         {
         }
 
@@ -279,7 +279,7 @@ namespace NarcityMedia.Net
         /// <param name="masked">Indicates whether the current SocketDataFrame is masked</param>
         /// <param name="length">Length of the content of the current SocketDataFrame</param>
         /// <param name="dataType">The data type of the current SocketDataFrame</param>
-        public SocketDataFrame(bool fin, bool masked, ushort length,
+        public WebSocketDataFrame(bool fin, bool masked, ushort length,
                                 DataFrameType dataType) : base(fin, masked, length)
         {
             this.DataType = dataType;
@@ -296,7 +296,7 @@ namespace NarcityMedia.Net
         /// <param name="message">Payload of the current SocketDataFrame</param>
         /// <exception cref="ArgumentOutOfRangeException">If the length of the message is greater than 65536</exception>
         /// <remark>This class, for now, only supports messages of length smaller of equal to 65536, that is, messages that can fit in a single frame</remark>
-        public SocketDataFrame(bool fin, bool masked, ushort length,
+        public WebSocketDataFrame(bool fin, bool masked, ushort length,
                                 DataFrameType dataType,
                                 byte[] message) : base(fin, masked, length)
         {
@@ -326,13 +326,13 @@ namespace NarcityMedia.Net
     /// <summary>
     /// Represents a WebSocket control frame as described in RFC 6455
     /// </summary>
-    public class SocketControlFrame : SocketDataFrame
+    public class WebSocketControlFrame : WebSocketDataFrame
     {
         /// <summary>
         /// Initializes a new instance of the SocketControlFrame class
         /// </summary>
         /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
-        public SocketControlFrame(WebSocketFrame.OPCodes controlOpCode) :base(true, false, 0,SocketDataFrame.DataFrameType.Binary)
+        public WebSocketControlFrame(WebSocketFrame.OPCodes controlOpCode) :base(true, false, 0,WebSocketDataFrame.DataFrameType.Binary)
         {
             this.opcode = (byte) controlOpCode;
         }
@@ -343,11 +343,16 @@ namespace NarcityMedia.Net
         /// <param name="fin"></param>
         /// <param name="masked"></param>
         /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
-        public SocketControlFrame(bool fin, bool masked, WebSocketFrame.OPCodes controlOpCode)
-                : base(true, false, 0, SocketDataFrame.DataFrameType.Binary)
+        public WebSocketControlFrame(bool fin, bool masked, WebSocketFrame.OPCodes controlOpCode)
+                : base(true, false, 0, WebSocketDataFrame.DataFrameType.Binary)
         {
             this.opcode = (byte) controlOpCode;
         }
+    }
+
+    public class WebSocketCloseFrame : WebSocketControlFrame
+    {
+
     }
 }
 

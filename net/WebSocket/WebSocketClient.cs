@@ -106,10 +106,14 @@ namespace NarcityMedia.Net
             this.SendFrames(frames);
         }
 
+        /// <summary>
+        /// Sends a text message to the socket associated with the current WebSocketClient
+        /// </summary>
+        /// <param name="message">The message to send</param>
         public void Send(string message)
         {
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes(message);
-            SocketDataFrame frame = new SocketDataFrame(true, false, (ushort) bytes.Length, SocketDataFrame.DataFrameType.Text, bytes);
+            WebSocketDataFrame frame = new WebSocketDataFrame(true, false, (ushort) bytes.Length, WebSocketDataFrame.DataFrameType.Text, bytes);
 
             List<WebSocketFrame> frames = new List<WebSocketFrame>();
             frames.Add(frame);
@@ -146,7 +150,7 @@ namespace NarcityMedia.Net
     {
         // Start values at value 1 to avoid sending empty application data
         public enum ApplicationMessageCode { Greeting = 1, FetchNOtifications, FetchCurrentArticle, FetchComments }
-        public SocketDataFrame.DataFrameType MessageType = SocketDataFrame.DataFrameType.Binary;
+        public WebSocketDataFrame.DataFrameType MessageType = WebSocketDataFrame.DataFrameType.Binary;
 
         public ushort AppMessageCode
         {
@@ -176,7 +180,7 @@ namespace NarcityMedia.Net
         {
             byte[] payload = BitConverter.GetBytes((int)this.appMessageCode);
             List<WebSocketFrame> frames = new List<WebSocketFrame>(1);
-            frames.Add(new SocketDataFrame(true, false, this.contentLength, this.MessageType, payload));
+            frames.Add(new WebSocketDataFrame(true, false, this.contentLength, this.MessageType, payload));
 
             return frames;
         }

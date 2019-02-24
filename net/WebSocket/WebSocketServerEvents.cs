@@ -20,14 +20,14 @@ namespace NarcityMedia.Net
         {
             public TWebSocketClient Cli;
             public Exception Exception;
-            public SocketDataFrame DataFrame;
+            public WebSocketDataFrame DataFrame;
 
             public WebSocketServerEventArgs(TWebSocketClient cli)
             {
                 this.Cli = cli;
             }
 
-            public WebSocketServerEventArgs(TWebSocketClient cli, SocketDataFrame dataFrame) : this(cli)
+            public WebSocketServerEventArgs(TWebSocketClient cli, WebSocketDataFrame dataFrame) : this(cli)
             {
                 this.DataFrame = dataFrame;
             }

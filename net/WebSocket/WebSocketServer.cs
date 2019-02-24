@@ -165,7 +165,7 @@ namespace NarcityMedia.Net
         /// </summary>
         /// <param name="cli">The client that sent the control frame</param>
         /// <param name="cFrame">The control frame that was received</param>
-        private void DefaultControlFrameHandler(TWebSocketClient cli, SocketControlFrame cFrame)
+        private void DefaultControlFrameHandler(TWebSocketClient cli, WebSocketControlFrame cFrame)
         {
             switch (cFrame.opcode)
             {
@@ -174,7 +174,7 @@ namespace NarcityMedia.Net
                 case 8: // Close
                     try
                     {
-                        cli.SendControlFrame(new SocketControlFrame(true, false, WebSocketFrame.OPCodes.Close));
+                        cli.SendControlFrame(new WebSocketControlFrame(true, false, WebSocketFrame.OPCodes.Close));
                         this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, cFrame));
                     }
                     catch (Exception e)
@@ -190,7 +190,7 @@ namespace NarcityMedia.Net
                 case 9: // Ping
                     try
                     {
-                        cli.SendControlFrame(new SocketControlFrame(true, false, WebSocketFrame.OPCodes.Pong));
+                        cli.SendControlFrame(new WebSocketControlFrame(true, false, WebSocketFrame.OPCodes.Pong));
                     }
                     catch (Exception e)
                     {
@@ -356,11 +356,11 @@ namespace NarcityMedia.Net
                     WebSocketFrame frame = WebSocketFrame.TryParse(receiveState.buffer, receiveState.Cli.socket);
                     if (frame != null)
                     {
-                        if (frame is SocketDataFrame)
+                        if (frame is WebSocketDataFrame)
                         {
                             if (!String.IsNullOrEmpty(frame.Plaintext))
                             {
-                                this.OnMessage.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, (SocketDataFrame) frame));
+                                this.OnMessage.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, (WebSocketDataFrame) frame));
                                 StartClientReceive(receiveState.Cli);
                             }
                             else
@@ -374,7 +374,7 @@ namespace NarcityMedia.Net
                         }
                         else
                         {
-                            this.DefaultControlFrameHandler(receiveState.Cli, (SocketControlFrame) frame);
+                            this.DefaultControlFrameHandler(receiveState.Cli, (WebSocketControlFrame) frame);
                             StartClientReceive(receiveState.Cli);
                         }
                     }
