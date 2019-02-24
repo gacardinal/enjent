@@ -8,7 +8,7 @@ namespace NarcityMedia.Net
     /// Represents a general concept of a WebSocket frame described by the 
     /// WebSocket standard
     /// </summary>
-    public abstract partial class SocketFrame
+    public abstract partial class WebSocketFrame
     {
         /// <summary>
         /// Enumerates the possible OPCodes of a WebSocket frame as described in RFC 6455
@@ -46,6 +46,9 @@ namespace NarcityMedia.Net
             Pong = 0xA
         }
 
+        /// <summary>
+        /// Represents WebSocket close codes as defined by the RFC 6455 specification
+        /// </summary>
         public enum CloseCodes
         {
             /// <summary>
@@ -180,7 +183,7 @@ namespace NarcityMedia.Net
         /// <param name="fin">Indicates whether the current SocketFrame is the last one of a multi frame message</param>
         /// <param name="masked">Indicates whether the current SocketFrame is masked</param>
         /// <param name="length">Length of the content of the current SocketFrame</param>
-        public SocketFrame(bool fin, bool masked, ushort length)
+        public WebSocketFrame(bool fin, bool masked, ushort length)
         {
             this.fin = fin;
             this.masked = masked;
@@ -250,7 +253,7 @@ namespace NarcityMedia.Net
     /// <summary>
     /// Represents a WebSocket frame that contains data
     /// </summary>
-    public class SocketDataFrame : SocketFrame
+    public class SocketDataFrame : WebSocketFrame
     {
         /// <summary>
         /// Represents types of WebSocket data frames
@@ -315,8 +318,8 @@ namespace NarcityMedia.Net
         /// </summary>
         protected override void InitOPCode()
         {
-            if (this.DataType == DataFrameType.Text) this.opcode = (byte) SocketFrame.OPCodes.Text;
-            else this.opcode = (byte) SocketFrame.OPCodes.Binary;
+            if (this.DataType == DataFrameType.Text) this.opcode = (byte) WebSocketFrame.OPCodes.Text;
+            else this.opcode = (byte) WebSocketFrame.OPCodes.Binary;
         }
     }
 
@@ -329,7 +332,7 @@ namespace NarcityMedia.Net
         /// Initializes a new instance of the SocketControlFrame class
         /// </summary>
         /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
-        public SocketControlFrame(SocketFrame.OPCodes controlOpCode) :base(true, false, 0,SocketDataFrame.DataFrameType.Binary)
+        public SocketControlFrame(WebSocketFrame.OPCodes controlOpCode) :base(true, false, 0,SocketDataFrame.DataFrameType.Binary)
         {
             this.opcode = (byte) controlOpCode;
         }
@@ -340,7 +343,7 @@ namespace NarcityMedia.Net
         /// <param name="fin"></param>
         /// <param name="masked"></param>
         /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
-        public SocketControlFrame(bool fin, bool masked, SocketFrame.OPCodes controlOpCode)
+        public SocketControlFrame(bool fin, bool masked, WebSocketFrame.OPCodes controlOpCode)
                 : base(true, false, 0, SocketDataFrame.DataFrameType.Binary)
         {
             this.opcode = (byte) controlOpCode;

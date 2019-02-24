@@ -3,7 +3,7 @@ using System.Net.Sockets;
 
 namespace NarcityMedia.Net
 {
-    abstract partial class SocketFrame
+    abstract partial class WebSocketFrame
     {
           
         /// <summary>
@@ -24,7 +24,7 @@ namespace NarcityMedia.Net
         /// It is necessary to pass a reference to the socket because of the way the WebSocket protocol is made.abstract It is impossible to know
         /// the length of the frame before having parsed the headers hence it is possible that more bytes will need to be read from the socket buffer.
         /// </remarks>
-        public static SocketFrame TryParse(byte[] headerBytes, Socket socket)
+        public static WebSocketFrame TryParse(byte[] headerBytes, Socket socket)
         {
             int headerSize = headerBytes.Length;
             bool fin = (headerBytes[0] >> 7) != 0;
@@ -50,11 +50,11 @@ namespace NarcityMedia.Net
                 byte[] contentBuffer = new byte[contentLength];
                 if (contentLength > 0) socket.Receive(contentBuffer);
 
-                SocketFrame frame;
+                WebSocketFrame frame;
                 if (opcode == 1 || opcode == 2)
                     frame = new SocketDataFrame(fin, masked, contentLength, (SocketDataFrame.DataFrameType) opcode, UnmaskContent(contentBuffer, maskingKey));
                 else
-                    frame = new SocketControlFrame(fin, masked, (SocketFrame.OPCodes)opcode);
+                    frame = new SocketControlFrame(fin, masked, (WebSocketFrame.OPCodes)opcode);
 
                 return frame;
             }

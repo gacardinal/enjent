@@ -65,7 +65,7 @@ namespace NarcityMedia.Net
         /// </remarks>
         public void Send(WebSocketMessage message)
         {
-            List<SocketFrame> frames = message.GetFrames();
+            List<WebSocketFrame> frames = message.GetFrames();
             SendFrames(frames);
         }
 
@@ -98,9 +98,9 @@ namespace NarcityMedia.Net
         /// Callers must call this method in a try statement because it will not catch exceptions
         /// raised by this.SendFrames()
         /// </remarks>
-        public void SendControlFrame(SocketFrame frame)
+        public void SendControlFrame(WebSocketFrame frame)
         {
-            List<SocketFrame> frames = new List<SocketFrame>(1);
+            List<WebSocketFrame> frames = new List<WebSocketFrame>(1);
             frames.Add(frame);
 
             this.SendFrames(frames);
@@ -111,7 +111,7 @@ namespace NarcityMedia.Net
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes(message);
             SocketDataFrame frame = new SocketDataFrame(true, false, (ushort) bytes.Length, SocketDataFrame.DataFrameType.Text, bytes);
 
-            List<SocketFrame> frames = new List<SocketFrame>();
+            List<WebSocketFrame> frames = new List<WebSocketFrame>();
             frames.Add(frame);
 
             this.SendFrames(frames);
@@ -128,9 +128,9 @@ namespace NarcityMedia.Net
         /// <remark>
         /// Any Exception raised by the socket.Send() method are meant to be caught by callers of this method
         /// </remark>
-        private void SendFrames(List<SocketFrame> frames)
+        private void SendFrames(List<WebSocketFrame> frames)
         {
-            foreach (SocketFrame frame in frames)
+            foreach (WebSocketFrame frame in frames)
             {
                 this.socket.Send(frame.GetBytes());
             }
@@ -172,10 +172,10 @@ namespace NarcityMedia.Net
         /// </summary>
         /// <remarks>The method currently supports only 1 frame messages</remarks>
         /// <returns>A List containing the frames of the message</returns>
-        public List<SocketFrame> GetFrames()
+        public List<WebSocketFrame> GetFrames()
         {
             byte[] payload = BitConverter.GetBytes((int)this.appMessageCode);
-            List<SocketFrame> frames = new List<SocketFrame>(1);
+            List<WebSocketFrame> frames = new List<WebSocketFrame>(1);
             frames.Add(new SocketDataFrame(true, false, this.contentLength, this.MessageType, payload));
 
             return frames;
