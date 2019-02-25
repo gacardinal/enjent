@@ -71,11 +71,24 @@ namespace NarcityMedia.Net
         /// </summary>
         UnacceptableDataType = 1003,
 
-        // 1004 is not defined yet
+        // 1004 is undefined
 
-        // 1005 Is a reserved value
+        /// <summary>
+        /// Is a reserved value and MUST NOT be set as a status code in a
+        /// Close control frame by an endpoint.  It is designated for use in
+        /// applications expecting a status code to indicate that no status
+        /// code was actually present.
+        /// </summary>
+        NoCloseCode = 1005,
 
-        // 1006 is a reserved value
+        /// <summary>
+        /// is a reserved value and MUST NOT be set as a status code in a
+        /// Close control frame by an endpoint.  It is designated for use in
+        /// applications expecting a status code to indicate that the
+        /// connection was closed abnormally, e.g., without sending or
+        /// receiving a Close control frame.
+        /// </summary>
+        AbnormalClose = 1006,
 
         /// <ummary>
         /// Indicates that an endpoint is terminating the connection
@@ -117,13 +130,20 @@ namespace NarcityMedia.Net
         /// it encountered an unexpected condition that prevented it from
         /// fulfilling the request.
         /// </summary>
-        UnexpectedCondition = 1011
+        UnexpectedCondition = 1011,
 
         // 1012 is undefined
         // 1013 is undefined
         // 1014 is undefined
 
-        // 1015 is a reserved value
+        /// <summary>
+        /// is a reserved value and MUST NOT be set as a status code in a
+        /// Close control frame by an endpoint.  It is designated for use in
+        /// applications expecting a status code to indicate that the
+        /// connection was closed due to a failure to perform a TLS handshake
+        /// (e.g., the server certificate can't be verified).
+        /// </summary>
+        TLSHandshakeFailure = 1015
     }
 
     /// <summary>
@@ -359,6 +379,10 @@ namespace NarcityMedia.Net
         private WebSocketCloseCode _closeCode;
         private string _closeReason;
 
+        /// <summary>
+        /// Represents the <see cref="WebSocketCLoseCode"> for the closing of a WebSocket connection.
+        /// </summary>
+        /// <value>The <see cref="WebSocketCLoseCode"> for the closing of a WebSocket connection</value>
         public WebSocketCloseCode CloseCode
         {
             get { return this._closeCode; }
@@ -378,6 +402,12 @@ namespace NarcityMedia.Net
             }
         }
 
+        /// <summary>
+        /// (Optionnal) indicates a reason for the WebSocket connexion closing.
+        /// This text is not necessarily 'human readable' and should ideally not
+        /// be show to the end user but may be useful for debugging.
+        /// </summary>
+        /// <value>The string representing the close reason</value>
         public string CloseReason
         {
             get { return this._closeReason; }
