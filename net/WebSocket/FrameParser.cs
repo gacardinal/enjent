@@ -28,7 +28,7 @@ namespace NarcityMedia.Net
         {
             int headerSize = headerBytes.Length;
             bool fin = (headerBytes[0] >> 7) != 0;
-            byte opcode = (byte) (headerBytes[0] & 0b00001111);
+            WebSocketOPCode opcode = (WebSocketOPCode) ((byte) (headerBytes[0] & 0b00001111));
             bool masked = (headerBytes[1] & 0b10000000) != 0;
             ushort contentLength = (ushort) (headerBytes[1] & 0b01111111);
 
@@ -51,10 +51,33 @@ namespace NarcityMedia.Net
                 if (contentLength > 0) socket.Receive(contentBuffer);
 
                 WebSocketFrame frame;
-                if (opcode == 1 || opcode == 2)
+                if (opcode == WebSocketOPCode.Text || opcode == WebSocketOPCode.Binary)
+                {
                     frame = new WebSocketDataFrame(fin, masked, contentLength, (WebSocketDataFrame.DataFrameType) opcode, UnmaskContent(contentBuffer, maskingKey));
+                }
+                else if (opcode == WebSocketOPCode.Close)
+                {
+                    WebSocketCloseFrame closeFrame = new WebSocketCloseFrame();
+                    if (contentLength >= 2)
+                    {
+                        byte[] unmasked = UnmaskContent(contentBuffer, maskingKey);
+                        WebSocketCloseCode closeCode = (WebSocketCloseCode) BitConverter.ToUInt16(unmasked);
+                        closeFrame.CloseCode = closeCode;
+
+                        if (contentLength > 2)
+                        {
+                            byte[] closeReasonBytes = new byte[contentLength - 2];
+                            Array.Copy(contentBuffer, 2, closeReasonBytes, 0, closeReasonBytes.Length);
+                            closeFrame.CloseReason = System.Text.Encoding.UTF8.GetString(closeReasonBytes);
+                        }
+                    }
+
+                    frame = closeFrame;
+                }
                 else
+                {
                     frame = new WebSocketControlFrame(fin, masked, (WebSocketOPCode)opcode);
+                }
 
                 return frame;
             }
