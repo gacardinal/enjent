@@ -188,6 +188,7 @@ namespace NarcityMedia.Net
             this.fin = fin;
             this.masked = masked;
             this.contentLength = length;
+            this._data = new byte[(int) length];
         }
 
         /// <summary>
@@ -354,11 +355,31 @@ namespace NarcityMedia.Net
     /// </summary>
     public class WebSocketCloseFrame : WebSocketControlFrame
     {
+        private WebSocketCloseCode _closeCode;
+        public WebSocketCloseCode CloseCode
+        {
+            get { return this._closeCode; }
+            set
+            {
+                this._closeCode = value;
+
+                int payloadLength = this._data.Length > 2 ? this._data.Length : 2;
+                byte[] payload = new byte[payloadLength];
+
+                this._data.CopyTo(payload, 0);
+
+                byte[] closeCodeBytes = BitConverter.GetBytes((ushort) value);
+                closeCodeBytes.CopyTo(payload, 0);
+
+                this._data = payload;
+            }
+        }
+
         public WebSocketCloseFrame(WebSocketCloseCode closeCode) : base(WebSocketOPCode.Close)
         {
             // Initialize the first two bytes of the close frame body to a 2-byte unsigned integer
             // as per RFC 6455 section 5.5.1
-            this._data = BitConverter.GetBytes((ushort) closeCode);
+            this.CloseCode = closeCode;
         }
 
         public WebSocketCloseFrame(WebSocketCloseCode closeCode, string closeReason) : this(closeCode)
