@@ -72,7 +72,6 @@
             if (socket) {
                 if (pingInterval) window.clearInterval(pingInterval);
                 socket.close();
-                log("Socket closed normally", 'info');
             } else {
                 log("Can't close an uninitialized socket", 'warn');
             }
@@ -99,8 +98,9 @@
                         // document.getElementById("app-code").innerHTML = dv.getInt8(0);
                     }
                 };
-                socket.onclose = () => {
-                    log("Socket was closed!", "error");
+                socket.onclose = e => {
+                    console.log(e);
+                    log("Socket was closed. " + e.message, "error");
                 };
 
                 pingInterval = setInterval(() => {
