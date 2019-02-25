@@ -158,6 +158,7 @@ namespace NarcityMedia.Net
             set
             {
                 this._data = value;
+                this.contentLength = value.Length;
                 this.Plaintext = System.Text.Encoding.UTF8.GetString(value);
             }
         }
@@ -165,7 +166,7 @@ namespace NarcityMedia.Net
         /// <summary>
         /// Length of the payload of the current WebSocketFrame
         /// </summary>
-        public ushort contentLength;
+        public int contentLength;
 
         /// <summary>
         /// The OPCode of the current WebSocketFrame
@@ -183,12 +184,12 @@ namespace NarcityMedia.Net
         /// <param name="fin">Indicates whether the current WebSocketFrame is the last one of a multi frame message</param>
         /// <param name="masked">Indicates whether the current WebSocketFrame is masked</param>
         /// <param name="length">Length of the content of the current WebSocketFrame</param>
-        public WebSocketFrame(bool fin, bool masked, ushort length)
+        public WebSocketFrame(bool fin, bool masked, int length)
         {
             this.fin = fin;
             this.masked = masked;
             this.contentLength = length;
-            this._data = new byte[(int) length];
+            this._data = new byte[length];
         }
 
         /// <summary>
@@ -356,6 +357,8 @@ namespace NarcityMedia.Net
     public class WebSocketCloseFrame : WebSocketControlFrame
     {
         private WebSocketCloseCode _closeCode;
+        private string _closeReason;
+
         public WebSocketCloseCode CloseCode
         {
             get { return this._closeCode; }
@@ -371,9 +374,29 @@ namespace NarcityMedia.Net
                 byte[] closeCodeBytes = BitConverter.GetBytes((ushort) value);
                 closeCodeBytes.CopyTo(payload, 0);
 
-                this._data = payload;
+                this.data = payload;
             }
         }
+
+        public string CloseReason
+        {
+            get { return this._closeReason; }
+            set
+            {
+                this._closeReason = value;
+
+                byte[] payload = new byte[2 + value.Length];
+                byte[] reasonBytes = System.Text.Encoding.UTF8.GetBytes(value);
+                
+                Array.Copy(this._data, payload, 2);
+                reasonBytes.CopyTo(payload, 2);
+
+                this.data = payload;
+            }
+        }
+
+        public WebSocketCloseFrame() : this(WebSocketCloseCode.NormalClosure)
+        {}
 
         public WebSocketCloseFrame(WebSocketCloseCode closeCode) : base(WebSocketOPCode.Close)
         {
@@ -384,13 +407,7 @@ namespace NarcityMedia.Net
 
         public WebSocketCloseFrame(WebSocketCloseCode closeCode, string closeReason) : this(closeCode)
         {
-            byte[] payload = new byte[2 + closeReason.Length];
-            byte[] reason = System.Text.Encoding.UTF8.GetBytes(closeReason);
-
-            this._data.CopyTo(payload, 0);
-            reason.CopyTo(payload, 2);
-
-            this._data = payload;
+            this.CloseReason = closeReason;
         }
     }
 }
