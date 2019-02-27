@@ -6,12 +6,12 @@ Follow these steps to start using this library
 1. If you don't already have a dotnet project, start by creating a new one with `dotnet new console` which will create a new blank Console application.
 2. Download and add a reference ot the NuGet package by running `dotnet add reference <path/to/nuget/file>. 
 *This step will become simpler once the classlib is live on nuget.org*
-3. Now you will have to 'use' the `NarcityMedia.Net` namespace which holds the `WebSocketServer` class, among others.
+3. Now you will have to 'use' the `NarcityMedia.Enjent` namespace which holds the `WebSocketServer` class, among others.
 4. Next, create, configure and start a `WebSocketServer`. Here's an example of a typical use of the `WebSocketServer` class.
 ```csharp
 using System;
 using System.Net;
-using NarcityMedia.Net;
+using NarcityMedia.Enjent;
 
 namespace UseSocketServer
 {
