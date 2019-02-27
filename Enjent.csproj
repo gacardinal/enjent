@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Library</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <RootNamespace>NarcityMedia.Net</RootNamespace>
+    <RootNamespace>NarcityMedia.Enjent</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
