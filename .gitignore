@@ -11,7 +11,7 @@ testing/string.txt
 .config
 output.log
 
-*/node_modules/
+*node_modules
 
 # Compiled Object files
 *.slo
