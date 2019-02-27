@@ -6,18 +6,18 @@ namespace NarcityMedia.Net
     /// <summary>
     /// Represents supported HTTP methods
     /// </summary>
-    public enum HTTPMethod {
+    public enum EnjentHTTPMethod {
         GET, POST, DELETE, PUT
     }
 
-    public class HTTPRequest
+    public sealed class EnjentHTTPRequest
     {
         public string URL;
         public NameValueCollection QueryString;
         public Dictionary<string, string> Headers;
-        public HTTPMethod Methods;
+        public EnjentHTTPMethod Methods;
         
-        public HTTPRequest(string url, HTTPMethod method, Dictionary<string, string> headers)
+        public EnjentHTTPRequest(string url, EnjentHTTPMethod method, Dictionary<string, string> headers)
         {
             this.URL = url;
             this.Methods = method;
@@ -25,7 +25,7 @@ namespace NarcityMedia.Net
             this.QueryString = new NameValueCollection(0);
         }
 
-        public HTTPRequest(string url, HTTPMethod method, Dictionary<string, byte[]> headers)
+        public EnjentHTTPRequest(string url, EnjentHTTPMethod method, Dictionary<string, byte[]> headers)
         {
             this.URL = url;
             this.Methods = method;
@@ -40,7 +40,7 @@ namespace NarcityMedia.Net
             this.Headers = mappedHeaders;
         }
 
-        public HTTPRequest(string url, HTTPMethod method, Dictionary<string, byte[]> headers, NameValueCollection queryString) : this(url, method, headers)
+        public EnjentHTTPRequest(string url, EnjentHTTPMethod method, Dictionary<string, byte[]> headers, NameValueCollection queryString) : this(url, method, headers)
         {
             this.QueryString = queryString;
         }
