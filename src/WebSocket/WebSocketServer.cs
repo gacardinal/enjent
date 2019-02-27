@@ -140,6 +140,10 @@ namespace NarcityMedia.Enjent
                     throw new WebSocketServerException("An error occured while binding the HTTP listener socket", e);
                 }
             }
+            else
+            {
+                throw new WebSocketServerException("Cannot start the server when it is already running", new InvalidOperationException());
+            }
         }
         
         /// <summary>
@@ -157,6 +161,7 @@ namespace NarcityMedia.Enjent
         public void Stop()
         {
             this.listening = false;  // Listener Thread will exit when safe to do so
+            this.socket.Disconnect(true);
         }
 
         /// <summary>
