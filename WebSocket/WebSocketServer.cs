@@ -5,7 +5,7 @@ using System.Threading;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NarcityMedia.Net
+namespace NarcityMedia.Enjent
 {
     /// <summary>
     /// Closed constructed version of the WebSocketServer class
@@ -28,7 +28,7 @@ namespace NarcityMedia.Net
         /// </summary>
         /// <param name="socket">The newly accepted WebSocket connection</param>
         /// <param name="initialWSRequet">The HTTP request that initiated the WebSocket connection</param>
-        private static WebSocketClient DefaultInitializationStrategy(Socket socket, HTTPRequest initialWSRequet)
+        private static WebSocketClient DefaultInitializationStrategy(Socket socket, EnjentHTTPRequest initialWSRequet)
         {
             WebSocketClient cli = new WebSocketClient(socket);
             cli.InitialRequest = initialWSRequet;
@@ -80,7 +80,7 @@ namespace NarcityMedia.Net
         /// It is mandatory to supply an initialization strategy when using the generic <see cref=" WebSocketServer<TWebSocketClient>" /> class.
         /// If you do not wish to provide such a strategy to initialize a custom type, use the non generic version of this class <see cref="WebSocketServer" />.
         /// </remark>
-        public delegate TWebSocketClient ClientInitialization(Socket socket, HTTPRequest initialWSRequest);
+        public delegate TWebSocketClient ClientInitialization(Socket socket, EnjentHTTPRequest initialWSRequest);
         private ClientInitialization ClientInitializationStrategy;
 
         /// <summary>
@@ -429,7 +429,7 @@ namespace NarcityMedia.Net
                 {
                     if (this.ClientInitializationStrategy != null)
                     {
-                        HTTPRequest initialWSReq = new HTTPRequest(this.CurrentUrl, HTTPMethod.GET, incomingHeadersMap, this.QueryString);
+                        EnjentHTTPRequest initialWSReq = new EnjentHTTPRequest(this.CurrentUrl, EnjentHTTPMethod.GET, incomingHeadersMap, this.QueryString);
                         TWebSocketClient cli = this.ClientInitializationStrategy(state.handler, initialWSReq);
                         state.cli = cli;
                         state.done(cli);

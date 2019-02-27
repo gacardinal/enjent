@@ -3,7 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NarcityMedia.Net
+namespace NarcityMedia.Enjent
 {
     /// <summary>
     /// A logical way to group <see cref="WebSocketClient" /> objects together.

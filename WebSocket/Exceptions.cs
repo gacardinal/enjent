@@ -1,6 +1,6 @@
 using System;
 
-namespace NarcityMedia.Net
+namespace NarcityMedia.Enjent
 {
     /// <summary>
     /// Represents an exception that occured in the WebSocketServer class logic

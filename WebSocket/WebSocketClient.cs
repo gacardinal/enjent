@@ -4,10 +4,9 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using NarcityMedia.Net;
 using NarcityMedia.Log;
 
-namespace NarcityMedia.Net
+namespace NarcityMedia.Enjent
 {
     /// <summary>
     /// Represents a client a.k.a. an end user that connected to the server by the HTTP protocol
@@ -31,7 +30,7 @@ namespace NarcityMedia.Net
             }
         }
 
-        public HTTPRequest InitialRequest;
+        public EnjentHTTPRequest InitialRequest;
 
         public string currentUrl;
 

@@ -1,6 +1,6 @@
 using System;
 
-namespace NarcityMedia.Net
+namespace NarcityMedia.Enjent
 {
 
     public partial class WebSocketServer<TWebSocketClient> where TWebSocketClient : WebSocketClient

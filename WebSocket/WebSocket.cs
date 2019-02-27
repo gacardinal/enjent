@@ -2,7 +2,7 @@ using System;
 using System.Numerics;
 using System.Collections.Generic;
 
-namespace NarcityMedia.Net
+namespace NarcityMedia.Enjent
 {
     /// <summary>
     /// Enumerates the possible OPCodes of a WebSocket frame as described in RFC 6455

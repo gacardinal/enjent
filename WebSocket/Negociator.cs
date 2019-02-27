@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Security.Cryptography;
 
-namespace NarcityMedia.Net
+namespace NarcityMedia.Enjent
 {
     public partial class WebSocketServer<TWebSocketClient> {
 
