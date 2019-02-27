@@ -129,7 +129,7 @@ namespace NarcityMedia.Enjent
                 }
                 catch (SocketException e)
                 {
-                    throw new WebSocketServerException(String.Format("Couldn't bind on endpoint {0}:{1} the port might already be in use", endpoint.Address, endpoint.Port), e);
+                    throw new WebSocketServerException(String.Format("Couldn't bind on endpoint {0}:{1} the port might already be in use. SocketException ErrorCode: ", endpoint.Address, endpoint.Port, e.ErrorCode), e);
                 }
                 catch (OutOfMemoryException e)
                 {
@@ -161,7 +161,15 @@ namespace NarcityMedia.Enjent
         public void Stop()
         {
             this.listening = false;  // Listener Thread will exit when safe to do so
-            this.socket.Disconnect(true);
+            try
+            {
+                this.socket.Disconnect(true);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                Console.WriteLine();
+            }
         }
 
         /// <summary>
