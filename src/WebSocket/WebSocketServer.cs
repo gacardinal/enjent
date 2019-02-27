@@ -371,7 +371,7 @@ namespace NarcityMedia.Enjent
                     {
                         if (frame is WebSocketDataFrame)
                         {
-                            if (!String.IsNullOrEmpty(frame.Plaintext))
+                            if (!(String.IsNullOrEmpty(frame.Plaintext) || (frame.Plaintext.Length == 1 && char.IsControl(frame.Plaintext.ElementAt(0)))))
                             {
                                 this.OnMessage.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, (WebSocketDataFrame) frame));
                                 StartClientReceive(receiveState.Cli);
