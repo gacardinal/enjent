@@ -76,7 +76,7 @@ namespace NarcityMedia.Net
                 }
                 else
                 {
-                    frame = new WebSocketControlFrame(fin, masked, (WebSocketOPCode)opcode);
+                    frame = new WebSocketControlFrame(fin, masked, (WebSocketOPCode) opcode);
                 }
 
                 return frame;
