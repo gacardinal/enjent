@@ -4,6 +4,15 @@
     <OutputType>Library</OutputType>
     <TargetFramework>netcoreapp2.1</TargetFramework>
     <RootNamespace>NarcityMedia.Enjent</RootNamespace>
+
+    <PackageId>Enjent</PackageId>
+    <Title>Enjent</Title>
+    <PackageDescription>A full websocket implementation using Dotnet Core, following RFC6455 bit by bit.</PackageDescription>
+    <Version>0.0.1-alpha</Version>
+    <PackageLicenseExpression>MPL-2.0</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/narcitymedia/enjent</RepositoryUrl>
+    <Authors>Gabriel Cardinal</Authors>
+    <Company>Narcity Media</Company>
   </PropertyGroup>
 
   <ItemGroup>
