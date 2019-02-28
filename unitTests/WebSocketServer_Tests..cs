@@ -22,16 +22,16 @@ namespace EnjentUnitTests
             this.server.Start(this.endpoint);
         }
 
-        [Fact]
-        public void WebSocketServer_Start_Enpoint_Bound_Throw()
-        {
-            // Start once
-            this.server.Start(this.endpoint);
+        // [Fact]
+        // public void WebSocketServer_Start_Enpoint_Bound_Throw()
+        // {
+        //     // Start once
+        //     this.server.Start(this.endpoint);
 
-            // Attempting to start again on an already bound endpoint should throw
-            Assert.Throws<WebSocketServerException>(() => { this.server.Start(this.endpoint); });
+        //     // Attempting to start again on an already bound endpoint should throw
+        //     Assert.Throws<WebSocketServerException>(() => { this.server.Start(this.endpoint); });
 
-            this.server.Stop();
-        }
+        //     this.server.Stop();
+        // }
     }
 }

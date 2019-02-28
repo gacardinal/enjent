@@ -1,5 +1,6 @@
 using System;
 using System.Linq;
+using System.Collections.Generic;
 using Xunit;
 using System.Net;
 using NarcityMedia.Enjent;
@@ -52,12 +53,34 @@ namespace EnjentUnitTests
             Assert.True(original_rndContent.SequenceEqual(reverted), "The masking algorithm didn't yeild the original data when applying the algorithm on masked data");
         }
 
+        public static IEnumerable<WebSocketFrame> GetTestFrames()
+        {
+            yield return new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text);
+            yield return new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text);
+            yield return new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text);
+            yield return new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text);
+            yield return new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text);
+        }
+
+        [Theory]
+        [MemberData(nameof(GetTestFrames))]
+        public void WebSocketFrame_GetBytes(WebSocketFrame frame)
+        {
+            byte[] bytes = frame.GetBytes();
+
+            Assert.True((bytes[0] >> 7 == Convert.ToInt32(frame.fin)));
+            Assert.True((byte) (bytes[0] & 0b00001111) == frame.opcode);
+        }
+
         [Fact]
         public void WebSocketFrame_TryParse_Valid_DataFrame_Text_SingleFrame()
         {
             string testContent = "test!";
+
             bool fin = true;
             WebSocketOPCode OPCode = WebSocketOPCode.Text;
+            byte[] payload = System.Text.Encoding.UTF8.GetBytes(testContent);
+
 
             // Manually craft a WebSocketFrame
             Random rnd = new Random();
@@ -65,7 +88,6 @@ namespace EnjentUnitTests
             // The masking key is supposed to be cryptographically secure but this will suffice for testing purposes
             rnd.NextBytes(maskingK);
 
-            byte[] payload = System.Text.Encoding.UTF8.GetBytes(testContent);
             
         }
     }
