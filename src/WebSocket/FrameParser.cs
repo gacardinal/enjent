@@ -53,14 +53,14 @@ namespace NarcityMedia.Enjent
                 WebSocketFrame frame;
                 if (opcode == WebSocketOPCode.Text || opcode == WebSocketOPCode.Binary)
                 {
-                    frame = new WebSocketDataFrame(fin, masked, contentLength, (WebSocketDataFrame.DataFrameType) opcode, UnmaskContent(contentBuffer, maskingKey));
+                    frame = new WebSocketDataFrame(fin, masked, contentLength, (WebSocketDataFrame.DataFrameType) opcode, ApplyMask(contentBuffer, maskingKey));
                 }
                 else if (opcode == WebSocketOPCode.Close)
                 {
                     WebSocketCloseFrame closeFrame = new WebSocketCloseFrame();
                     if (contentLength >= 2)
                     {
-                        byte[] unmasked = UnmaskContent(contentBuffer, maskingKey);
+                        byte[] unmasked = ApplyMask(contentBuffer, maskingKey);
                         WebSocketCloseCode closeCode = (WebSocketCloseCode) BitConverter.ToUInt16(unmasked);
                         closeFrame.CloseCode = closeCode;
 
@@ -86,22 +86,27 @@ namespace NarcityMedia.Enjent
         }
 
         /// <summary>
-        /// Unmasks a masked WebSocket frame payload received from the client as described in section 5.3 of RFC6455
+        /// Applies the masking / unmasking algorithm defined in section 5.3 of RFC6455.
         /// </summary>
-        /// <param name="masked">Masked payload bytes</param>
+        /// <param name="data">Masked payload bytes</param>
         /// <param name="maskingKey">Unmasking key bytes</param>
-        /// <returns>The unmasked payload data</returns>
-        private static byte[] UnmaskContent(byte[] masked, byte[] maskingKey)
+        /// <returns>The masked / unmasked data</returns>
+        /// <remarks>
+        /// This algorithm is such that passing the output of this function to itself with the same masking key
+        /// will yeild the original result because it essentially performs an XOR operation on the data with the masking key.
+        /// Reffer to section 5.3 of RFC6455 for full implementation details
+        /// </remarks>
+        public static byte[] ApplyMask(byte[] data, byte[] maskingKey)
         {
             if (maskingKey.Length != 4) throw new ArgumentException("Masking key must always be of length 4");
 
-            if (masked.Length == 0) return new byte[0];
+            if (data.Length == 0) return new byte[0];
 
-            byte[] unmasked = new byte[masked.Length];
+            byte[] unmasked = new byte[data.Length];
 
-            for (int i = 0; i < masked.Length; i++)
+            for (int i = 0; i < data.Length; i++)
             {
-                unmasked[i] = (byte) (masked[i] ^ maskingKey[i % 4]);
+                unmasked[i] = (byte) (data[i] ^ maskingKey[i % 4]);
             }
 
             return unmasked;
