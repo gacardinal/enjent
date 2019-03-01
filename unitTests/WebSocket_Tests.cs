@@ -74,8 +74,11 @@ namespace EnjentUnitTests
         {
             byte[] bytes = frame.GetBytes();
 
-            Assert.True((bytes[0] >> 7 == Convert.ToInt32(frame.fin)));
-            Assert.True((byte) (bytes[0] & 0b00001111) == frame.opcode);
+            Assert.True((bytes[0] >> 7 == Convert.ToInt32(frame.fin)), "Frame FIN bit was not set properly");
+            Assert.True((byte) (bytes[0] & 0b00001111) == frame.opcode, "Frame OPCode was not set properly");
+            Assert.True((bytes[1] & 0b10000000) == Convert.ToInt32(frame.masked), "Frame MASKED bit was not set properly");
+
+            int length = bytes[1] & 0b01111111;
         }
 
         [Fact]
