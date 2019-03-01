@@ -53,13 +53,19 @@ namespace EnjentUnitTests
             Assert.True(original_rndContent.SequenceEqual(reverted), "The masking algorithm didn't yeild the original data when applying the algorithm on masked data");
         }
 
-        public static IEnumerable<WebSocketFrame> GetTestFrames()
+        public static TheoryData<WebSocketFrame> GetTestFrames
         {
-            yield return new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text);
-            yield return new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text);
-            yield return new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text);
-            yield return new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text);
-            yield return new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text);
+            get
+            {
+                TheoryData<WebSocketFrame> data = new TheoryData<WebSocketFrame>();
+                data.Add(new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text));
+                data.Add(new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text));
+                data.Add(new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text));
+                data.Add(new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text));
+                data.Add(new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text));
+
+                return data;
+            }
         }
 
         [Theory]
