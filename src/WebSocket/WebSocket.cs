@@ -161,7 +161,7 @@ namespace NarcityMedia.Enjent
         /// Indicates whether the current WebSocketFrame is masked.
         ///  Frames comming from the client must be masked whereas frames sent from the server must NOT be masked
         /// </summary>
-        protected bool masked;
+        public readonly bool masked;
 
         /// <summary>
         /// Payload of the current WebSocketFrame
