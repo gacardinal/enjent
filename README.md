@@ -127,3 +127,30 @@ Here's an oversimplified overview of the workings of this classlib:
 *Note:* If you wish to use a custom object instead of the default `WebSocketClient`, you can use the generic `WebSocketServer<TWebSocketClient>` class, where `TWebSocketClient` is a type that is derived from `WebSocketClient`. The generic `WebSocketServer<TWebSocketClient>` class requires that you provide a `ClientInitializationStrategy`, which is a callback that is invoked right before the `OnConnect` event and that is used to initialize an instance of your custom `TWebSocketClient` type.
  - When the `WebSocketServer` receives a WebSocket `Frame` from a client, the `OnMessage` event event is invoked if the received frame was a 'data frame', that is, a frame that is *not* a 'control frame'. Reffer to the [WebSocket specification (RFC 6455)](https://tools.ietf.org/html/rfc6455 "RFC 6455") specification for the definition of a 'data frame' and a 'control frame'.
  - The `WebSocketServer`  invokes the `OnDisconnect` event when a client closes the connection to the server.
+
+## Contributors ##
+ - [Gabriel Cardinal](https://github.com/Gaboik)
+ - [Erik Desjardins](https://github.com/rykdesjardins)
+ - [Narcity Media](https://github.com/narcitymedia)
+
+## License ##
+Mozilla Public License Version 2.0
+
+## About the license
+_TL;DR : You can use the library to make money as long as it remains open source. The typical use case involves no additional work._
+
+Both individuals and businesses are allowed to use Enjent. 
+You are allowed to host a copy of Enjent, modify it, redistribute it, create something different with it. 
+
+One important thing to note : you **must** disclose the source code, copyright, and must document any modification done. A copy of the license must be available. However, this does not mean you need to credit Narcity Media on your website or anything of the sort. Simply make the source code available and highlight the modifications if any. 
+
+That being said, you can still use Enjent for almost any purposes. 
+
+Like most open source licenses, Narcity Media is not liable if anything happens with your server, data, etc. Enjent does not come with a warranty. 
+
+The previous information is not legal advice, but should give you a good idea.
+
+Mozilla Public License Version 2.0 is a simple, permissive license with conditions easy to respect. There have a [great FAQ here](https://www.mozilla.org/en-US/MPL/2.0/FAQ/).
+
+## Copyright ##
+© Narcity Media, 2019
