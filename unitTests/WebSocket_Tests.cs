@@ -58,11 +58,16 @@ namespace EnjentUnitTests
             get
             {
                 TheoryData<WebSocketFrame> data = new TheoryData<WebSocketFrame>();
-                data.Add(new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text));
-                data.Add(new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text));
-                data.Add(new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text));
-                data.Add(new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text));
-                data.Add(new WebSocketDataFrame(true, true, (ushort) ("first test".Length), WebSocketDataFrame.DataFrameType.Text));
+
+                data.Add(new WebSocketDataFrame(true, true, System.Text.Encoding.UTF8.GetBytes(""), WebSocketDataFrame.DataFrameType.Text));
+                data.Add(new WebSocketDataFrame(false, true, System.Text.Encoding.UTF8.GetBytes("second text"), WebSocketDataFrame.DataFrameType.Text));
+                data.Add(new WebSocketDataFrame(true, false, System.Text.Encoding.UTF8.GetBytes("test number 3"), WebSocketDataFrame.DataFrameType.Text));
+                data.Add(new WebSocketDataFrame(false, false, System.Text.Encoding.UTF8.GetBytes("Test_4"), WebSocketDataFrame.DataFrameType.Text));
+
+                data.Add(new WebSocketDataFrame(true, true, System.Text.Encoding.UTF8.GetBytes("Test_5"), WebSocketDataFrame.DataFrameType.Binary));
+                data.Add(new WebSocketDataFrame(false, true, System.Text.Encoding.UTF8.GetBytes("Test_6"), WebSocketDataFrame.DataFrameType.Binary));
+                data.Add(new WebSocketDataFrame(true, false, System.Text.Encoding.UTF8.GetBytes("Test_7"), WebSocketDataFrame.DataFrameType.Binary));
+                data.Add(new WebSocketDataFrame(false, false, System.Text.Encoding.UTF8.GetBytes("Test_8"), WebSocketDataFrame.DataFrameType.Binary));
 
                 return data;
             }
@@ -76,10 +81,21 @@ namespace EnjentUnitTests
 
             Assert.True((bytes[0] >> 7 == Convert.ToInt32(frame.fin)), "Frame FIN bit was not set properly");
             Assert.True((byte) (bytes[0] & 0b00001111) == frame.opcode, "Frame OPCode was not set properly");
-            Assert.True((bytes[1] & 0b10000000) == Convert.ToInt32(frame.masked), "Frame MASKED bit was not set properly");
+            Assert.True((bytes[1] >> 7) == Convert.ToInt32(frame.masked), "Frame MASKED bit was not set properly");
 
             int length = bytes[1] & 0b01111111;
+            int messageBytesLength = System.Text.Encoding.UTF8.GetBytes(frame.Plaintext).Length;
+
+            Assert.Equal(length, messageBytesLength);
+            Assert.True(bytes.Length == 2 + length, "Frame object did not return the correct number of bytes");
+            
+            byte[] realContent = new byte[length];
+            Array.Copy(bytes, 2, realContent, 0, length);
+
+            string read = System.Text.Encoding.UTF8.GetString(realContent);
+            Assert.Equal(frame.Plaintext, read);
         }
+
 
         [Fact]
         public void WebSocketFrame_TryParse_Valid_DataFrame_Text_SingleFrame()
@@ -89,6 +105,7 @@ namespace EnjentUnitTests
             bool fin = true;
             WebSocketOPCode OPCode = WebSocketOPCode.Text;
             byte[] payload = System.Text.Encoding.UTF8.GetBytes(testContent);
+
 
 
             // Manually craft a WebSocketFrame
