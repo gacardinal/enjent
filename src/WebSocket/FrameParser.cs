@@ -53,7 +53,7 @@ namespace NarcityMedia.Enjent
                 WebSocketFrame frame;
                 if (opcode == WebSocketOPCode.Text || opcode == WebSocketOPCode.Binary)
                 {
-                    frame = new WebSocketDataFrame(fin, masked, contentLength, (WebSocketDataFrame.DataFrameType) opcode, ApplyMask(contentBuffer, maskingKey));
+                    frame = new WebSocketDataFrame(fin, masked, contentBuffer, (WebSocketDataFrame.DataFrameType) opcode, ApplyMask(contentBuffer, maskingKey));
                 }
                 else if (opcode == WebSocketOPCode.Close)
                 {

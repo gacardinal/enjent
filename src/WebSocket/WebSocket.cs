@@ -203,13 +203,13 @@ namespace NarcityMedia.Enjent
         /// </summary>
         /// <param name="fin">Indicates whether the current WebSocketFrame is the last one of a multi frame message</param>
         /// <param name="masked">Indicates whether the current WebSocketFrame is masked</param>
-        /// <param name="length">Length of the content of the current WebSocketFrame</param>
-        public WebSocketFrame(bool fin, bool masked, int length)
+        /// <param name="payload">Payload of the current WebSocketFrame</param>
+        public WebSocketFrame(bool fin, bool masked, byte[] payload)
         {
             this.fin = fin;
             this.masked = masked;
-            this.contentLength = length;
-            this._data = new byte[length];
+            this.contentLength = payload.Length;
+            this.data = payload;
         }
 
         /// <summary>
@@ -289,7 +289,7 @@ namespace NarcityMedia.Enjent
         /// <summary>
         /// Initializes a new instance of the SocketDataFrame class
         /// </summary>
-        public WebSocketDataFrame() : base(true, true, 0)
+        public WebSocketDataFrame() : base(true, true, new byte[0])
         {
         }
 
@@ -298,10 +298,10 @@ namespace NarcityMedia.Enjent
         /// </summary>
         /// <param name="fin">Indicates whether the current SocketDataFrame is the last one of a multi frame message</param>
         /// <param name="masked">Indicates whether the current SocketDataFrame is masked</param>
-        /// <param name="length">Length of the content of the current SocketDataFrame</param>
+        /// <param name="payload">Payload of the current WebSocketFrame</param>
         /// <param name="dataType">The data type of the current SocketDataFrame</param>
-        public WebSocketDataFrame(bool fin, bool masked, ushort length,
-                                DataFrameType dataType) : base(fin, masked, length)
+        public WebSocketDataFrame(bool fin, bool masked, byte[] payload,
+                                DataFrameType dataType) : base(fin, masked, payload)
         {
             this.DataType = dataType;
             this.InitOPCode();
@@ -312,14 +312,14 @@ namespace NarcityMedia.Enjent
         /// </summary>
         /// <param name="fin">Indicates whether the current SocketDataFrame is the last one of a multi frame message</param>
         /// <param name="masked">Indicates whether the current SocketDataFrame is masked</param>
-        /// <param name="length">Length of the content of the current SocketDataFrame</param>
+        /// <param name="payload">Payload of the current WebSocketFrame</param>
         /// <param name="dataType">The data type of the current SocketDataFrame</param>
         /// <param name="message">Payload of the current SocketDataFrame</param>
         /// <exception cref="ArgumentOutOfRangeException">If the length of the message is greater than 65536</exception>
         /// <remark>This class, for now, only supports messages of length smaller of equal to 65536, that is, messages that can fit in a single frame</remark>
-        public WebSocketDataFrame(bool fin, bool masked, ushort length,
+        public WebSocketDataFrame(bool fin, bool masked, byte[] payload,
                                 DataFrameType dataType,
-                                byte[] message) : base(fin, masked, length)
+                                byte[] message) : base(fin, masked, payload)
         {
             this.DataType = dataType;
             this.InitOPCode();
@@ -353,7 +353,7 @@ namespace NarcityMedia.Enjent
         /// Initializes a new instance of the SocketControlFrame class
         /// </summary>
         /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
-        public WebSocketControlFrame(WebSocketOPCode controlOpCode) : base(true, false, 0,WebSocketDataFrame.DataFrameType.Binary)
+        public WebSocketControlFrame(WebSocketOPCode controlOpCode) : base(true, false, new byte[0], WebSocketDataFrame.DataFrameType.Binary)
         {
             this.opcode = (byte) controlOpCode;
         }
@@ -365,7 +365,7 @@ namespace NarcityMedia.Enjent
         /// <param name="masked"></param>
         /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
         public WebSocketControlFrame(bool fin, bool masked, WebSocketOPCode controlOpCode)
-                : base(true, false, 0, WebSocketDataFrame.DataFrameType.Binary)
+                : base(true, false, new byte[0], WebSocketDataFrame.DataFrameType.Binary)
         {
             this.opcode = (byte) controlOpCode;
         }

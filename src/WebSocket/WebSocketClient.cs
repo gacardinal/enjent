@@ -112,7 +112,7 @@ namespace NarcityMedia.Enjent
         public void Send(string message)
         {
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes(message);
-            WebSocketDataFrame frame = new WebSocketDataFrame(true, false, (ushort) bytes.Length, WebSocketDataFrame.DataFrameType.Text, bytes);
+            WebSocketDataFrame frame = new WebSocketDataFrame(true, false, bytes, WebSocketDataFrame.DataFrameType.Text, bytes);
 
             List<WebSocketFrame> frames = new List<WebSocketFrame>();
             frames.Add(frame);
@@ -179,7 +179,7 @@ namespace NarcityMedia.Enjent
         {
             byte[] payload = BitConverter.GetBytes((int)this.appMessageCode);
             List<WebSocketFrame> frames = new List<WebSocketFrame>(1);
-            frames.Add(new WebSocketDataFrame(true, false, this.contentLength, this.MessageType, payload));
+            frames.Add(new WebSocketDataFrame(true, false, payload, this.MessageType));
 
             return frames;
         }
