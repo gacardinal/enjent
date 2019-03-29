@@ -145,7 +145,7 @@ namespace NarcityMedia.Enjent
                 throw new WebSocketServerException("Cannot start the server when it is already running", new InvalidOperationException());
             }
         }
-        
+
         /// <summary>
         /// Executed by the 'listener' Thread, used to perform cleanup operation before quitting
         /// </summary>
@@ -265,8 +265,17 @@ namespace NarcityMedia.Enjent
                     // Executed async once the negotiation is done
                     if (state.exception == null)
                     {
-                        this.AddClient(cli);
-                        this.OnConnect.Invoke(this, new WebSocketServerEventArgs(state.cli));
+                        Exception e = this.AddClient(cli);
+                        if (e == null)
+                        {
+                            this.OnConnect.Invoke(this, new WebSocketServerEventArgs(state.cli));
+                        }
+                        else
+                        {
+                            this.OnError.Invoke(this, new WebSocketServerEventArgs(cli, e));
+                            cli.Dispose();
+                            handler.Dispose();
+                        }
                     }
                     else
                     {
@@ -289,14 +298,28 @@ namespace NarcityMedia.Enjent
         /// <remark>
         /// Will most likely be executed by a ThreadPool thread during the negotiation of the WebSocket connection
         /// </remark>
-        private void AddClient(TWebSocketClient cli)
+        /// <return>
+        /// An instance of a class derived of <see cref="Exception" /> that represents an exception that occured
+        /// while trying to add the client to the clients list or while attempting to listen.
+        /// If no exception is thrown, null is returned
+        /// </return>
+        private Exception AddClient(TWebSocketClient cli)
         {
-            lock (this.clients)
+            try
             {
-                this.clients.Add(cli);
+                this.StartClientReceive(cli);
+
+                lock (this.clients)
+                {
+                    this.clients.Add(cli);
+                }
+            }
+            catch (Exception e)
+            {
+                return e;
             }
 
-            this.StartClientReceive(cli);
+            return null;
         }
 
         /// <summary>
