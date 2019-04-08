@@ -13,10 +13,7 @@
     <RepositoryUrl>https://github.com/narcitymedia/enjent</RepositoryUrl>
     <Authors>Gabriel Cardinal</Authors>
     <Company>Narcity Media</Company>
+    <RootNamespace>NarcityMedia.Enjent</RootNamespace>
   </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="NarcityLogger" Version="1.0.1" />
-  </ItemGroup>
 
 </Project>

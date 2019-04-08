@@ -4,7 +4,6 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using NarcityMedia.Log;
 
 namespace NarcityMedia.Enjent
 {
