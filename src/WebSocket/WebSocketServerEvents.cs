@@ -5,11 +5,11 @@ namespace NarcityMedia.Enjent
 
     public partial class WebSocketServer<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {
-        private WebSocketServerEvent _onConnect;
-        private WebSocketServerEvent _onDisconnect;
-        private WebSocketServerEvent _onMessage;
-        private WebSocketServerEvent _onControlFrame;
-        private WebSocketServerEvent _onError;
+        private WebSocketServerEvent _onConnect = delegate {};
+        private WebSocketServerEvent _onDisconnect = delegate {};
+        private WebSocketServerEvent _onMessage = delegate {};
+        private WebSocketServerEvent _onControlFrame = delegate {};
+        private WebSocketServerEvent _onError = delegate {};
 
         public delegate void WebSocketServerEvent(object sender, WebSocketServerEventArgs a);
 
@@ -37,21 +37,6 @@ namespace NarcityMedia.Enjent
         {
             add { lock (this._onError) { this._onError += value; } }
             remove { lock (this._onError) { this._onError -= value; } }
-        }
-
-        public void TryInvokeEach(WebSocketServerEvent ev, object sender, WebSocketServerEventArgs args)
-        {
-            foreach (WebSocketServerEvent evHandler in ev.GetInvocationList())
-            {
-                try
-                {
-                    evHandler(sender, args);
-                }
-                catch (Exception e)
-                {
-                    // TODO Handle exception
-                }
-            }
         }
 
         /// <summary>
