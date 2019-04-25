@@ -51,20 +51,22 @@ namespace NarcityMedia.Enjent
         }
 
         /// <summary>
-        /// Sends an application message to the socket associated with the current client
+        /// Tries to send an application message to the socket associated with the current client
         /// </summary>
         /// <param name="message">The socket message to send</param>
-        /// <exception cref="SSystem.ArgumentNullException"><exception/>
-        /// <exception cref="SSystem.Net.Sockets.SocketException"><exception/>
-        /// <exception cref="SSystem.ObjectDisposedException"><exception/>
-        /// <remarks>
-        /// Callers must call this method in a try statement because it will not catch exceptions
-        /// raised by this.SendFrames()
-        /// </remarks>
-        public void Send(WebSocketMessage message)
+        public bool Send(WebSocketMessage message)
         {
             List<WebSocketFrame> frames = message.GetFrames();
-            SendFrames(frames);
+            try
+            {
+                SendFrames(frames);
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -72,36 +74,29 @@ namespace NarcityMedia.Enjent
         /// </summary>
         /// <param name="messageCode">The application message code to send</param>
         /// <remarks>Calls <see cref="Send" /></remarks>
-        /// <exception cref="SSystem.ArgumentNullException"><exception/>
-        /// <exception cref="SSystem.Net.Sockets.SocketException"><exception/>
-        /// <exception cref="SSystem.ObjectDisposedException"><exception/>
-        /// <remarks>
-        /// Callers must call this method in a try statement because it will not catch exceptions
-        /// raised by this.SendFrames()
-        /// </remarks>
-        public void Send(WebSocketMessage.ApplicationMessageCode messageCode)
+        public bool Send(WebSocketMessage.ApplicationMessageCode messageCode)
         {
             WebSocketMessage message = new WebSocketMessage(messageCode);            
-            this.Send(message);
+            return this.Send(message);
         }
     
         /// <summary>
         /// Sends a websocket control frame such as a 'pong' or a 'close' frame
         /// </summary>
-        /// <param name="frame">The control frame to send</param>
-        /// <exception cref="SSystem.ArgumentNullException"><exception/>
-        /// <exception cref="SSystem.Net.Sockets.SocketException"><exception/>
-        /// <exception cref="SSystem.ObjectDisposedException"><exception/>
-        /// <remarks>
-        /// Callers must call this method in a try statement because it will not catch exceptions
-        /// raised by this.SendFrames()
-        /// </remarks>
-        public void SendControlFrame(WebSocketFrame frame)
+        public bool SendControlFrame(WebSocketFrame frame)
         {
-            List<WebSocketFrame> frames = new List<WebSocketFrame>(1);
-            frames.Add(frame);
+            List<WebSocketFrame> frames = new List<WebSocketFrame>(1) {frame};
 
-            this.SendFrames(frames);
+            try
+            {
+                this.SendFrames(frames);
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
