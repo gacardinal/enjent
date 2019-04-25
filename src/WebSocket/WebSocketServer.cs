@@ -333,7 +333,6 @@ namespace NarcityMedia.Enjent
         {
             if (cli != null)
             {
-                
                 lock (this.clients)
                 {
                     this.clients.Remove(cli);

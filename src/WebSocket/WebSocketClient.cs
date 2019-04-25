@@ -103,7 +103,7 @@ namespace NarcityMedia.Enjent
         /// Sends a text message to the socket associated with the current WebSocketClient
         /// </summary>
         /// <param name="message">The message to send</param>
-        public void Send(string message)
+        public bool Send(string message)
         {
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes(message);
             WebSocketDataFrame frame = new WebSocketDataFrame(true, false, bytes, WebSocketDataFrame.DataFrameType.Text, bytes);
@@ -111,7 +111,16 @@ namespace NarcityMedia.Enjent
             List<WebSocketFrame> frames = new List<WebSocketFrame>();
             frames.Add(frame);
 
-            this.SendFrames(frames);
+            try
+            {
+                this.SendFrames(frames);
+            }
+            catch (Exception e)
+            {
+                return false;
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -133,7 +142,7 @@ namespace NarcityMedia.Enjent
             }
         }
     }
-    
+
     /// <summary>
     /// Represents an application message that is to be sent via WebSocket.
     /// A message is composed of frames
