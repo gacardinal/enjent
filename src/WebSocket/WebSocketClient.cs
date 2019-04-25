@@ -44,7 +44,8 @@ namespace NarcityMedia.Enjent
 
         public void Dispose()
         {
-            if (this.socket != null) {
+            if (this.socket != null)
+            {
                 // Close method does Dispose of the object
                 this.socket.Close();
             }
@@ -56,16 +57,6 @@ namespace NarcityMedia.Enjent
         /// <param name="message">The socket message to send</param>
         public bool Send(WebSocketMessage message)
         {
-            List<WebSocketFrame> frames = message.GetFrames();
-            try
-            {
-                SendFrames(frames);
-            }
-            catch (Exception e)
-            {
-                return false;
-            }
-
             return true;
         }
 
