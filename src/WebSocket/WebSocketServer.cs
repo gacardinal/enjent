@@ -268,20 +268,7 @@ namespace NarcityMedia.Enjent
                         Exception e = this.AddClient(cli);
                         if (e == null)
                         {
-                            foreach (WebSocketServerEvent onConnectHandler in this._onConnect.GetInvocationList())
-                            {
-                                // Not ideal for performance but necessary for proper exception handling and thread safety
-                                try
-                                {
-                                    onConnectHandler(this, new WebSocketServerEventArgs(state.cli));
-                                }
-                                catch (Exception handlerException)
-                                {
-                                    lock (this._onError) this._onError.Invoke(this, new WebSocketServerEventArgs(cli, handlerException));
-                                    cli.Dispose();
-                                    handler.Dispose();
-                                }
-                            }
+                            this._onConnect.Invoke(this, new WebSocketServerEventArgs(cli));
                         }
                         else
                         {
@@ -409,7 +396,7 @@ namespace NarcityMedia.Enjent
                         {
                             if (!(String.IsNullOrEmpty(frame.Plaintext) || (frame.Plaintext.Length == 1 && char.IsControl(frame.Plaintext.ElementAt(0)))))
                             {
-                                this.OnMessage.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, (WebSocketDataFrame) frame));
+                                this._onMessage.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, (WebSocketDataFrame) frame));
                                 StartClientReceive(receiveState.Cli);
                             }
                             else
@@ -417,7 +404,7 @@ namespace NarcityMedia.Enjent
                                 // Many browsers and WebSocket client side implementations send an empty frame on disconnection
                                 // for some obscure reason, so if it's the case, we disconnect the client 
                                 this.RemoveCLient(receiveState.Cli);
-                                this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli));
+                                this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli));
                                 receiveState.Cli.Dispose();
                             }
                         }
@@ -431,14 +418,14 @@ namespace NarcityMedia.Enjent
                     {
                         this.RemoveCLient(receiveState.Cli);
                         Exception e = new WebSocketServerException("Error while parsing an incoming WebSocketFrame");
-                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, e));
+                        this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, e));
                         receiveState.Cli.Dispose();
                     }
                 }
                 else
                 {
                     this.RemoveCLient(receiveState.Cli);
-                    this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli));
+                    this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli));
                     receiveState.Cli.Dispose();
                 }
             }
@@ -447,7 +434,7 @@ namespace NarcityMedia.Enjent
                 // TODO: Send a closing frame with 1011 "Internal Server Error" closing code as per protocol specifications
                 this.RemoveCLient(receiveState.Cli);
                 Exception ex = new WebSocketServerException("An error occured while processing message received from client. See inner exception for additional information", e);
-                this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, ex));
+                this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, ex));
                 receiveState.Cli.Dispose();
             }
         }
