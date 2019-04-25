@@ -188,12 +188,12 @@ namespace NarcityMedia.Enjent
                     try
                     {
                         cli.SendControlFrame(new WebSocketControlFrame(true, false, WebSocketOPCode.Close));
-                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, cFrame));
+                        lock (this._onDisconnect) this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, cFrame));
                     }
                     catch (Exception e)
                     {
                         WebSocketServerException ex = new WebSocketServerException("Error while sending 'close' control frame", e);
-                        this.OnDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, ex));
+                        lock (this._onDisconnect) this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, ex));
                     }
                     finally
                     {
@@ -268,11 +268,24 @@ namespace NarcityMedia.Enjent
                         Exception e = this.AddClient(cli);
                         if (e == null)
                         {
-                            this.OnConnect.Invoke(this, new WebSocketServerEventArgs(state.cli));
+                            foreach (WebSocketServerEvent onConnectHandler in this._onConnect.GetInvocationList())
+                            {
+                                // Not ideal for performance but necessary for proper exception handling and thread safety
+                                try
+                                {
+                                    onConnectHandler(this, new WebSocketServerEventArgs(state.cli));
+                                }
+                                catch (Exception handlerException)
+                                {
+                                    lock (this._onError) this._onError.Invoke(this, new WebSocketServerEventArgs(cli, handlerException));
+                                    cli.Dispose();
+                                    handler.Dispose();
+                                }
+                            }
                         }
                         else
                         {
-                            this.OnError.Invoke(this, new WebSocketServerEventArgs(cli, e));
+                            lock (this._onError) this._onError.Invoke(this, new WebSocketServerEventArgs(cli, e));
                             cli.Dispose();
                             handler.Dispose();
                         }
