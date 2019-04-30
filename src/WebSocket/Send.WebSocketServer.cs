@@ -26,7 +26,6 @@ namespace NarcityMedia.Enjent
             this.SendFrames(cli, frames);
         }
 
-
         /// <summary>
         /// Sends an application message to the socket associated with the specified client
         /// </summary>

@@ -38,7 +38,7 @@ namespace NarcityMedia.Enjent
         /// <summary>
         /// The maximum accepted header size for the initial HTTP request
         /// </summary>
-        private const int MAX_REQUEST_HEADERS_LENGTH = 2048;
+        private const int MAX_REQUEST_HEADERS_LENGTH = 1024 * 2;
 
         /// <summary>
         /// Sec-WebSocket-Key HTTP header name

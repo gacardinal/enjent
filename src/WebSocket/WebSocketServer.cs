@@ -263,7 +263,7 @@ namespace NarcityMedia.Enjent
                 SocketNegotiationState state = new SocketNegotiationState(handler);
                 state.done = cli => {
                     // Executed async once the negotiation is done
-                    if (state.exception == null)
+                    if (state.exception == null && cli != null)
                     {
                         Exception e = this.AddClient(cli);
                         if (e == null)
@@ -279,6 +279,10 @@ namespace NarcityMedia.Enjent
                     }
                     else
                     {
+                        // TODO: make this not so nasty
+                        string response = "HTTP/1.1 431 Request Header Fields too large\nEnjent-Message: Request header fields were too large\n\nRequest header fields too large";
+                        handler.Send(System.Text.Encoding.Default.GetBytes(response));
+                        handler.Close();
                         handler.Dispose();
                     }
                 };
@@ -472,11 +476,13 @@ namespace NarcityMedia.Enjent
                     else
                     {
                         state.exception = new WebSocketNegotiationException("You are using a generic version of the WebSocketServer class but you did not specify a ClientInitializationStrategy");
+                        state.done(null);
                     }
                 }
                 else
                 {
                     state.exception = new WebSocketNegotiationException("WebSocket negotiation failed");
+                    state.done(null);
                 }
             }
         }
