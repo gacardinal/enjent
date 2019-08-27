@@ -5,12 +5,17 @@ using System.Linq;
 
 namespace NarcityMedia.Enjent
 {
+	public class WebSocketRoom : WebSocketRoom<WebSocketClient>
+	{
+
+	}
+
     /// <summary>
     /// A logical way to group <see cref="WebSocketClient" /> objects together.
     /// This class implements the ICollection interface for convenience.
     /// </summary>
     /// <typeparam name="WebSocketClient">The client objects to hold.true Can be a WebSocketClient or any derived type.</typeparam>
-    public class WebSocketRoom : ICollection<WebSocketClient>
+    public class WebSocketRoom<TWebSocketClient> : ICollection<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {
         public readonly Guid Id;
 
@@ -34,7 +39,7 @@ namespace NarcityMedia.Enjent
             get { return false; }
         }
 
-        public System.Collections.ObjectModel.ReadOnlyCollection<WebSocketClient> Clients
+        public System.Collections.ObjectModel.ReadOnlyCollection<TWebSocketClient> Clients
         {
             get { return this.clients.AsReadOnly(); }
         }
@@ -42,15 +47,15 @@ namespace NarcityMedia.Enjent
         /// <summary>
         /// The inner collection on which the current Room interfaces
         /// </summary>
-        private List<WebSocketClient> clients;
+        private List<TWebSocketClient> clients;
         
         public WebSocketRoom()
         {
             this.Id = Guid.NewGuid();
-            this.clients = new List<WebSocketClient>(100);
+            this.clients = new List<TWebSocketClient>(100);
         }
 
-        public WebSocketRoom(IEnumerable<WebSocketClient> clients) : this()
+        public WebSocketRoom(IEnumerable<TWebSocketClient> clients) : this()
         {
             this.clients.AddRange(clients);
         }
@@ -68,15 +73,15 @@ namespace NarcityMedia.Enjent
         /// <remark>
         /// If parameter rooms is 
         /// </remark>
-        public static WebSocketRoom Aggregate(IEnumerable<WebSocketRoom> rooms)
+        public static WebSocketRoom<TWebSocketClient> Aggregate(IEnumerable<WebSocketRoom<TWebSocketClient>> rooms)
         {
-            if (rooms == null) return new WebSocketRoom();
+            if (rooms == null) return new WebSocketRoom<TWebSocketClient>();
 
             int nbRooms = rooms.Count();
-            if (nbRooms == 0) return new WebSocketRoom();
+            if (nbRooms == 0) return new WebSocketRoom<TWebSocketClient>();
             if (nbRooms == 1) return rooms.ElementAt(0);
 
-            WebSocketRoom aggregate = rooms.ElementAt(0);
+            WebSocketRoom<TWebSocketClient> aggregate = rooms.ElementAt(0);
             for (int i = 1; i < nbRooms; i++)
             {
                 aggregate.Union(rooms.ElementAt(i));
@@ -104,18 +109,18 @@ namespace NarcityMedia.Enjent
         {
             lock (this.clients) 
             {
-                foreach(WebSocketClient cli in this.clients)
+                foreach(TWebSocketClient cli in this.clients)
                 {
                     cli.Send(message);
                 }
             }
         }
 
-        public WebSocketClient this[int index]
+        public TWebSocketClient this[int index]
         {
             get 
             { 
-                return (WebSocketClient) clients[index]; 
+                return (TWebSocketClient) clients[index]; 
             }
             set { 
                 lock (this.clients) 
@@ -125,11 +130,11 @@ namespace NarcityMedia.Enjent
             }
         }
 
-        public bool Contains(WebSocketClient client)
+        public bool Contains(TWebSocketClient client)
         {
             lock (this.clients) 
             {
-                foreach (WebSocketClient cli in this.clients)
+                foreach (TWebSocketClient cli in this.clients)
                 {
                     if (cli.Equals(client))
                     {
@@ -157,7 +162,7 @@ namespace NarcityMedia.Enjent
             return false;
         }
 
-        public void Add(WebSocketClient cli)
+        public void Add(TWebSocketClient cli)
         {
             lock (this.clients) 
             {
@@ -173,7 +178,7 @@ namespace NarcityMedia.Enjent
             }
         }
 
-        public void CopyTo(WebSocketClient[] array, int arrayIndex)
+        public void CopyTo(TWebSocketClient[] array, int arrayIndex)
         {
             if (array == null)
                 throw new ArgumentNullException("The array cannot be null.");
@@ -187,12 +192,12 @@ namespace NarcityMedia.Enjent
             }
         }
 
-        public bool Remove(WebSocketClient cli)
+        public bool Remove(TWebSocketClient cli)
         {
             lock (this.clients) {
                 for (int i = 0; i < this.clients.Count; i++)
                 {
-                    WebSocketClient curCli = (WebSocketClient) this.clients[i];
+                    TWebSocketClient curCli = (TWebSocketClient) this.clients[i];
 
                     if (curCli.Equals(cli))
                     {
@@ -205,27 +210,27 @@ namespace NarcityMedia.Enjent
             return false;
         }
 
-        public IEnumerator<WebSocketClient> GetEnumerator()
+        public IEnumerator<TWebSocketClient> GetEnumerator()
         {
-            return new WebSocketClientEnumerator(this);
+            return new WebSocketClientEnumerator<TWebSocketClient>(this);
         }
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return new WebSocketClientEnumerator(this);
+            return new WebSocketClientEnumerator<TWebSocketClient>(this);
         }
     }
 
-    public class WebSocketClientEnumerator : IEnumerator<WebSocketClient>
+    public class WebSocketClientEnumerator<TWebSocketClient> : IEnumerator<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {
-        private WebSocketRoom room;
+        private WebSocketRoom<TWebSocketClient> room;
         private int curIndex;
-        private WebSocketClient curCli;
+        private TWebSocketClient curCli;
 
-        public WebSocketClientEnumerator(WebSocketRoom room)
+        public WebSocketClientEnumerator(WebSocketRoom<TWebSocketClient> room)
         {
             this.room = room;
             curIndex = -1;
-            curCli = default(WebSocketClient);
+            curCli = default(TWebSocketClient);
         }
 
         public bool MoveNext()
@@ -245,7 +250,7 @@ namespace NarcityMedia.Enjent
 
         void IDisposable.Dispose() { }
 
-        public WebSocketClient Current
+        public TWebSocketClient Current
         {
             get { return curCli; }
         }

@@ -61,16 +61,16 @@ namespace NarcityMedia.Enjent
         /// <summary>
         /// Internal Room that holds every client that is connected to the server
         /// </summary>
-        private WebSocketRoom _allClients;
+        private WebSocketRoom<TWebSocketClient> _allClients;
 
         /// <summary>
         /// Returns a <see cref="WebSocketRoom" /> that contains all the clients currently connected
         /// to the server
         /// </summary>
         /// <value>The returned <see cref="WebSocketRoom" /> is a copy of an internal WebsocketRoom object</value>
-        public WebSocketRoom AllClients
+        public WebSocketRoom<TWebSocketClient> AllClients
         {
-            get { return new WebSocketRoom(this._allClients); }
+            get { return new WebSocketRoom<TWebSocketClient>(this._allClients); }
         }
 
         /// <summary>
@@ -98,7 +98,7 @@ namespace NarcityMedia.Enjent
             this.listener.IsBackground = false;
             this.listener.Name = "WebSocketServerHTTPListener";
 
-            this._allClients = new WebSocketRoom();
+            this._allClients = new WebSocketRoom<TWebSocketClient>();
             this._allClients.Name = "GLOBAL";
 
             this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
