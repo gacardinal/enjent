@@ -262,8 +262,6 @@ namespace NarcityMedia.Enjent
                 if (index != -1)
                 {
                     int nextColon = cookieData.IndexOf(';', index + cookieName.Length);
-                    // string lmlTk = (nextColon != -1) ? cookieData.Substring(index + cookieName.Length, nextColon - index + cookieName.Length) 
-                    //                                 : cookieData.Substring(index + cookieName.Length);
                 }
             }
 
@@ -286,21 +284,29 @@ namespace NarcityMedia.Enjent
                     negociatedkey = Convert.ToBase64String(hash);
                 }
 
+				StringBuilder sb = new StringBuilder();
                 try
                 {
-                    socket.Send(System.Text.Encoding.Default.GetBytes("HTTP/1.1 101 Switching Protocols\n"));
-                    socket.Send(System.Text.Encoding.Default.GetBytes("Connection: upgrade\n"));
-                    socket.Send(System.Text.Encoding.Default.GetBytes("Upgrade: websocket\n"));
-                    socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Accept: " + negociatedkey));
+					sb.AppendLine("HTTP/1.1 101 Switching Protocols");
+					sb.AppendLine("Connection: upgrade");
+					sb.AppendLine("Upgrade: websocket");
+					sb.AppendLine("Sec-WebSocket-Accept: " + negociatedkey);
+
+                    // socket.Send(System.Text.Encoding.Default.GetBytes("HTTP/1.1 101 Switching Protocols\n"));
+                    // socket.Send(System.Text.Encoding.Default.GetBytes("Connection: upgrade\n"));
+                    // socket.Send(System.Text.Encoding.Default.GetBytes("Upgrade: websocket\n"));
+                    // socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Accept: " + negociatedkey));
 
                     if (this.headersmap.ContainsKey("Sec-WebSocket-Protocol"))
                     {
                         byte[] protocol = new byte[0];
                         this.headersmap.TryGetValue("Sec-WebSocket-Protocol", out protocol);
-                        socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Protocol: " + protocol));
+						string sProtocol = System.Text.Encoding.Default.GetString(protocol);
+						sb.AppendLine("Sec-WebSocket-Protocol: " + sProtocol);
                     }
 
-                    socket.Send(System.Text.Encoding.Default.GetBytes("\n\n"));
+					sb.Append("\n");
+                    socket.Send(System.Text.Encoding.Default.GetBytes(sb.ToString()));
                 }
                 catch (Exception)
                 {
