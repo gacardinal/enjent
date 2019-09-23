@@ -199,7 +199,7 @@ namespace NarcityMedia.Enjent
                 {
                     TWebSocketClient curCli = (TWebSocketClient) this.clients[i];
 
-                    if (curCli.Equals(cli))
+                    if (curCli == cli)
                     {
                         this.clients.RemoveAt(i);
                         return true;
