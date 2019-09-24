@@ -183,9 +183,12 @@ namespace NarcityMedia.Enjent
             }
         }
 
-        /// <summary>
-        /// Length of the payload of the current WebSocketFrame
-        /// </summary>
+		/// <summary>
+        /// Length of the payload of the current WebSocketFrame.
+		/// Eventhough the WS Protocl specification specifies that a frame may have a payload
+		/// length equal to up to the value of an unsigned 64 bits integer, the .NET runtime imposes
+		/// a hard limit on the maximum size of any object, that limit being the length of an int
+		/// </summary>
         public int contentLength;
 
         /// <summary>
@@ -228,22 +231,55 @@ namespace NarcityMedia.Enjent
 
             // First octet - 1 bit for FIN, 3 reserved, 4 for OP Code
             byte octet0 = (byte) ((this.fin) ? 0b10000000 : 0b00000000);
-            octet0 = (byte) (octet0 | this.opcode);
+            octet0 = (byte) ( octet0 | this.opcode );
 
             byte octet1 = (byte) ((this.masked) ? 0b10000000 : 0b00000000);
-            octet1 = (byte) (octet1 | this.contentLength);
+            octet1 = (byte) ( octet1 | ( this.contentLength <= 125 ? this.contentLength : this.contentLength <= ushort.MaxValue ? 126 : 127 ) );
 
             frameHeader[0] = octet0;
             frameHeader[1] = octet1;
 
             if (this.data != null)
             {
-                byte[] finalBytes = AppendMessageToBytes(frameHeader, this.data);
+				byte[] contentLengthBytes = this.GetContentLengthBytes();
+				byte[] headerWithPayloadLength = new byte[frameHeader.Length + contentLengthBytes.Length];
+				frameHeader.CopyTo(headerWithPayloadLength, 0);
+				contentLengthBytes.CopyTo(headerWithPayloadLength, frameHeader.Length);
+                byte[] finalBytes = AppendContentToHeader(headerWithPayloadLength, this.data);
                 return finalBytes;
             }
 
             return frameHeader;
         }
+
+		/// <summary>
+		/// Returns an array of bytes that represent the value of a given length integer to be inserted in a 
+		/// WebSocket frame as the content length.
+		/// The returned byte array will be of length:
+		/// 0 if the current frame's content length is smaller than or equal to 125
+		/// 2 if the current frame's content length is smaller than or equal to 65,535 (ushort)
+		/// 4 if the current frame's content length is smaller than or equal to 4,294,967,295 (uint)
+		/// </summary>
+		/// <returns>An array of bytes that can be inserted in the current frame to represent the content length, if any</returns>
+		/// <remark>The length of a frame is a uint hence will never be bigger</remark>
+		private byte[] GetContentLengthBytes()
+		{
+			byte[] contentLengthBytes;
+			if (this.contentLength <= 235)
+			{
+				contentLengthBytes = new byte[0];
+			}
+			else if (this.contentLength <= ushort.MaxValue)
+			{
+				contentLengthBytes = BitConverter.GetBytes((ushort) this.contentLength);
+			}
+			else
+			{
+				contentLengthBytes = BitConverter.GetBytes(this.contentLength);
+			}
+
+			return contentLengthBytes;
+		}
 
         /// <summary>
         /// Appends the payload to the header of the data frame
@@ -251,23 +287,13 @@ namespace NarcityMedia.Enjent
         /// <param name="header">Bytes of the frame header</param>
         /// <param name="message">Bytes of the frame message</param>
         /// <returns>All the bytes of the frame</returns>
-        private byte[] AppendMessageToBytes(byte[] header, byte[] message)
+        private byte[] AppendContentToHeader(byte[] header, byte[] message)
         {
             byte[] payload = new byte[header.Length + message.Length];
             header.CopyTo(payload, 0);
             message.CopyTo(payload, header.Length);
 
-            // Removing trailing zeroes
-            int i = payload.Length - 1;
-            while (payload[i] == 0)
-            {
-                i--;
-            }
-
-            byte[] trimmed = new byte[i + 1];
-            Array.Copy(payload, trimmed, i + 1);
-
-            return trimmed;
+            return payload;
         }
     }
 
