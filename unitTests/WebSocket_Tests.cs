@@ -64,6 +64,11 @@ namespace EnjentUnitTests
                 data.Add(new WebSocketDataFrame(true, false, System.Text.Encoding.UTF8.GetBytes("test number 3"), WebSocketDataFrame.DataFrameType.Text));
                 data.Add(new WebSocketDataFrame(false, false, System.Text.Encoding.UTF8.GetBytes("Test_4"), WebSocketDataFrame.DataFrameType.Text));
 
+				string longText = @"Spicy jalapeno bacon ipsum dolor amet laborum pastrami voluptate quis. Short ribs ground round nisi sed commodo corned beef.
+									Id reprehenderit pork quis tongue ham hock nostrud lorem jerky. Reprehenderit frankfurter leberkas tri-tip shank aliquip.";
+
+                data.Add(new WebSocketDataFrame(false, false, System.Text.Encoding.UTF8.GetBytes(longText), WebSocketDataFrame.DataFrameType.Text));
+
                 data.Add(new WebSocketDataFrame(true, true, System.Text.Encoding.UTF8.GetBytes("Test_5"), WebSocketDataFrame.DataFrameType.Binary));
                 data.Add(new WebSocketDataFrame(false, true, System.Text.Encoding.UTF8.GetBytes("Test_6"), WebSocketDataFrame.DataFrameType.Binary));
                 data.Add(new WebSocketDataFrame(true, false, System.Text.Encoding.UTF8.GetBytes("Test_7"), WebSocketDataFrame.DataFrameType.Binary));
@@ -83,12 +88,33 @@ namespace EnjentUnitTests
             Assert.True((byte) (bytes[0] & 0b00001111) == frame.opcode, "Frame OPCode was not set properly");
             Assert.True((bytes[1] >> 7) == Convert.ToInt32(frame.masked), "Frame MASKED bit was not set properly");
 
-            int length = bytes[1] & 0b01111111;
+			byte l = (byte) (bytes[1] & 0b01111111);
+			int frameHeaderSize = 2;
+			int length;
+			if (l <= 125)
+			{
+				length = l;
+			}
+			else if (l <= 126)
+			{
+				byte[] lengthBytes = new byte[2];
+				frameHeaderSize = frameHeaderSize + 2;
+				bytes.CopyTo(lengthBytes, 0);
+				length = (int) BitConverter.ToUInt32(lengthBytes);
+			}
+			else
+			{
+				byte[] lengthBytes = new byte[4];
+				frameHeaderSize = frameHeaderSize + 4;
+				bytes.CopyTo(lengthBytes, 0);
+				length = (int) BitConverter.ToUInt32(lengthBytes);
+			}
+
             int messageBytesLength = System.Text.Encoding.UTF8.GetBytes(frame.Plaintext).Length;
 
             Assert.Equal(length, messageBytesLength);
-            Assert.True(bytes.Length == 2 + length, "Frame object did not return the correct number of bytes");
-            
+            Assert.True(bytes.Length == frameHeaderSize + length, "Frame object did not return the correct number of bytes");
+
             byte[] realContent = new byte[length];
             Array.Copy(bytes, 2, realContent, 0, length);
 
