@@ -180,7 +180,7 @@ namespace NarcityMedia.Enjent
         /// <param name="cFrame">The control frame that was received</param>
         private void DefaultControlFrameHandler(TWebSocketClient cli, WebSocketControlFrame cFrame)
         {
-            switch (cFrame.opcode)
+            switch (cFrame.OpCode)
             {
                 case 0: // Continuation
                     break;

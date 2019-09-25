@@ -155,30 +155,30 @@ namespace NarcityMedia.Enjent
         /// <summary>
         /// Indicates whether the current WebSocketFrame is the last one of a message
         /// </summary>
-        public bool fin;
+        public bool Fin;
 
         /// <summary>
         /// Indicates whether the current WebSocketFrame is masked.
         ///  Frames comming from the client must be masked whereas frames sent from the server must NOT be masked
         /// </summary>
-        public readonly bool masked;
+        public readonly bool Masked;
 
         /// <summary>
         /// Payload of the current WebSocketFrame
         /// </summary>
-        protected byte[] _data;
+        protected byte[] _payload;
 
         /// <summary>
         /// Payload of the current WebSocketFrame
         /// </summary>
         /// <value></value>
-        public byte[] data
+        public byte[] Payload
         {
-            get { return this._data; }
+            get { return this._payload; }
             set
             {
-                this._data = value;
-                this.contentLength = value.Length;
+                this._payload = value;
+                this.PayloadLength = value.Length;
                 this.Plaintext = System.Text.Encoding.UTF8.GetString(value);
             }
         }
@@ -189,12 +189,12 @@ namespace NarcityMedia.Enjent
 		/// length equal to up to the value of an unsigned 64 bits integer, the .NET runtime imposes
 		/// a hard limit on the maximum size of any object, that limit being the length of an int
 		/// </summary>
-        public int contentLength;
+        public int PayloadLength;
 
         /// <summary>
         /// The OPCode of the current WebSocketFrame
         /// </summary>
-        public byte opcode;
+        public byte OpCode;
 
         /// <summary>
         /// The plaintext content of the current WebSocketFrame
@@ -209,10 +209,10 @@ namespace NarcityMedia.Enjent
         /// <param name="payload">Payload of the current WebSocketFrame</param>
         public WebSocketFrame(bool fin, bool masked, byte[] payload)
         {
-            this.fin = fin;
-            this.masked = masked;
-            this.contentLength = payload.Length;
-            this.data = payload;
+            this.Fin = fin;
+            this.Masked = masked;
+            this.PayloadLength = payload.Length;
+            this.Payload = payload;
         }
 
         /// <summary>
@@ -230,22 +230,23 @@ namespace NarcityMedia.Enjent
             byte[] frameHeader = new byte[2];
 
             // First octet - 1 bit for FIN, 3 reserved, 4 for OP Code
-            byte octet0 = (byte) ((this.fin) ? 0b10000000 : 0b00000000);
-            octet0 = (byte) ( octet0 | this.opcode );
+            byte octet0 = (byte) ((this.Fin) ? 0b10000000 : 0b00000000);
+            octet0 = (byte) ( octet0 | this.OpCode );
 
-            byte octet1 = (byte) ((this.masked) ? 0b10000000 : 0b00000000);
-            octet1 = (byte) ( octet1 | ( this.contentLength <= 125 ? this.contentLength : this.contentLength <= ushort.MaxValue ? 126 : 127 ) );
+            byte octet1 = (byte) ((this.Masked) ? 0b10000000 : 0b00000000);
+            octet1 = (byte) ( octet1 | ( this.PayloadLength <= 125 ? this.PayloadLength : this.PayloadLength <= ushort.MaxValue ? 126 : 127 ) );
 
             frameHeader[0] = octet0;
             frameHeader[1] = octet1;
 
-            if (this.data != null)
+            if (this.Payload != null)
             {
 				byte[] contentLengthBytes = this.GetContentLengthBytes();
 				byte[] headerWithPayloadLength = new byte[frameHeader.Length + contentLengthBytes.Length];
 				frameHeader.CopyTo(headerWithPayloadLength, 0);
 				contentLengthBytes.CopyTo(headerWithPayloadLength, frameHeader.Length);
-                byte[] finalBytes = AppendContentToHeader(headerWithPayloadLength, this.data);
+                byte[] finalBytes = AppendContentToHeader(headerWithPayloadLength, this.Payload);
+
                 return finalBytes;
             }
 
@@ -265,17 +266,17 @@ namespace NarcityMedia.Enjent
 		private byte[] GetContentLengthBytes()
 		{
 			byte[] contentLengthBytes;
-			if (this.contentLength <= 235)
+			if (this.PayloadLength <= 235)
 			{
 				contentLengthBytes = new byte[0];
 			}
-			else if (this.contentLength <= ushort.MaxValue)
+			else if (this.PayloadLength <= ushort.MaxValue)
 			{
-				contentLengthBytes = BitConverter.GetBytes((ushort) this.contentLength);
+				contentLengthBytes = BitConverter.GetBytes((ushort) this.PayloadLength);
 			}
 			else
 			{
-				contentLengthBytes = BitConverter.GetBytes(this.contentLength);
+				contentLengthBytes = BitConverter.GetBytes(this.PayloadLength);
 			}
 
 			return contentLengthBytes;
@@ -349,15 +350,6 @@ namespace NarcityMedia.Enjent
         {
             this.DataType = dataType;
             this.InitOPCode();
-
-            if (message.Length <= 65536)
-            {
-                this.data = message;
-            }
-            else
-            {
-                throw new ArgumentOutOfRangeException("This class does not support frames that have a content length value that is greater than 126");
-            }
         }
 
         /// <summary>
@@ -365,8 +357,7 @@ namespace NarcityMedia.Enjent
         /// </summary>
         protected override void InitOPCode()
         {
-            if (this.DataType == DataFrameType.Text) this.opcode = (byte) WebSocketOPCode.Text;
-            else this.opcode = (byte) WebSocketOPCode.Binary;
+			this.OpCode = (byte) ( this.DataType == DataFrameType.Text ? WebSocketOPCode.Text : WebSocketOPCode.Binary );
         }
     }
 
@@ -381,7 +372,7 @@ namespace NarcityMedia.Enjent
         /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
         public WebSocketControlFrame(WebSocketOPCode controlOpCode) : base(true, false, new byte[0], WebSocketDataFrame.DataFrameType.Binary)
         {
-            this.opcode = (byte) controlOpCode;
+            this.OpCode = (byte) controlOpCode;
         }
 
         /// <summary>
@@ -393,7 +384,7 @@ namespace NarcityMedia.Enjent
         public WebSocketControlFrame(bool fin, bool masked, WebSocketOPCode controlOpCode)
                 : base(true, false, new byte[0], WebSocketDataFrame.DataFrameType.Binary)
         {
-            this.opcode = (byte) controlOpCode;
+            this.OpCode = (byte) controlOpCode;
         }
     }
 
@@ -416,15 +407,15 @@ namespace NarcityMedia.Enjent
             {
                 this._closeCode = value;
 
-                int payloadLength = this._data.Length > 2 ? this._data.Length : 2;
+                int payloadLength = this._payload.Length > 2 ? this._payload.Length : 2;
                 byte[] payload = new byte[payloadLength];
 
-                this._data.CopyTo(payload, 0);
+                this._payload.CopyTo(payload, 0);
 
                 byte[] closeCodeBytes = BitConverter.GetBytes((ushort) value);
                 closeCodeBytes.CopyTo(payload, 0);
 
-                this.data = payload;
+                this.Payload = payload;
             }
         }
 
@@ -444,10 +435,10 @@ namespace NarcityMedia.Enjent
                 byte[] payload = new byte[2 + value.Length];
                 byte[] reasonBytes = System.Text.Encoding.UTF8.GetBytes(value);
                 
-                Array.Copy(this._data, payload, 2);
+                Array.Copy(this._payload, payload, 2);
                 reasonBytes.CopyTo(payload, 2);
 
-                this.data = payload;
+                this.Payload = payload;
             }
         }
 
