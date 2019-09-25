@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using Xunit;
+using Xunit.Abstractions;
 using System.Net;
 using NarcityMedia.Enjent;
 
@@ -9,6 +10,12 @@ namespace EnjentUnitTests
 {
     public class WebSocket_Tests
     {
+    	private readonly ITestOutputHelper output;
+
+		public WebSocket_Tests(ITestOutputHelper o)
+		{
+			this.output = o;
+		}
 
         [Fact]
         public void WebSocketFrame_ApplyMask_ExpectedOutput()
@@ -52,7 +59,7 @@ namespace EnjentUnitTests
 
             Assert.True(original_rndContent.SequenceEqual(reverted), "The masking algorithm didn't yeild the original data when applying the algorithm on masked data");
         }
-
+		
         public static TheoryData<WebSocketFrame> GetTestFrames
         {
             get
@@ -67,7 +74,7 @@ namespace EnjentUnitTests
 				string longText = @"Spicy jalapeno bacon ipsum dolor amet laborum pastrami voluptate quis. Short ribs ground round nisi sed commodo corned beef.
 									Id reprehenderit pork quis tongue ham hock nostrud lorem jerky. Reprehenderit frankfurter leberkas tri-tip shank aliquip.";
 
-                data.Add(new WebSocketDataFrame(false, false, System.Text.Encoding.UTF8.GetBytes(longText), WebSocketDataFrame.DataFrameType.Text));
+                data.Add(new WebSocketDataFrame(true, false, System.Text.Encoding.UTF8.GetBytes(longText), WebSocketDataFrame.DataFrameType.Text));
 
                 data.Add(new WebSocketDataFrame(true, true, System.Text.Encoding.UTF8.GetBytes("Test_5"), WebSocketDataFrame.DataFrameType.Binary));
                 data.Add(new WebSocketDataFrame(false, true, System.Text.Encoding.UTF8.GetBytes("Test_6"), WebSocketDataFrame.DataFrameType.Binary));
@@ -84,9 +91,12 @@ namespace EnjentUnitTests
         {
             byte[] bytes = frame.GetBytes();
 
-            Assert.True((bytes[0] >> 7 == Convert.ToInt32(frame.fin)), "Frame FIN bit was not set properly");
-            Assert.True((byte) (bytes[0] & 0b00001111) == frame.opcode, "Frame OPCode was not set properly");
-            Assert.True((bytes[1] >> 7) == Convert.ToInt32(frame.masked), "Frame MASKED bit was not set properly");
+			output.WriteLine(String.Format("Testing frame with payload (length {0}) {1}", frame.Plaintext.Length, frame.Plaintext));
+			output.WriteLine("Bytes: " + BitConverter.ToString(bytes));
+
+            Assert.True((bytes[0] >> 7 == Convert.ToInt32(frame.Fin)), "Frame FIN bit was not set properly");
+            Assert.True((byte) (bytes[0] & 0b00001111) == frame.OpCode, "Frame OPCode was not set properly");
+            Assert.True((bytes[1] >> 7) == Convert.ToInt32(frame.Masked), "Frame MASKED bit was not set properly");
 
 			byte l = (byte) (bytes[1] & 0b01111111);
 			int frameHeaderSize = 2;
@@ -99,8 +109,8 @@ namespace EnjentUnitTests
 			{
 				byte[] lengthBytes = new byte[2];
 				frameHeaderSize = frameHeaderSize + 2;
-				bytes.CopyTo(lengthBytes, 0);
-				length = (int) BitConverter.ToUInt32(lengthBytes);
+				Array.Copy(bytes, 2, lengthBytes, 0, 2);
+				length = BitConverter.ToUInt16(lengthBytes, 0);
 			}
 			else
 			{
@@ -116,7 +126,7 @@ namespace EnjentUnitTests
             Assert.True(bytes.Length == frameHeaderSize + length, "Frame object did not return the correct number of bytes");
 
             byte[] realContent = new byte[length];
-            Array.Copy(bytes, 2, realContent, 0, length);
+            Array.Copy(bytes, frameHeaderSize, realContent, 0, length);
 
             string read = System.Text.Encoding.UTF8.GetString(realContent);
             Assert.Equal(frame.Plaintext, read);
