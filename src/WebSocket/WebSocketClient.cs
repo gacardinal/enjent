@@ -97,7 +97,7 @@ namespace NarcityMedia.Enjent
         public bool Send(string message)
         {
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes(message);
-            WebSocketDataFrame frame = new WebSocketDataFrame(true, false, bytes, WebSocketDataFrame.DataFrameType.Text, bytes);
+            WebSocketDataFrame frame = new WebSocketDataFrame(true, false, bytes, WebSocketDataFrame.DataFrameType.Text);
 
             List<WebSocketFrame> frames = new List<WebSocketFrame>();
             frames.Add(frame);
