@@ -1,6 +1,5 @@
 using System;
-using System.Numerics;
-using System.Collections.Generic;
+using System.Net;
 
 namespace NarcityMedia.Enjent
 {
@@ -266,17 +265,20 @@ namespace NarcityMedia.Enjent
 		private byte[] GetContentLengthBytes()
 		{
 			byte[] contentLengthBytes;
-			if (this.PayloadLength <= 235)
+			if (this.PayloadLength <= 125)
 			{
 				contentLengthBytes = new byte[0];
 			}
-			else if (this.PayloadLength <= ushort.MaxValue)
+            // Length must be encoded in network byte order
+        	else if (this.PayloadLength <= ushort.MaxValue)
 			{
-				contentLengthBytes = BitConverter.GetBytes((ushort) this.PayloadLength);
+				byte[] encodedLength = BitConverter.GetBytes(this.PayloadLength);
+				contentLengthBytes = new byte[2] { encodedLength[1], encodedLength[0] };
 			}
 			else
 			{
-				contentLengthBytes = BitConverter.GetBytes(this.PayloadLength);
+				byte[] encodedLength = BitConverter.GetBytes(this.PayloadLength);
+				contentLengthBytes = new byte[4] { encodedLength[3], encodedLength[2], encodedLength[1], encodedLength[0] };
 			}
 
 			return contentLengthBytes;
@@ -329,24 +331,6 @@ namespace NarcityMedia.Enjent
         /// <param name="dataType">The data type of the current SocketDataFrame</param>
         public WebSocketDataFrame(bool fin, bool masked, byte[] payload,
                                 DataFrameType dataType) : base(fin, masked, payload)
-        {
-            this.DataType = dataType;
-            this.InitOPCode();
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the SocketDataFrame class
-        /// </summary>
-        /// <param name="fin">Indicates whether the current SocketDataFrame is the last one of a multi frame message</param>
-        /// <param name="masked">Indicates whether the current SocketDataFrame is masked</param>
-        /// <param name="payload">Payload of the current WebSocketFrame</param>
-        /// <param name="dataType">The data type of the current SocketDataFrame</param>
-        /// <param name="message">Payload of the current SocketDataFrame</param>
-        /// <exception cref="ArgumentOutOfRangeException">If the length of the message is greater than 65536</exception>
-        /// <remark>This class, for now, only supports messages of length smaller of equal to 65536, that is, messages that can fit in a single frame</remark>
-        public WebSocketDataFrame(bool fin, bool masked, byte[] payload,
-                                DataFrameType dataType,
-                                byte[] message) : base(fin, masked, payload)
         {
             this.DataType = dataType;
             this.InitOPCode();
