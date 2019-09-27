@@ -8,9 +8,14 @@ using NarcityMedia.Enjent;
 
 namespace EnjentUnitTests
 {
-    public class WebSocket_Tests
+    /// <summary>
+    /// Tests features specific to the WebSocket protocol.
+    /// Test data for this test class is defined in WebSocket_Tests_data.cs
+    /// </summary>
+    public partial class WebSocket_Tests
     {
     	private readonly ITestOutputHelper output;
+        private static Random rand = new Random();
 
 		public WebSocket_Tests(ITestOutputHelper o)
 		{
@@ -44,15 +49,21 @@ namespace EnjentUnitTests
         }
 
         [Fact]
+        /// <summary>
+        /// When the masking algorithm is applied on plain data (d1) with a given key (k),
+        /// pssing the ciphered data (c) to the algorithm with the same key should yeild the original plain data
+        /// such that:
+        ///     c = mask(d1, k),
+        ///     d2 = mask(c, k) = d1
+        /// </summary>
         public void WebSocketFrame_ApplyMask_RevertInput()
         {
-            Random rnd = new Random();
-
             byte[] original_rndContent = new byte[100];
-            rnd.NextBytes(original_rndContent);
+            rand.NextBytes(original_rndContent);
 
+            // No need for cryptographically secure randomness here
             byte[] k = new byte[4];
-            rnd.NextBytes(k);
+            rand.NextBytes(k);
 
             byte[] masked = WebSocketFrame.ApplyMask(original_rndContent, k);
             byte[] reverted = WebSocketFrame.ApplyMask(masked, k);
@@ -60,45 +71,22 @@ namespace EnjentUnitTests
             Assert.True(original_rndContent.SequenceEqual(reverted), "The masking algorithm didn't yeild the original data when applying the algorithm on masked data");
         }
 		
-        public static TheoryData<WebSocketFrame> GetTestFrames
-        {
-            get
-            {
-                TheoryData<WebSocketFrame> data = new TheoryData<WebSocketFrame>();
 
-                data.Add(new WebSocketDataFrame(true, true, System.Text.Encoding.UTF8.GetBytes(""), WebSocketDataFrame.DataFrameType.Text));
-                data.Add(new WebSocketDataFrame(false, true, System.Text.Encoding.UTF8.GetBytes("second text"), WebSocketDataFrame.DataFrameType.Text));
-                data.Add(new WebSocketDataFrame(true, false, System.Text.Encoding.UTF8.GetBytes("test number 3"), WebSocketDataFrame.DataFrameType.Text));
-                data.Add(new WebSocketDataFrame(false, false, System.Text.Encoding.UTF8.GetBytes("Test_4"), WebSocketDataFrame.DataFrameType.Text));
-
-				string longText = @"Spicy jalapeno bacon ipsum dolor amet laborum pastrami voluptate quis. Short ribs ground round nisi sed commodo corned beef.
-									Id reprehenderit pork quis tongue ham hock nostrud lorem jerky. Reprehenderit frankfurter leberkas tri-tip shank aliquip.";
-
-                data.Add(new WebSocketDataFrame(true, false, System.Text.Encoding.UTF8.GetBytes(longText), WebSocketDataFrame.DataFrameType.Text));
-
-                data.Add(new WebSocketDataFrame(true, true, System.Text.Encoding.UTF8.GetBytes("Test_5"), WebSocketDataFrame.DataFrameType.Binary));
-                data.Add(new WebSocketDataFrame(false, true, System.Text.Encoding.UTF8.GetBytes("Test_6"), WebSocketDataFrame.DataFrameType.Binary));
-                data.Add(new WebSocketDataFrame(true, false, System.Text.Encoding.UTF8.GetBytes("Test_7"), WebSocketDataFrame.DataFrameType.Binary));
-                data.Add(new WebSocketDataFrame(false, false, System.Text.Encoding.UTF8.GetBytes("Test_8"), WebSocketDataFrame.DataFrameType.Binary));
-
-                return data;
-            }
-        }
 
         [Theory]
         [MemberData(nameof(GetTestFrames))]
         public void WebSocketFrame_GetBytes(WebSocketFrame frame)
         {
-            byte[] bytes = frame.GetBytes();
+            byte[] frameBytes = frame.GetBytes();
 
 			output.WriteLine(String.Format("Testing frame with payload (length {0}) {1}", frame.Plaintext.Length, frame.Plaintext));
-			output.WriteLine("Bytes: " + BitConverter.ToString(bytes));
+			output.WriteLine("Bytes: " + BitConverter.ToString(frameBytes));
 
-            Assert.True((bytes[0] >> 7 == Convert.ToInt32(frame.Fin)), "Frame FIN bit was not set properly");
-            Assert.True((byte) (bytes[0] & 0b00001111) == frame.OpCode, "Frame OPCode was not set properly");
-            Assert.True((bytes[1] >> 7) == Convert.ToInt32(frame.Masked), "Frame MASKED bit was not set properly");
+            Assert.True((frameBytes[0] >> 7 == Convert.ToInt32(frame.Fin)), "Frame FIN bit was not set properly");
+            Assert.True((byte) (frameBytes[0] & 0b00001111) == frame.OpCode, "Frame OPCode bits were not set properly");
+            Assert.True((frameBytes[1] >> 7) == Convert.ToInt32(frame.Masked), "Frame MASKED bit was not set properly");
 
-			byte l = (byte) (bytes[1] & 0b01111111);
+			byte l = (byte) (frameBytes[1] & 0b01111111);
 			int frameHeaderSize = 2;
 			int length;
 			if (l <= 125)
@@ -109,27 +97,43 @@ namespace EnjentUnitTests
 			{
 				byte[] lengthBytes = new byte[2];
 				frameHeaderSize = frameHeaderSize + 2;
-				Array.Copy(bytes, 2, lengthBytes, 0, 2);
+				Array.Copy(frameBytes, 2, lengthBytes, 0, 2);
+                ReverseIfLittleEndian(lengthBytes);
 				length = BitConverter.ToUInt16(lengthBytes, 0);
 			}
 			else
 			{
 				byte[] lengthBytes = new byte[4];
 				frameHeaderSize = frameHeaderSize + 4;
-				bytes.CopyTo(lengthBytes, 0);
+				Array.Copy(frameBytes, 2, lengthBytes, 0, 4);
+                ReverseIfLittleEndian(lengthBytes);
 				length = (int) BitConverter.ToUInt32(lengthBytes);
 			}
 
-            int messageBytesLength = System.Text.Encoding.UTF8.GetBytes(frame.Plaintext).Length;
-
-            Assert.Equal(length, messageBytesLength);
-            Assert.True(bytes.Length == frameHeaderSize + length, "Frame object did not return the correct number of bytes");
+            Assert.True(length == frame.Payload.Length, "Encoded payload length did not match actual payload length");
+            Assert.True(frameBytes.Length == frameHeaderSize + length, "Frame object did not return the correct number of bytes");
 
             byte[] realContent = new byte[length];
-            Array.Copy(bytes, frameHeaderSize, realContent, 0, length);
+            Array.Copy(frameBytes, frameHeaderSize, realContent, 0, length);
+            Assert.True(Enumerable.SequenceEqual(frame.Payload, realContent), "'Real' frame payload did not match the frame's payload property");
+        }
 
-            string read = System.Text.Encoding.UTF8.GetString(realContent);
-            Assert.Equal(frame.Plaintext, read);
+        /// <summary>
+        /// Fields within a WebSocket frame are to be interpreted as BIG ENDIAN, however, most client architectures use little endian,
+        /// in which case it is necessary to reverse an array representing a datatype such as a uint before attempting to convert
+        /// this array to the said datatype.
+        /// </summary>
+        /// <param name="array">The array to MAYBE reverse</param>
+        /// <remark>
+        /// If the current architecture uses little endian, the passed array IS MODIFIED IN PLACE, else, it is untouched.
+        /// </remark>
+        public void ReverseIfLittleEndian(byte[] array)
+        {
+            if (BitConverter.IsLittleEndian)
+            {
+                this.output.WriteLine("Detected architecture using little-endian, will reverse the frame length bytes since they are encoded in a WebSocket frame as big-endian");
+                Array.Reverse(array);
+            }
         }
 
 
@@ -142,15 +146,10 @@ namespace EnjentUnitTests
             WebSocketOPCode OPCode = WebSocketOPCode.Text;
             byte[] payload = System.Text.Encoding.UTF8.GetBytes(testContent);
 
-
-
             // Manually craft a WebSocketFrame
-            Random rnd = new Random();
             byte[] maskingK = new byte[4];
             // The masking key is supposed to be cryptographically secure but this will suffice for testing purposes
-            rnd.NextBytes(maskingK);
-
-            
+            rand.NextBytes(maskingK);
         }
     }
 }
