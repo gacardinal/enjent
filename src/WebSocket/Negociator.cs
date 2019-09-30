@@ -292,11 +292,6 @@ namespace NarcityMedia.Enjent
 					sb.AppendLine("Upgrade: websocket");
 					sb.AppendLine("Sec-WebSocket-Accept: " + negociatedkey);
 
-                    // socket.Send(System.Text.Encoding.Default.GetBytes("HTTP/1.1 101 Switching Protocols\n"));
-                    // socket.Send(System.Text.Encoding.Default.GetBytes("Connection: upgrade\n"));
-                    // socket.Send(System.Text.Encoding.Default.GetBytes("Upgrade: websocket\n"));
-                    // socket.Send(System.Text.Encoding.Default.GetBytes("Sec-WebSocket-Accept: " + negociatedkey));
-
                     if (this.headersmap.ContainsKey("Sec-WebSocket-Protocol"))
                     {
                         byte[] protocol = new byte[0];

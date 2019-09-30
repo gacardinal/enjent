@@ -10,17 +10,32 @@ namespace NarcityMedia.Enjent
         GET, POST, DELETE, PUT
     }
 
+    /// <summary>
+    /// A very 'bare-bones' representation of an HTTP request
+    /// </summary>
     public sealed class EnjentHTTPRequest
     {
         public string URL;
+
+        /// <summary>
+        /// Query string that was sent with the request
+        /// </summary>
         public NameValueCollection QueryString;
+
+        /// <summary>
+        /// HTTP headers sent with the request
+        /// </summary>
         public Dictionary<string, string> Headers;
-        public EnjentHTTPMethod Methods;
+
+        /// <summary>
+        /// HTTP method (or verb) used to make the request
+        /// </summary>
+        public EnjentHTTPMethod Method;
         
         public EnjentHTTPRequest(string url, EnjentHTTPMethod method, Dictionary<string, string> headers)
         {
             this.URL = url;
-            this.Methods = method;
+            this.Method = method;
             this.Headers = headers;
             this.QueryString = new NameValueCollection(0);
         }
@@ -28,7 +43,7 @@ namespace NarcityMedia.Enjent
         public EnjentHTTPRequest(string url, EnjentHTTPMethod method, Dictionary<string, byte[]> headers)
         {
             this.URL = url;
-            this.Methods = method;
+            this.Method = method;
             this.QueryString = new NameValueCollection(0);
 
             Dictionary<string, string> mappedHeaders = new Dictionary<string, string>(headers.Count);
