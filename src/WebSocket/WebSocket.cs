@@ -1,5 +1,5 @@
 using System;
-using System.Net;
+using System.Collections.Generic;
 
 namespace NarcityMedia.Enjent
 {
@@ -439,6 +439,65 @@ namespace NarcityMedia.Enjent
         public WebSocketCloseFrame(WebSocketCloseCode closeCode, string closeReason) : this(closeCode)
         {
             this.CloseReason = closeReason;
+        }
+    }
+
+    /// <summary>
+    /// Represents a message that is to be sent via WebSocket.
+    /// A message is composed of one or more frames.
+    /// </summary>
+    /// <remarks>This public class only support messages that can fit in a single frame for now</remarks>
+    public abstract class WebSocketMessage
+    {
+        /// <summary>
+        /// Buffer containing the payload data
+        /// </summary>
+        public byte[] Payload;
+
+		/// <summary>
+		/// Type of the current message
+		/// </summary>
+		public readonly WebSocketDataFrame.DataFrameType MessageType;
+
+		/// <summary>
+		/// Creates an instance of WebSocketMessage that contains the given payload.
+		/// <see cref="MessageType" /> will be set to <see cref="WebSocketDataFrame.DataFrameType.Binary" />
+		/// </summary>
+		/// <param name="payload">The payload to initialize the message with</param>
+        public WebSocketMessage(byte[] payload)
+        {
+			this.MessageType = WebSocketDataFrame.DataFrameType.Binary;
+			this.Payload = payload;
+        }
+
+		/// <summary>
+		/// Creates an instance of WebSocketMessage that contains the given message as payload.
+		/// <see cref="MessageType" /> will be set to <see cref="WebSocketDataFrame.DataFrameType.Text" />
+		/// </summary>
+		/// <param name="message">The message to set as the payload</param>
+		public WebSocketMessage(string message)
+		{
+			this.MessageType = WebSocketDataFrame.DataFrameType.Text;
+			this.Payload = System.Text.Encoding.UTF8.GetBytes(message);
+		}
+
+		public WebSocketMessage(byte[] payload, WebSocketDataFrame.DataFrameType messageType)
+		{
+			
+		}
+
+        /// <summary>
+        /// Returns the Websocket frames that compose the current message, as per
+        /// the websocket standard
+        /// </summary>
+        /// <remarks>The method currently supports only 1 frame messages</remarks>
+        /// <returns>A List containing the frames of the message</returns>
+        public List<WebSocketFrame> GetFrames()
+        {
+            List<WebSocketFrame> frames = new List<WebSocketFrame>(1);
+            frames.Add(new WebSocketDataFrame(true, false, this.Payload, this.MessageType));
+
+            return frames;
         }
     }
 }

@@ -128,36 +128,4 @@ namespace NarcityMedia.Enjent
             }
         }
     }
-
-    /// <summary>
-    /// Represents a message that is to be sent via WebSocket.
-    /// A message is composed of one or more frames.
-    /// </summary>
-    /// <remarks>This public class only support messages that can fit in a single frame for now</remarks>
-    public abstract class WebSocketMessage
-    {
-        /// <summary>
-        /// Buffer containing the payload data
-        /// </summary>
-        public byte[] Payload;
-
-        public WebSocketMessage(byte[] payload)
-        {
-
-        }
-
-        /// <summary>
-        /// Returns the Websocket frames that compose the current message, as per
-        /// the websocket standard
-        /// </summary>
-        /// <remarks>The method currently supports only 1 frame messages</remarks>
-        /// <returns>A List containing the frames of the message</returns>
-        public List<WebSocketFrame> GetFrames()
-        {
-            List<WebSocketFrame> frames = new List<WebSocketFrame>(1);
-            frames.Add(new WebSocketDataFrame(true, false, payload, this.MessageType));
-
-            return frames;
-        }
-    }
 }

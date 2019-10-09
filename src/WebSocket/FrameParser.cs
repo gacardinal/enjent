@@ -111,5 +111,27 @@ namespace NarcityMedia.Enjent
 
             return unmasked;
         }
+
+		private static unsafe void ApplyMask(byte[] data, byte[] outBuf, int inOffset, int outOffset, int length, uint mask)
+        {
+            fixed (byte* fpInBuf = data)
+            {
+                fixed (byte* fpOutBuf = outBuf)
+                {
+					uint payloadLength = &fpInBuf->length;
+                    uint* pOutBuf = (uint*)fpOutBuf + (outOffset / 4);
+                    uint* pInBuf = (uint*)(fpInBuf + inOffset);
+                    uint* end = pInBuf + (length / 4 + 1);
+
+                    if (outOffset % 4 != 0)
+                        *pOutBuf++ = *pInBuf++ ^ (mask & (0xffffffffU >> ((outOffset % 4) * 8)));
+
+                    while (pInBuf < end)
+                    {
+                        *pOutBuf++ = *pInBuf++ ^ mask;
+                    }
+                }
+            }
+        }
     }
 }
