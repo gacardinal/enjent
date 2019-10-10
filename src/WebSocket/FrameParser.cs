@@ -102,7 +102,50 @@ namespace NarcityMedia.Enjent
 
             if (data.Length == 0) return new byte[0];
 
-            byte[] unmasked = new byte[data.Length];
+			return ApplyMaskBlock(data, maskingKey);
+        }
+
+		private static byte[] ApplyMaskBlock(byte[] data, byte[] maskingKey)
+        {
+			if (data.Length < 4)
+			{
+				uint fullMaskingKey = (uint) ((maskingKey[0] << 24) | (maskingKey[1] << 16) | (maskingKey[2] << 8) | maskingKey[3]);
+				byte b0, b1, b2, b3;
+				byte[] result = new byte[data.Length];
+				for (uint i = 0; i < data.Length; i = i + 4)
+				{
+					if (data.Length - i >= 4)
+					{
+						b0 = data[i];		b1 = data[i + 1];
+						b2 = data[i + 2];	b3 = data[i + 3];
+
+						uint fourByteBlock = (uint) ((b0 << 24) | (b1 << 16) | (b3 << 8) | b3);
+
+						uint blockResult = fourByteBlock ^ fullMaskingKey;
+						
+						result[i + 3]	= (byte) (blockResult & 0x000F);
+						result[i + 2]	= (byte) (blockResult >> 24 & 0x000F);
+						result[i + 1]	= (byte) (blockResult >> 16 & 0x000F);
+						result[i]		= (byte) (blockResult >> 8 & 0x000F);
+					}
+					else
+					{
+						byte[] lastBytes = ApplyMaskOneByOne(data[6..], maskingKey);
+						lastBytes.CopyTo(results, data.Length - i);
+					}
+				}
+
+				return result;
+			}
+			else
+			{
+				return ApplyMaskOneByOne(data, maskingKey);
+			}
+        }
+
+		private static byte[] ApplyMaskOneByOne(byte[] data, byte[] maskingKey)
+		{
+			byte[] unmasked = new byte[data.Length];
 
             for (int i = 0; i < data.Length; i++)
             {
@@ -110,28 +153,6 @@ namespace NarcityMedia.Enjent
             }
 
             return unmasked;
-        }
-
-		private static unsafe void ApplyMask(byte[] data, byte[] outBuf, int inOffset, int outOffset, int length, uint mask)
-        {
-            fixed (byte* fpInBuf = data)
-            {
-                fixed (byte* fpOutBuf = outBuf)
-                {
-					uint payloadLength = &fpInBuf->length;
-                    uint* pOutBuf = (uint*)fpOutBuf + (outOffset / 4);
-                    uint* pInBuf = (uint*)(fpInBuf + inOffset);
-                    uint* end = pInBuf + (length / 4 + 1);
-
-                    if (outOffset % 4 != 0)
-                        *pOutBuf++ = *pInBuf++ ^ (mask & (0xffffffffU >> ((outOffset % 4) * 8)));
-
-                    while (pInBuf < end)
-                    {
-                        *pOutBuf++ = *pInBuf++ ^ mask;
-                    }
-                }
-            }
-        }
+		}
     }
 }
