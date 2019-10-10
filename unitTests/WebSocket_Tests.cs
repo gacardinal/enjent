@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Linq;
 using System.Collections.Generic;
 using Xunit;
@@ -48,6 +49,24 @@ namespace EnjentUnitTests
             Assert.True(expectedMasked.SequenceEqual(masked), "Masking algorithm didn't produce expected output");
         }
 
+		// This is not being NOT during the test execution
+		public void WebSocketFrame_ApplyMask_Benchmark()
+		{
+			byte[] k = new byte[4];
+            rand.NextBytes(k);
+			byte[] bigBuffer = new byte[1024 * 1000000];
+			rand.NextBytes(bigBuffer);
+			
+			this.output.WriteLine("Commencing masking algorithm benchmark");
+			Stopwatch watch = Stopwatch.StartNew();
+
+			byte[] masked = WebSocketFrame.ApplyMask(bigBuffer, k);
+
+			watch.Stop();
+			long elapsedMs = watch.ElapsedMilliseconds;
+			this.output.WriteLine("Completed in : " + elapsedMs.ToString());
+		}
+
         [Fact]
         /// <summary>
         /// When the masking algorithm is applied on plain data (d1) with a given key (k),
@@ -71,8 +90,6 @@ namespace EnjentUnitTests
             Assert.True(original_rndContent.SequenceEqual(reverted), "The masking algorithm didn't yeild the original data when applying the algorithm on masked data");
         }
 		
-
-
         [Theory]
         [MemberData(nameof(GetTestFrames))]
         public void WebSocketFrame_GetBytes(WebSocketFrame frame)
