@@ -15,8 +15,8 @@ namespace NarcityMedia.Enjent
 
         public event WebSocketServerEvent OnConnect 
         {
-            add { lock (this._onConnect) { this._onConnect += value; } }
-            remove { lock (this._onConnect) { this._onConnect -= value; } }
+            add { lock ( this._onConnect) { this._onConnect += value; } }
+            remove { lock ( this._onConnect) { this._onConnect -= value; } }
         }
         public event WebSocketServerEvent OnDisconnect 
         {
@@ -45,8 +45,8 @@ namespace NarcityMedia.Enjent
         public class WebSocketServerEventArgs
         {
             public TWebSocketClient Cli;
-            public Exception Exception;
-            public WebSocketDataFrame DataFrame;
+            public Exception? Exception;
+            public WebSocketDataFrame? DataFrame;
 
             public WebSocketServerEventArgs(TWebSocketClient cli)
             {

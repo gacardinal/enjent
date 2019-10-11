@@ -227,11 +227,11 @@ namespace NarcityMedia.Enjent
             /// <summary>
             /// The associated client object
             /// </summary>
-            public TWebSocketClient cli;
+            public TWebSocketClient? cli;
             /// <summary>
             /// Represents an exception that MIGHT have occured during the negotiation
             /// </summary>
-            public WebSocketNegotiationException exception;
+            public WebSocketNegotiationException? exception;
             /// <summary>
             /// Handles a successful WebSocket negotiation
             /// </summary>
@@ -240,7 +240,7 @@ namespace NarcityMedia.Enjent
             /// <summary>
             /// Invoked once the WebSocket negotiation has completed
             /// </summary>
-            public NegotiationCallback done;
+            public NegotiationCallback? done;
 
             /// <summary>
             /// Initializes a new instance of the SocketNegotiationState class
@@ -265,7 +265,7 @@ namespace NarcityMedia.Enjent
                     // Executed async once the negotiation is done
                     if (state.exception == null && cli != null)
                     {
-                        Exception e = this.AddClient(cli);
+                        Exception? e = this.AddClient(cli);
                         if (e == null)
                         {
                             this._onConnect.Invoke(this, new WebSocketServerEventArgs(cli));
@@ -307,7 +307,7 @@ namespace NarcityMedia.Enjent
         /// while trying to add the client to the clients list or while attempting to listen.
         /// If no exception is thrown, null is returned
         /// </return>
-        private Exception AddClient(TWebSocketClient cli)
+        private Exception? AddClient(TWebSocketClient cli)
         {
             try
             {
@@ -350,9 +350,8 @@ namespace NarcityMedia.Enjent
         /// <param name="cli">The client from which to start receiving</param>
         private void StartClientReceive(TWebSocketClient cli)
         {
-            ReceiveState receiveState = new ReceiveState();
-            receiveState.Cli = cli;
-            receiveState.Cli.socket.BeginReceive(receiveState.buffer, 0, ReceiveState.INIT_BUFFER_SIZE, 0,
+            ReceiveState receiveState = new ReceiveState(cli);
+            receiveState.Cli.Socket.BeginReceive(receiveState.buffer, 0, ReceiveState.INIT_BUFFER_SIZE, 0,
                                     new AsyncCallback(ReceiveCallback), receiveState);
         }
 
@@ -378,6 +377,14 @@ namespace NarcityMedia.Enjent
             /// The buffer that holds the received data
             /// </summary>
             public byte[] buffer = new byte[INIT_BUFFER_SIZE];
+
+            public ReceiveState(TWebSocketClient cli)
+            {
+                if (cli == null)
+                    throw new ArgumentNullException("cli");
+
+                this.Cli = cli;
+            }
         }
 
         /// <summary>
@@ -391,10 +398,10 @@ namespace NarcityMedia.Enjent
                 ReceiveState receiveState = (ReceiveState) iar.AsyncState;
                 try
                 {
-                    int received = receiveState.Cli.socket.EndReceive(iar);
+                    int received = receiveState.Cli.Socket.EndReceive(iar);
                     if (received != 0)
                     {
-                        WebSocketFrame? frame = WebSocketFrame.TryParse(receiveState.buffer, receiveState.Cli.socket);
+                        WebSocketFrame? frame = WebSocketFrame.TryParse(receiveState.buffer, receiveState.Cli.Socket);
                         if (frame != null)
                         {
                             if (frame is WebSocketDataFrame)
@@ -453,9 +460,13 @@ namespace NarcityMedia.Enjent
         private void NegotiateWebSocketConnection(Object s)
         {
             SocketNegotiationState state = (SocketNegotiationState) s;
+            if (state.done == null)
+            {
+                state.exception = new WebSocketNegotiationException("Negotiation state 'done' attribute is required but was nul");
+                return;
+            }
+
             bool incomingOK = false;
-            // Keep a COPY of the incoming headers
-            Dictionary<string, byte[]> incomingHeadersMap = null;
             // Try to acquire a lock on an object used to parse the HTTP request to ensure only
             // one request is parsed at a time as for now, the parsing logic is by no mean thread safe
             // and the current method is executed by multiple ThreadPool threads at once
@@ -466,7 +477,7 @@ namespace NarcityMedia.Enjent
                              this.AnalyzeRequestHeaders() &&
                              this.Negociate101Upgrade(state.handler);
 
-                incomingHeadersMap = new Dictionary<string, byte[]>(this.headersmap);
+                Dictionary<string, byte[]> incomingHeadersMap = new Dictionary<string, byte[]>(this.headersmap);
 
                 if (incomingOK)
                 {

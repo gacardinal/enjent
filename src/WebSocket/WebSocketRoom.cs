@@ -23,7 +23,7 @@ namespace NarcityMedia.Enjent
         /// Indicates the name of the current WebSocketRoom.
         /// Use this attribute to classify your rooms
         /// </summary>
-        public string Name;
+        public string? Name;
 
         /// <summary>
         /// Gets the number of <see cref="WebSocketClient" /> in the current room
@@ -53,6 +53,11 @@ namespace NarcityMedia.Enjent
         {
             this.Id = Guid.NewGuid();
             this.clients = new List<TWebSocketClient>(100);
+        }
+
+        public WebSocketRoom(string name) : this()
+        {
+            this.Name = name;
         }
 
         public WebSocketRoom(IEnumerable<TWebSocketClient> clients) : this()
@@ -224,7 +229,7 @@ namespace NarcityMedia.Enjent
     {
         private WebSocketRoom<TWebSocketClient> room;
         private int curIndex;
-        private TWebSocketClient curCli;
+        private TWebSocketClient? curCli;
 
         public WebSocketClientEnumerator(WebSocketRoom<TWebSocketClient> room)
         {
