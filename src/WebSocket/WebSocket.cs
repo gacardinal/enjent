@@ -178,7 +178,6 @@ namespace NarcityMedia.Enjent
             {
                 this._payload = value;
                 this.PayloadLength = value.Length;
-                this.Plaintext = System.Text.Encoding.UTF8.GetString(value);
             }
         }
 
@@ -196,11 +195,6 @@ namespace NarcityMedia.Enjent
         public byte OpCode;
 
         /// <summary>
-        /// The plaintext content of the current WebSocketFrame
-        /// </summary>
-        public string Plaintext;
-
-        /// <summary>
         /// Initializes a new instance of the WebSocketFrame class
         /// </summary>
         /// <param name="fin">Indicates whether the current WebSocketFrame is the last one of a multi frame message</param>
@@ -211,7 +205,8 @@ namespace NarcityMedia.Enjent
             this.Fin = fin;
             this.Masked = masked;
             this.PayloadLength = payload.Length;
-            this.Payload = payload;
+            this._payload = payload;
+
         }
 
         /// <summary>
@@ -315,11 +310,23 @@ namespace NarcityMedia.Enjent
         /// </summary>
         public DataFrameType DataType;
 
+        private string? _plaintext;
+
         /// <summary>
-        /// Initializes a new instance of the SocketDataFrame class
+        /// The plaintext content of the current WebSocketFrame
         /// </summary>
-        public WebSocketDataFrame() : base(true, true, new byte[0])
+        public string? Plaintext
         {
+            get { return this._plaintext; }
+            set
+            {
+                if (value != null)
+                {
+                    // this.Plaintext = System.Text.Encoding.UTF8.GetString(value);
+                    this._plaintext = value;
+                    this.Payload = System.Text.Encoding.UTF8.GetBytes(value);
+                }
+            }
         }
 
         /// <summary>
@@ -334,6 +341,7 @@ namespace NarcityMedia.Enjent
         {
             this.DataType = dataType;
             this.InitOPCode();
+
         }
 
         /// <summary>
@@ -378,7 +386,7 @@ namespace NarcityMedia.Enjent
     public class WebSocketCloseFrame : WebSocketControlFrame
     {
         private WebSocketCloseCode _closeCode;
-        private string _closeReason;
+        private string? _closeReason;
 
         /// <summary>
         /// Represents the <see cref="WebSocketCLoseCode"> for the closing of a WebSocket connection.
@@ -409,20 +417,23 @@ namespace NarcityMedia.Enjent
         /// be show to the end user but may be useful for debugging.
         /// </summary>
         /// <value>The string representing the close reason</value>
-        public string CloseReason
+        public string? CloseReason
         {
             get { return this._closeReason; }
             set
             {
                 this._closeReason = value;
 
-                byte[] payload = new byte[2 + value.Length];
-                byte[] reasonBytes = System.Text.Encoding.UTF8.GetBytes(value);
-                
-                Array.Copy(this._payload, payload, 2);
-                reasonBytes.CopyTo(payload, 2);
+                if (value != null)
+                {
+                    byte[] payload = new byte[2 + value.Length];
+                    byte[] reasonBytes = System.Text.Encoding.UTF8.GetBytes(value);
+                    
+                    Array.Copy(this._payload, payload, 2);
+                    reasonBytes.CopyTo(payload, 2);
 
-                this.Payload = payload;
+                    this.Payload = payload;
+                }
             }
         }
 
@@ -433,7 +444,7 @@ namespace NarcityMedia.Enjent
         {
             // Initialize the first two bytes of the close frame body to a 2-byte unsigned integer
             // as per RFC 6455 section 5.5.1
-            this.CloseCode = closeCode;
+            this._closeCode = closeCode;
         }
 
         public WebSocketCloseFrame(WebSocketCloseCode closeCode, string closeReason) : this(closeCode)
@@ -479,11 +490,6 @@ namespace NarcityMedia.Enjent
 		{
 			this.MessageType = WebSocketDataFrame.DataFrameType.Text;
 			this.Payload = System.Text.Encoding.UTF8.GetBytes(message);
-		}
-
-		public WebSocketMessage(byte[] payload, WebSocketDataFrame.DataFrameType messageType)
-		{
-			
 		}
 
         /// <summary>

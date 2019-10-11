@@ -236,7 +236,7 @@ namespace NarcityMedia.Enjent
             /// Handles a successful WebSocket negotiation
             /// </summary>
             /// <param name="cli">The newly created client object</param>
-            public delegate void NegotiationCallback(TWebSocketClient cli);
+            public delegate void NegotiationCallback(TWebSocketClient? cli);
             /// <summary>
             /// Invoked once the WebSocket negotiation has completed
             /// </summary>
@@ -251,7 +251,7 @@ namespace NarcityMedia.Enjent
                 this.handler = handler;
             }
         }
-        
+
         /// <summary>
         /// Executed by a dedicated Thread, in charge of listening for HTTP requests and handle WebSocket negociation
         /// </summary>
@@ -386,59 +386,63 @@ namespace NarcityMedia.Enjent
         /// <param name="iar">The result of the asynchronous receive operation</param>
         private void ReceiveCallback(IAsyncResult iar)
         {
-            ReceiveState receiveState = (ReceiveState) iar.AsyncState;
-            try
+            if (iar != null && iar.AsyncState != null)
             {
-                int received = receiveState.Cli.socket.EndReceive(iar);
-                if (received != 0)
+                ReceiveState receiveState = (ReceiveState) iar.AsyncState;
+                try
                 {
-                    WebSocketFrame frame = WebSocketFrame.TryParse(receiveState.buffer, receiveState.Cli.socket);
-                    if (frame != null)
+                    int received = receiveState.Cli.socket.EndReceive(iar);
+                    if (received != 0)
                     {
-                        if (frame is WebSocketDataFrame)
+                        WebSocketFrame? frame = WebSocketFrame.TryParse(receiveState.buffer, receiveState.Cli.socket);
+                        if (frame != null)
                         {
-                            if (!(String.IsNullOrEmpty(frame.Plaintext) || (frame.Plaintext.Length == 1 && char.IsControl(frame.Plaintext.ElementAt(0)))))
+                            if (frame is WebSocketDataFrame)
                             {
-                                this._onMessage.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, (WebSocketDataFrame) frame));
-                                StartClientReceive(receiveState.Cli);
+                                WebSocketDataFrame dataFrame = (WebSocketDataFrame) frame;
+                                if (!(String.IsNullOrEmpty(dataFrame.Plaintext) || (dataFrame.Plaintext.Length == 1 && char.IsControl(dataFrame.Plaintext.ElementAt(0)))))
+                                {
+                                    this._onMessage.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, (WebSocketDataFrame) frame));
+                                    StartClientReceive(receiveState.Cli);
+                                }
+                                else
+                                {
+                                    // Many browsers and WebSocket client side implementations send an empty frame on disconnection
+                                    // for some obscure reason, so if it's the case, we disconnect the client 
+                                    this.RemoveCLient(receiveState.Cli);
+                                    this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli));
+                                    receiveState.Cli.Dispose();
+                                }
                             }
                             else
                             {
-                                // Many browsers and WebSocket client side implementations send an empty frame on disconnection
-                                // for some obscure reason, so if it's the case, we disconnect the client 
-                                this.RemoveCLient(receiveState.Cli);
-                                this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli));
-                                receiveState.Cli.Dispose();
+                                this.DefaultControlFrameHandler(receiveState.Cli, (WebSocketControlFrame) frame);
+                                StartClientReceive(receiveState.Cli);
                             }
                         }
                         else
                         {
-                            this.DefaultControlFrameHandler(receiveState.Cli, (WebSocketControlFrame) frame);
-                            StartClientReceive(receiveState.Cli);
+                            this.RemoveCLient(receiveState.Cli);
+                            Exception e = new WebSocketServerException("Error while parsing an incoming WebSocketFrame");
+                            this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, e));
+                            receiveState.Cli.Dispose();
                         }
                     }
                     else
                     {
                         this.RemoveCLient(receiveState.Cli);
-                        Exception e = new WebSocketServerException("Error while parsing an incoming WebSocketFrame");
-                        this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, e));
+                        this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli));
                         receiveState.Cli.Dispose();
                     }
                 }
-                else
+                catch (Exception e)
                 {
+                    // TODO: Send a closing frame with 1011 "Internal Server Error" closing code as per protocol specifications
                     this.RemoveCLient(receiveState.Cli);
-                    this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli));
+                    Exception ex = new WebSocketServerException("An error occured while processing message received from client. See inner exception for additional information", e);
+                    this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, ex));
                     receiveState.Cli.Dispose();
                 }
-            }
-            catch (Exception e)
-            {
-                // TODO: Send a closing frame with 1011 "Internal Server Error" closing code as per protocol specifications
-                this.RemoveCLient(receiveState.Cli);
-                Exception ex = new WebSocketServerException("An error occured while processing message received from client. See inner exception for additional information", e);
-                this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, ex));
-                receiveState.Cli.Dispose();
             }
         }
 
