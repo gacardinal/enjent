@@ -131,7 +131,7 @@ namespace NarcityMedia.Enjent
 					else
 					{
 						byte[] lastBytes = ApplyMaskOneByOne(data[6..], maskingKey);
-						lastBytes.CopyTo(results, data.Length - i);
+						lastBytes.CopyTo(result, data.Length - i);
 					}
 				}
 
