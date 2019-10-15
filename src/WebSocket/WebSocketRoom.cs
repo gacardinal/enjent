@@ -242,12 +242,14 @@ namespace NarcityMedia.Enjent
         {
             if (++curIndex >= room.Count)
             {
+				this.curCli = null;
                 return false;
             }
             else
             {
                 curCli = room[curIndex];
             }
+
             return true;
         }
 
@@ -257,7 +259,17 @@ namespace NarcityMedia.Enjent
 
         public TWebSocketClient Current
         {
-            get { return curCli; }
+            get
+			{
+				if (this.curCli != null)
+				{
+					return this.curCli;
+				}
+				else
+				{
+					throw new Exception("Cannot access the current property when the enumerator is exhausted");
+				}
+			}
         }
 
         object IEnumerator.Current
