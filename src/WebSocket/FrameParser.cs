@@ -24,7 +24,7 @@ namespace NarcityMedia.Enjent
         /// It is necessary to pass a reference to the socket because of the way the WebSocket protocol is made.abstract It is impossible to know
         /// the length of the frame before having parsed the headers hence it is possible that more bytes will need to be read from the socket buffer.
         /// </remarks>
-        public static WebSocketFrame TryParse(byte[] headerBytes, Socket socket)
+        public static WebSocketFrame? TryParse(byte[] headerBytes, Socket socket)
         {
             int headerSize = headerBytes.Length;
             bool fin = (headerBytes[0] >> 7) != 0;
@@ -105,6 +105,7 @@ namespace NarcityMedia.Enjent
 			return ApplyMaskBlock(data, maskingKey);
         }
 
+        
 		private static byte[] ApplyMaskBlock(byte[] data, byte[] maskingKey)
         {
 			if (data.Length < 4)

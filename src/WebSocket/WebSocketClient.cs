@@ -23,12 +23,12 @@ namespace NarcityMedia.Enjent
         /// <summary>
         /// The TCP socket associated with the current WebSocketClient
         /// </summary>
-        public Socket socket;
+        public Socket Socket;
 
         /// <summary>
         /// Represents the initial HTTP request that was used to negotiate the WebSocket connection
         /// </summary>
-        public EnjentHTTPRequest InitialRequest;
+        public EnjentHTTPRequest? InitialRequest;
 
         /// <summary>
         /// Initializes a new instance of a WebSocketClient
@@ -36,20 +36,20 @@ namespace NarcityMedia.Enjent
         /// <param name="socket">A connected TCP socket that represents a conneciton to a remote client</param>
         public WebSocketClient(Socket socket)
         {
-            if (socket != null)
+            if (socket == null)
                 throw new ArgumentNullException("socket");
 
-            this.socket = socket;
+            this.Socket = socket;
             this.Id = Guid.NewGuid();
             this.InitTime = DateTime.Now;
         }
 
         public void Dispose()
         {
-            if (this.socket != null)
+            if (this.Socket != null)
             {
                 // Close method does Dispose of the object
-                this.socket.Close();
+                this.Socket.Close();
             }
         }
 
@@ -124,7 +124,7 @@ namespace NarcityMedia.Enjent
         {
             foreach (WebSocketFrame frame in frames)
             {
-                this.socket.Send(frame.GetBytes());
+                this.Socket.Send(frame.GetBytes());
             }
         }
     }

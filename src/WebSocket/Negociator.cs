@@ -294,10 +294,17 @@ namespace NarcityMedia.Enjent
 
                     if (this.headersmap.ContainsKey("Sec-WebSocket-Protocol"))
                     {
-                        byte[] protocol = new byte[0];
+                        byte[]? protocol = new byte[0];
                         this.headersmap.TryGetValue("Sec-WebSocket-Protocol", out protocol);
-						string sProtocol = System.Text.Encoding.Default.GetString(protocol);
-						sb.AppendLine("Sec-WebSocket-Protocol: " + sProtocol);
+                        if (protocol != null)
+                        {
+                            string sProtocol = System.Text.Encoding.Default.GetString(protocol);
+                            sb.AppendLine("Sec-WebSocket-Protocol: " + sProtocol);
+                        }
+                        else
+                        {
+                            return false;
+                        }
                     }
 
 					sb.Append("\n");

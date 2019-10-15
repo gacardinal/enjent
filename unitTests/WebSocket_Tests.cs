@@ -92,7 +92,7 @@ namespace EnjentUnitTests
 		
         [Theory]
         [MemberData(nameof(GetTestFrames))]
-        public void WebSocketFrame_GetBytes(WebSocketFrame frame)
+        public void WebSocketFrame_GetBytes(WebSocketDataFrame frame)
         {
             byte[] frameBytes = frame.GetBytes();
 

@@ -64,7 +64,7 @@ namespace NarcityMedia.Enjent
         {
             foreach (WebSocketFrame frame in frames)
             {
-                cli.socket.Send(frame.GetBytes());
+                cli.Socket.Send(frame.GetBytes());
             }
         }
     }
