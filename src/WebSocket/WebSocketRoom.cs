@@ -267,7 +267,7 @@ namespace NarcityMedia.Enjent
 				}
 				else
 				{
-					throw new Exception("Cannot access the current property when the enumerator is exhausted");
+					throw new InvalidOperationException("Cannot access the current property when the enumerator is exhausted");
 				}
 			}
         }
