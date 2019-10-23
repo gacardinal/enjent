@@ -46,17 +46,17 @@ namespace NarcityMedia.Enjent
         /// <summary>
         /// Thread that will listen for incoming connections
         /// </summary>
-        private Thread listener;
+        private Thread Listener;
 
         /// <summary>
         /// The socket that will be bound on the endpoint passed to the WebSocketServer.Start() method
         /// </summary>
-        private Socket socket;
+        private Socket Socket;
 
         /// <summary>
         /// Indicates whether the server is listening for incoming connections
         /// </summary>
-        private bool listening;
+        private bool Listening;
 
         /// <summary>
         /// Internal Room that holds every client that is connected to the server
@@ -93,16 +93,19 @@ namespace NarcityMedia.Enjent
         /// </summary>
         public WebSocketServer(ClientInitialization initStrategy)
         {
-            this.listener = new Thread(this.NegociationLoop);
+            this.Listener = new Thread(this.NegociationLoop);
             // Set Thread as foreground to prevent program execution finishing
-            this.listener.IsBackground = false;
-            this.listener.Name = "WebSocketServerHTTPListener";
+            this.Listener.IsBackground = false;
+            this.Listener.Name = "WebSocketServerHTTPListener";
+            
+            this.EventHandler = new Thread(this.EventHandlerLoop);
+            this.EventHandler.Name = "WebSocketEventHandler";
 
             this._allClients = new WebSocketRoom<TWebSocketClient>();
             this._allClients.Name = "GLOBAL";
 
-            this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-            this.socket.ReceiveTimeout = 1000;
+            this.Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
+            this.Socket.ReceiveTimeout = 1000;
 
             this.clients = new List<TWebSocketClient>(1024);
 
@@ -118,14 +121,14 @@ namespace NarcityMedia.Enjent
         /// <exception cref="WebSocketServerException">Thros any exception that might occur while trying to bind the socket as an inner exception</exception>
         public void Start(IPEndPoint endpoint)
         {
-            if (!this.listening)
+            if (!this.Listening)
             {
                 try
                 {
-                    this.socket.Bind(endpoint);
-                    this.socket.Listen(1024);
-                    this.listening = true;
-                    this.listener.Start();
+                    this.Socket.Bind(endpoint);
+                    this.Socket.Listen(1024);
+                    this.Listening = true;
+                    this.Listener.Start();
                 }
                 catch (SocketException e)
                 {
@@ -160,10 +163,10 @@ namespace NarcityMedia.Enjent
         /// </summary>
         public void Stop()
         {
-            this.listening = false;  // Listener Thread will exit when safe to do so
+            this.Listening = false;  // Listener Thread will exit when safe to do so
             try
             {
-                this.socket.Disconnect(true);
+                this.Socket.Disconnect(true);
             }
             catch (Exception e)
             {
@@ -257,9 +260,9 @@ namespace NarcityMedia.Enjent
         /// </summary>
         private void NegociationLoop()
         {
-            while (this.listening)
+            while (this.Listening)
             {
-                Socket handler = this.socket.Accept();  // Blocking
+                Socket handler = this.Socket.Accept();  // Blocking
                 SocketNegotiationState state = new SocketNegotiationState(handler);
                 state.done = cli => {
                     // Executed async once the negotiation is done

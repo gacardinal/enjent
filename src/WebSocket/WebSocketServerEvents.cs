@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using System.Collections.Concurrent;
 
 namespace NarcityMedia.Enjent
 {
@@ -37,6 +39,28 @@ namespace NarcityMedia.Enjent
         {
             add { lock (this._onError) { this._onError += value; } }
             remove { lock (this._onError) { this._onError -= value; } }
+        }
+
+        /// <summary>
+        /// Single thread responsible for executing the client code that handles the events
+        /// that are awaiting to be processed in the EventQueue
+        /// </summary>
+        private Thread EventHandler;
+
+        /// <summary>
+        /// Thread safe queue to hold the events that are dispatched and awaiting to be processed
+        /// by the EventHandler thread
+        /// </summary>
+        private ConcurrentQueue<WebSocketServerEventArgs> EventQueue;
+
+        private ManualResetEvent handleMessageResetEvent;
+
+        private void EventHandlerLoop()
+        {
+            while (this.Listening)
+            {
+                
+            }
         }
 
         /// <summary>
