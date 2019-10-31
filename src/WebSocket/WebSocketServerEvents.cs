@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using System.Collections.Generic;
 using System.Collections.Concurrent;
 
 namespace NarcityMedia.Enjent
@@ -51,15 +52,32 @@ namespace NarcityMedia.Enjent
         /// Thread safe queue to hold the events that are dispatched and awaiting to be processed
         /// by the EventHandler thread
         /// </summary>
-        private ConcurrentQueue<WebSocketServerEventArgs> EventQueue;
+        private ConcurrentQueue<WebSocketServerEvent> EventQueue;
 
-        private ManualResetEvent handleMessageResetEvent;
+        /// <summary>
+        /// Wait handle that is set whenever anything is pushed to the EventQueue to signal <see cref="this.EventHandler" />
+        /// to execute the events that are in the event queue.
+        /// </summary>
+        private ManualResetEventSlim handleMessageResetEvent;
 
         private void EventHandlerLoop()
         {
+            IEnumerator<WebSocketServerEvent> eventsEnum;
             while (this.Listening)
             {
+                handleMessageResetEvent.Wait();
                 
+                eventsEnum = EventQueue.GetEnumerator();
+
+                if (eventsEnum.MoveNext())
+                {
+                    do
+                    {
+                    }
+                    while (eventsEnum.MoveNext());
+                }
+
+                handleMessageResetEvent.Reset();
             }
         }
 
