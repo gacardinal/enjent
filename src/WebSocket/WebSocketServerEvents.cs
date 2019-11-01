@@ -73,6 +73,7 @@ namespace NarcityMedia.Enjent
                 {
                     do
                     {
+                        
                     }
                     while (eventsEnum.MoveNext());
                 }
@@ -80,30 +81,72 @@ namespace NarcityMedia.Enjent
                 handleMessageResetEvent.Reset();
             }
         }
+    }
+    
+    /// <summary>
+    /// Instance of this class are passed to WebSocketServerEvent handlers as arguments
+    /// </summary>
+    public abstract class WebSocketServerEventArgs<TWebSocketClient> where TWebSocketClient : WebSocketClient
+    {
+        public TWebSocketClient Cli;
 
-        /// <summary>
-        /// Instance of this class are passed to WebSocketServerEvent handlers as arguments
-        /// </summary>
-        public class WebSocketServerEventArgs
+        public WebSocketServerEventArgs(TWebSocketClient cli)
         {
-            public TWebSocketClient Cli;
-            public Exception? Exception;
-            public WebSocketDataFrame? DataFrame;
-
-            public WebSocketServerEventArgs(TWebSocketClient cli)
-            {
-                this.Cli = cli;
-            }
-
-            public WebSocketServerEventArgs(TWebSocketClient cli, WebSocketDataFrame dataFrame) : this(cli)
-            {
-                this.DataFrame = dataFrame;
-            }
-
-            public WebSocketServerEventArgs(TWebSocketClient cli, Exception innerException) : this(cli)
-            {
-                this.Exception = innerException;
-            }
+            this.Cli = cli;
         }
     }
+    
+    public class WebSocketServerMessageEventArgs<TWebSocketClient> : WebSocketServerEventArgs<TWebSocketClient> where TWebSocketClient : WebSocketClient
+    {
+        public WebSocketDataFrame DataFrame;
+        
+        public WebSocketServerMessageEventArgs(TWebSocketClient cli, WebSocketDataFrame dataFrame) : base(cli)
+        {
+            this.DataFrame = dataFrame;
+        }
+    }
+
+    public class WebSocketServerConnectionEventArgs<TWebSocketClient> : WebSocketServerEventArgs<TWebSocketClient> where TWebSocketClient : WebSocketClient
+    {
+        public WebSocketServerConnectionEventArgs(TWebSocketClient cli) : base(cli)
+        {
+        }
+    }
+
+    
+    public class WebSocketServerDisconnectionEventArgs<TWebSocketClient> : WebSocketServerEventArgs<TWebSocketClient> where TWebSocketClient : WebSocketClient
+    {
+        /// <summary>
+        /// <see cref="Exception" /> that lead to the closing of the current conneciton, if any
+        /// </summary>
+        public Exception? Exception;
+
+        public WebSocketServerDisconnectionEventArgs(TWebSocketClient cli) : base(cli)
+        {
+        }
+    }
+
+    public class WebSocketServerErrorEventArgs<TWebSocketClient> : WebSocketServerEventArgs<TWebSocketClient> where TWebSocketClient : WebSocketClient
+    {
+        /// <summary>
+        /// The <see cref="Exception" /> that triggered the current event
+        /// </summary>
+        public Exception Exception;
+
+        public WebSocketServerErrorEventArgs(TWebSocketClient cli, Exception innerException) : base(cli)
+        {
+            this.Exception = innerException;
+        }
+    }
+
+    public class WebSocketServerControlFrameEventArgs<TWebSocketClient> : WebSocketServerEventArgs<TWebSocketClient> where TWebSocketClient : WebSocketClient
+    {
+        WebSocketControlFrame ControlFrame;
+
+        public WebSocketServerControlFrameEventArgs(TWebSocketClient cli, WebSocketControlFrame cf) : base(cli)
+        {
+            this.ControlFrame = cf;
+        }
+    }
+
 }
