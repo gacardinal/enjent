@@ -5,38 +5,41 @@ using System.Collections.Concurrent;
 
 namespace NarcityMedia.Enjent
 {
-
     public partial class WebSocketServer<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {
-        private WebSocketServerEvent _onConnect = delegate {};
-        private WebSocketServerEvent _onDisconnect = delegate {};
-        private WebSocketServerEvent _onMessage = delegate {};
-        private WebSocketServerEvent _onControlFrame = delegate {};
-        private WebSocketServerEvent _onError = delegate {};
+        public delegate void ConnectionEvent(object sender, ConnectionEventArgs ca);
+        public delegate void DisconnectEvent(object sender, DisconnectionEventArgs da);
+        public delegate void MessageEvent(object sender, MessageEventArgs ma);
+        public delegate void ControlFrameReceived(object sender, ControlFrameEventArgs a);
+        public delegate void ErrorEvent(object sender, ErrorEventArgs a);
 
-        public delegate void WebSocketServerEvent(object sender, WebSocketServerEventArgs a);
+        private ConnectionEvent _onConnect = delegate {};
+        private DisconnectEvent _onDisconnect = delegate {};
+        private MessageEvent _onMessage = delegate {};
+        private ControlFrameReceived _onControlFrame = delegate {};
+        private ErrorEvent _onError = delegate {};
 
-        public event WebSocketServerEvent OnConnect 
+        public event ConnectionEvent OnConnect 
         {
             add { lock ( this._onConnect) { this._onConnect += value; } }
             remove { lock ( this._onConnect) { this._onConnect -= value; } }
         }
-        public event WebSocketServerEvent OnDisconnect 
+        public event DisconnectEvent OnDisconnect 
         {
             add { lock (this._onDisconnect) { this._onDisconnect += value; } }
             remove { lock (this._onDisconnect) { this._onDisconnect -= value; } }
         }
-        public event WebSocketServerEvent OnMessage 
+        public event MessageEvent OnMessage 
         {
             add { lock (this._onMessage) { this._onMessage += value; } }
             remove { lock (this._onMessage) { this._onMessage -= value; } }
         }
-        public event WebSocketServerEvent OnControlFrame 
+        public event ControlFrameReceived OnControlFrame 
         {
             add { lock (this._onControlFrame) { this._onControlFrame += value; } }
             remove { lock (this._onControlFrame) { this._onControlFrame -= value; } }
         }
-        public event WebSocketServerEvent OnError 
+        public event ErrorEvent OnError 
         {
             add { lock (this._onError) { this._onError += value; } }
             remove { lock (this._onError) { this._onError -= value; } }
@@ -49,10 +52,10 @@ namespace NarcityMedia.Enjent
         private Thread EventHandler;
 
         /// <summary>
-        /// Thread safe queue to hold the events that are dispatched and awaiting to be processed
-        /// by the EventHandler thread
+        /// Thread safe queue to hold the event args that correspond to events
+        /// that need to be processed by the EventHandler thread
         /// </summary>
-        private ConcurrentQueue<WebSocketServerEvent> EventQueue;
+        private ConcurrentQueue<WebSocketServerEventArgs> EventQueue;
 
         /// <summary>
         /// Wait handle that is set whenever anything is pushed to the EventQueue to signal <see cref="this.EventHandler" />
@@ -60,92 +63,132 @@ namespace NarcityMedia.Enjent
         /// </summary>
         private ManualResetEventSlim handleMessageResetEvent;
 
+        /// <summary>
+        /// Listens to <see cref="this.handleMessageResetEvent" /> to know when events are pushed in <see cref="this.EventQueue" />.
+        /// When the ManualResetEvent is signaled, this methods empties the event queue and processes the events sequentially and
+        /// goes back to waiting for the ManualResetEvent
+        /// </summary>
+        /// <remarks>
+        /// This method is executed by the <see cref="this.EventHandler" /> thread
+        /// </remarks>
         private void EventHandlerLoop()
         {
-            IEnumerator<WebSocketServerEvent> eventsEnum;
+            WebSocketServerEventArgs? curEventArgs;
             while (this.Listening)
             {
+                // After loop starts, wait for manual reset event to be set, indicating events are ready to be processed
                 handleMessageResetEvent.Wait();
                 
-                eventsEnum = EventQueue.GetEnumerator();
-
-                if (eventsEnum.MoveNext())
+                if (!EventQueue.IsEmpty)
                 {
+                    // Execute all avents sequentially until EventQueue is empty
                     do
                     {
-                        
+                        if (EventQueue.TryDequeue(out curEventArgs))
+                        {
+                            if (curEventArgs is MessageEventArgs)
+                                this._onMessage.Invoke(this, (MessageEventArgs) curEventArgs);
+                            else if (curEventArgs is ConnectionEventArgs)
+                                this._onConnect.Invoke(this, (ConnectionEventArgs) curEventArgs);
+                            else if (curEventArgs is DisconnectionEventArgs)
+                                this._onDisconnect.Invoke(this, (DisconnectionEventArgs) curEventArgs);
+                            else if (curEventArgs is ControlFrameEventArgs)
+                                this._onControlFrame.Invoke(this, (ControlFrameEventArgs) curEventArgs);
+                            else if (curEventArgs is ErrorEventArgs)
+                                this._onError.Invoke(this, (ErrorEventArgs) curEventArgs);
+                        }
                     }
-                    while (eventsEnum.MoveNext());
+                    while (!EventQueue.IsEmpty);
                 }
 
+                // After EventQueue has been emptied, reset the manual reset event to block thread until
+                // some new events are pushed in the queue
                 handleMessageResetEvent.Reset();
             }
         }
-    }
-    
-    /// <summary>
-    /// Instance of this class are passed to WebSocketServerEvent handlers as arguments
-    /// </summary>
-    public abstract class WebSocketServerEventArgs<TWebSocketClient> where TWebSocketClient : WebSocketClient
-    {
-        public TWebSocketClient Cli;
 
-        public WebSocketServerEventArgs(TWebSocketClient cli)
+        /// <summary>
+        /// Pushes a given instance of a type derived of WebSocketServerEventArgs in the EventQueue and sets the
+        /// ManualResetEvent to signal the EventHandler thread to proceed
+        /// </summary>
+        /// <remarks>
+        /// This code will be executed by a large number of different ThreadPool threads that are responsible for handling
+        /// traffic on all the different websocket TCP sockets that are open with the clients
+        /// </remarks>
+        protected void PushToEventQueue(WebSocketServerEventArgs eventArgs)
         {
-            this.Cli = cli;
+            EventQueue.Enqueue(eventArgs);
+            this.handleMessageResetEvent.Set();
         }
-    }
-    
-    public class WebSocketServerMessageEventArgs<TWebSocketClient> : WebSocketServerEventArgs<TWebSocketClient> where TWebSocketClient : WebSocketClient
-    {
-        public WebSocketDataFrame DataFrame;
         
-        public WebSocketServerMessageEventArgs(TWebSocketClient cli, WebSocketDataFrame dataFrame) : base(cli)
-        {
-            this.DataFrame = dataFrame;
-        }
-    }
-
-    public class WebSocketServerConnectionEventArgs<TWebSocketClient> : WebSocketServerEventArgs<TWebSocketClient> where TWebSocketClient : WebSocketClient
-    {
-        public WebSocketServerConnectionEventArgs(TWebSocketClient cli) : base(cli)
-        {
-        }
-    }
-
-    
-    public class WebSocketServerDisconnectionEventArgs<TWebSocketClient> : WebSocketServerEventArgs<TWebSocketClient> where TWebSocketClient : WebSocketClient
-    {
         /// <summary>
-        /// <see cref="Exception" /> that lead to the closing of the current conneciton, if any
+        /// Instance of this class are passed to WebSocketServerEvent handlers as arguments
         /// </summary>
-        public Exception? Exception;
-
-        public WebSocketServerDisconnectionEventArgs(TWebSocketClient cli) : base(cli)
+        public abstract class WebSocketServerEventArgs
         {
+            public TWebSocketClient Cli;
+
+            public WebSocketServerEventArgs(TWebSocketClient cli)
+            {
+                this.Cli = cli;
+            }
         }
-    }
-
-    public class WebSocketServerErrorEventArgs<TWebSocketClient> : WebSocketServerEventArgs<TWebSocketClient> where TWebSocketClient : WebSocketClient
-    {
-        /// <summary>
-        /// The <see cref="Exception" /> that triggered the current event
-        /// </summary>
-        public Exception Exception;
-
-        public WebSocketServerErrorEventArgs(TWebSocketClient cli, Exception innerException) : base(cli)
+        
+        public class MessageEventArgs : WebSocketServerEventArgs
         {
-            this.Exception = innerException;
+            public WebSocketDataFrame DataFrame;
+            
+            public MessageEventArgs(TWebSocketClient cli, WebSocketDataFrame dataFrame) : base(cli)
+            {
+                this.DataFrame = dataFrame;
+            }
         }
-    }
 
-    public class WebSocketServerControlFrameEventArgs<TWebSocketClient> : WebSocketServerEventArgs<TWebSocketClient> where TWebSocketClient : WebSocketClient
-    {
-        WebSocketControlFrame ControlFrame;
-
-        public WebSocketServerControlFrameEventArgs(TWebSocketClient cli, WebSocketControlFrame cf) : base(cli)
+        public class ConnectionEventArgs : WebSocketServerEventArgs
         {
-            this.ControlFrame = cf;
+            public ConnectionEventArgs(TWebSocketClient cli) : base(cli)
+            {
+            }
+        }
+
+        
+        public class DisconnectionEventArgs : WebSocketServerEventArgs
+        {
+            /// <summary>
+            /// <see cref="Exception" /> that lead to the closing of the current conneciton, if any
+            /// </summary>
+            public Exception? Exception;
+
+            public DisconnectionEventArgs(TWebSocketClient cli) : base(cli)
+            {}
+
+            public DisconnectionEventArgs(TWebSocketClient cli, Exception e) : this(cli)
+            {
+                Exception = e;
+            }
+        }
+
+        public class ErrorEventArgs : WebSocketServerEventArgs
+        {
+            /// <summary>
+            /// The <see cref="Exception" /> that triggered the current event
+            /// </summary>
+            public Exception Exception;
+
+            public ErrorEventArgs(TWebSocketClient cli, Exception innerException) : base(cli)
+            {
+                this.Exception = innerException;
+            }
+        }
+
+        public class ControlFrameEventArgs : WebSocketServerEventArgs
+        {
+            WebSocketControlFrame ControlFrame;
+
+            public ControlFrameEventArgs(TWebSocketClient cli, WebSocketControlFrame cf) : base(cli)
+            {
+                this.ControlFrame = cf;
+            }
         }
     }
 
