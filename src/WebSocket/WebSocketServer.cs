@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -101,6 +102,10 @@ namespace NarcityMedia.Enjent
             this.EventHandler = new Thread(this.EventHandlerLoop);
             this.EventHandler.Name = "WebSocketEventHandler";
 
+            this.EventQueue = new ConcurrentQueue<WebSocketServerEventArgs>();
+
+            this.handleMessageResetEvent = new ManualResetEventSlim(false);
+
             this._allClients = new WebSocketRoom<TWebSocketClient>();
             this._allClients.Name = "GLOBAL";
 
@@ -108,6 +113,7 @@ namespace NarcityMedia.Enjent
             this.Socket.ReceiveTimeout = 1000;
 
             this.clients = new List<TWebSocketClient>(1024);
+
 
             this.ClientInitializationStrategy = initStrategy;
 
@@ -129,6 +135,7 @@ namespace NarcityMedia.Enjent
                     this.Socket.Listen(1024);
                     this.Listening = true;
                     this.Listener.Start();
+                    this.EventHandler.Start();
                 }
                 catch (SocketException e)
                 {
@@ -191,15 +198,18 @@ namespace NarcityMedia.Enjent
                     try
                     {
                         cli.SendControlFrame(new WebSocketControlFrame(true, false, WebSocketOPCode.Close));
-                        lock (this._onDisconnect) this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, cFrame));
+                        this.PushToEventQueue(new DisconnectionEventArgs(cli));
+                        // lock (this._onDisconnect) this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, cFrame));
                     }
                     catch (Exception e)
                     {
-                        WebSocketServerException ex = new WebSocketServerException("Error while sending 'close' control frame", e);
-                        lock (this._onDisconnect) this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, ex));
+                        WebSocketServerException ex = new WebSocketServerException("Error while sending 'close' control frame. Connection will be dropped forcefully. See inner exception for additional information.", e);
+                        this.PushToEventQueue(new DisconnectionEventArgs(cli, ex));
+                        // lock (this._onDisconnect) this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, ex));
                     }
                     finally
                     {
+
                         cli.Dispose();
                     }
                     break;
@@ -271,11 +281,11 @@ namespace NarcityMedia.Enjent
                         Exception? e = this.AddClient(cli);
                         if (e == null)
                         {
-                            this._onConnect.Invoke(this, new WebSocketServerEventArgs(cli));
+                            this.PushToEventQueue(new ConnectionEventArgs(cli));
                         }
                         else
                         {
-                            lock (this._onError) this._onError.Invoke(this, new WebSocketServerEventArgs(cli, e));
+                            this.PushToEventQueue(new ErrorEventArgs(cli, e));
                             cli.Dispose();
                             handler.Dispose();
                         }
@@ -412,15 +422,15 @@ namespace NarcityMedia.Enjent
                                 WebSocketDataFrame dataFrame = (WebSocketDataFrame) frame;
                                 if (!(String.IsNullOrEmpty(dataFrame.Plaintext) || (dataFrame.Plaintext.Length == 1 && char.IsControl(dataFrame.Plaintext.ElementAt(0)))))
                                 {
-                                    this._onMessage.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, (WebSocketDataFrame) frame));
+                                    this.PushToEventQueue(new MessageEventArgs(receiveState.Cli, (WebSocketDataFrame) frame));
                                     StartClientReceive(receiveState.Cli);
                                 }
                                 else
                                 {
-                                    // Many browsers and WebSocket client side implementations send an empty frame on disconnection
+                                    // Many browsers and WebSocket client side implementations send an empty data frame on disconnection
                                     // for some obscure reason, so if it's the case, we disconnect the client 
                                     this.RemoveCLient(receiveState.Cli);
-                                    this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli));
+                                    this.PushToEventQueue(new DisconnectionEventArgs(receiveState.Cli));
                                     receiveState.Cli.Dispose();
                                 }
                             }
@@ -434,14 +444,14 @@ namespace NarcityMedia.Enjent
                         {
                             this.RemoveCLient(receiveState.Cli);
                             Exception e = new WebSocketServerException("Error while parsing an incoming WebSocketFrame");
-                            this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, e));
+                            this.PushToEventQueue(new DisconnectionEventArgs(receiveState.Cli, e));
                             receiveState.Cli.Dispose();
                         }
                     }
                     else
                     {
                         this.RemoveCLient(receiveState.Cli);
-                        this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli));
+                        this.PushToEventQueue(new DisconnectionEventArgs(receiveState.Cli));
                         receiveState.Cli.Dispose();
                     }
                 }
@@ -450,7 +460,7 @@ namespace NarcityMedia.Enjent
                     // TODO: Send a closing frame with 1011 "Internal Server Error" closing code as per protocol specifications
                     this.RemoveCLient(receiveState.Cli);
                     Exception ex = new WebSocketServerException("An error occured while processing message received from client. See inner exception for additional information", e);
-                    this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(receiveState.Cli, ex));
+                    this.PushToEventQueue(new DisconnectionEventArgs(receiveState.Cli, ex));
                     receiveState.Cli.Dispose();
                 }
             }
