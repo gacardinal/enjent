@@ -13,7 +13,7 @@ using System;
 using System.Net;
 using NarcityMedia.Enjent;
 
-namespace UseSocketServer
+namespace UseEnjent
 {
     class Program
     {
@@ -24,8 +24,9 @@ namespace UseSocketServer
 
             // Add event handlers
             Wss.OnConnect += HandleConnect;
-            Wss.OnMessage += HandleMessage; 
+            Wss.OnMessage += HandleMessage;
             Wss.OnDisconnect += HandleDisconnect;
+            Wss.OnError += HandleError;
 
             // Start the server
             try
@@ -38,22 +39,34 @@ namespace UseSocketServer
             }
         }
 
-        public static void HandleConnect(object sender, WebSocketServerEventArgs args)
+        public static void HandleConnect(object sender, WebSocketServer.ConnectionEventArgs args)
         {
             // Execute logic on socket connection
             Console.WriteLine("Got a new socket ID: " + args.Cli.Id);
         }
         
-        public static void HandleMessage(object sender, WebSocketServerEventArgs args)
+        public static void HandleMessage(object sender, WebSocketServer.MessageEventArgs args)
         {
             // Execute logic on socket message
             Console.WriteLine(String.Format("User {0} says : {1}", args.Cli.Id, args.DataFrame.Plaintext));
         }
         
-        public static void HandleDisconnect(object sender, WebSocketServerEventArgs args)
+        public static void HandleDisconnect(object sender, WebSocketServer.DisconnectionEventArgs args)
         {
             // Execute logic on socket disconnect
-            Console.WriteLine(String.Format("User {0} disconnected", args.Cli.Id));
+            if (args.Exception != null)
+            {
+                Console.WriteLine(String.Format("User {0} disconnected with exception: {1} - {2}", args.Cli.Id, args.Exception.Message, args.Exception.InnerException.Message));
+            }
+            else
+            {
+                Console.WriteLine(String.Format("User {0} disconnected", args.Cli.Id));
+            }
+        }
+
+        public static void HandleError(object sender, WebSocketServer.ErrorEventArgs args)
+        {
+            Console.WriteLine(String.Format("Got error with user {0}. {1} {2}", args.Cli.Id, args.Exception.Message, args.Exception.InnerException.Message));
         }
     }
 }
