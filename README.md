@@ -24,7 +24,7 @@ namespace UseSocketServer
 
             // Add event handlers
             Wss.OnConnect += HandleConnect;
-            Wss.OnMessage += HandleMessage;
+            Wss.OnMessage += HandleMessage; 
             Wss.OnDisconnect += HandleDisconnect;
 
             // Start the server
@@ -60,7 +60,7 @@ namespace UseSocketServer
 ```
 Your output should look something like this
 
-![Example Output](./assets/example_output.png)
+![Example Output](./src/assets/example_output.png)
 
 That's it! You're good to go!
 
