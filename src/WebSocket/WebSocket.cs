@@ -158,7 +158,7 @@ namespace NarcityMedia.Enjent
 
         /// <summary>
         /// Indicates whether the current WebSocketFrame is masked.
-        ///  Frames comming from the client must be masked whereas frames sent from the server must NOT be masked
+        /// Frames comming from the client must be masked whereas frames sent from the server must NOT be masked
         /// </summary>
         public readonly bool Masked;
 
@@ -177,7 +177,6 @@ namespace NarcityMedia.Enjent
             set
             {
                 this._payload = value;
-                this.PayloadLength = value.Length;
             }
         }
 
@@ -187,7 +186,7 @@ namespace NarcityMedia.Enjent
 		/// length equal to up to the value of an unsigned 64 bits integer, the .NET runtime imposes
 		/// a hard limit on the maximum size of any object, that limit being the length of an int
 		/// </summary>
-        public int PayloadLength;
+        public int PayloadLength { get { return this.Payload.Length; } }
 
         /// <summary>
         /// The OPCode of the current WebSocketFrame
@@ -204,7 +203,6 @@ namespace NarcityMedia.Enjent
         {
             this.Fin = fin;
             this.Masked = masked;
-            this.PayloadLength = payload.Length;
             this._payload = payload;
 
         }
@@ -341,7 +339,10 @@ namespace NarcityMedia.Enjent
         {
             this.DataType = dataType;
             this.InitOPCode();
-
+            if (this.DataType == DataFrameType.Text)
+            {
+                this.Plaintext = System.Text.Encoding.UTF8.GetString(payload);
+            }
         }
 
         /// <summary>
