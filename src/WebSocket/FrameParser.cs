@@ -113,7 +113,7 @@ namespace NarcityMedia.Enjent
 				uint fullMaskingKey = (uint) ((maskingKey[0] << 24) | (maskingKey[1] << 16) | (maskingKey[2] << 8) | maskingKey[3]);
 				byte b0, b1, b2, b3;
 				byte[] result = new byte[data.Length];
-				for (uint i = 0; i < data.Length; i = i + 4)
+				for (int i = 0; i < data.Length; i = i + 4)
 				{
 					if (data.Length - i >= 4)
 					{
@@ -131,8 +131,8 @@ namespace NarcityMedia.Enjent
 					}
 					else
 					{
-						byte[] lastBytes = ApplyMaskOneByOne(data[6..], maskingKey);
-						lastBytes.CopyTo(result, data.Length - i);
+						byte[] lastBytes = ApplyMaskOneByOne(data[i..], maskingKey);
+						lastBytes.CopyTo(result, i);
 					}
 				}
 
