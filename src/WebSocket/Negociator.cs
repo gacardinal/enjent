@@ -63,12 +63,12 @@ namespace NarcityMedia.Enjent
             67, 56, 53, 66, 49, 49 
         };
 
-        private string CurrentUrl;
+        private string CurrentUrl = String.Empty;
 
         /// <summary>
         /// HTTP method and path of the incoming HTTP request
         /// </summary>
-        private byte[] methodandpath;
+        private byte[] methodandpath = new byte[0];
 
         /// <summary>
         /// Holds the headers of the incoming HTTP request
@@ -78,7 +78,7 @@ namespace NarcityMedia.Enjent
         /// <summary>
         /// Name value collection that holds the QueryString of the incoming HTTP request
         /// </summary>
-        private NameValueCollection QueryString;
+        private NameValueCollection QueryString = new NameValueCollection(0);
 
         /// <summary>
         /// Associative mapping of the headers of the incoming HTTP request
