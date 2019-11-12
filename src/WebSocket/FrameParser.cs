@@ -5,7 +5,6 @@ namespace NarcityMedia.Enjent
 {
     abstract partial class WebSocketFrame
     {
-          
         /// <summary>
         /// Tries to parse a byte[] header into a SocketDataFrame object.
         /// Returns a null reference if object cannot be parsed
@@ -16,12 +15,12 @@ namespace NarcityMedia.Enjent
         /// If pasrse is successful, an Object of a type that is derived from SocketFrame.abstract Returns a null pointer otherwise.
         /// </returns>
         /// <remarks>
-        /// This method is not exactly like the Int*.TryParse() methods as it doesn't take an 'out' parameter and return a
+        /// This method is not exactly like the Int*.TryParse() methods that are common throughout the .NET framework as it doesn't take an 'out' parameter and return a
         /// boolean value but rather returns either the parsed object reference or a null reference, which means that callers of this method need to check
         /// for null before using the return value.
-        /// Furthermore, if the parse is successful, a caller should check the type of the object that is returned to, for example,
+        /// Furthermore, if the parsing is successful, a caller should check the type of the object that is returned too as to, for example,
         /// differenciate between a SocketDataFrame and a SocketControlFrame, which are both derived from SocketFrame.
-        /// It is necessary to pass a reference to the socket because of the way the WebSocket protocol is made.abstract It is impossible to know
+        /// It is necessary to pass a reference to the socket because of the way the WebSocket protocol is made. It is impossible to know
         /// the length of the frame before having parsed the headers hence it is possible that more bytes will need to be read from the socket buffer.
         /// </remarks>
         public static WebSocketFrame? TryParse(byte[] headerBytes, Socket socket)
@@ -88,8 +87,8 @@ namespace NarcityMedia.Enjent
         /// <summary>
         /// Applies the masking / unmasking algorithm defined in section 5.3 of RFC6455.
         /// </summary>
-        /// <param name="data">Masked payload bytes</param>
-        /// <param name="maskingKey">Unmasking key bytes</param>
+        /// <param name="data">Data on which to apply the masking algorithm</param>
+        /// <param name="maskingKey">Masking key bytes</param>
         /// <returns>The masked / unmasked data</returns>
         /// <remarks>
         /// This algorithm is such that passing the output of this function to itself with the same masking key
@@ -105,7 +104,16 @@ namespace NarcityMedia.Enjent
 			return ApplyMaskBlock(data, maskingKey);
         }
 
-        
+        /// <summary>
+        /// Applies the masking algorithm defined by RFC6455 for some given data with a given maskingKey by operating on 'blocks' of data.
+        /// </summary>
+        /// <param name="data">Data on which to apply the masking algorithm</param>
+        /// <param name="maskingKey">Masking key bytes</param>
+        /// <returns>The masked / unmasked data</returns>
+        /// <remarks>
+        /// /// This function treats the maskingKey as an int rather than a 4 bytes array. It then iterates over the data in chunks of 4 bytes
+        /// and treats each chunk as an int also. It then performs the XOR operation on two ints rather than 2 bytes.
+        /// </remarks>
 		private static byte[] ApplyMaskBlock(byte[] data, byte[] maskingKey)
         {
 			if (data.Length < 4)
@@ -144,6 +152,12 @@ namespace NarcityMedia.Enjent
 			}
         }
 
+        /// <summary>
+        /// Applies the masking algorithm defined by RFC6455 for some given data with a given maskingKey by operating on each individual bytes
+        /// </summary>
+        /// <param name="data">Data on which to apply the masking algorithm</param>
+        /// <param name="maskingKey">Masking key bytes</param>
+        /// <returns>The masked / unmasked data</returns>
 		private static byte[] ApplyMaskOneByOne(byte[] data, byte[] maskingKey)
 		{
 			byte[] unmasked = new byte[data.Length];
