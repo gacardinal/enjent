@@ -79,6 +79,7 @@ namespace NarcityMedia.Enjent
             }
             catch (Exception e)
             {
+                // TODO Make it so it is the server who actually sends bytes trough the socket to allow better error handling
                 return false;
             }
 
