@@ -105,7 +105,7 @@ namespace NarcityMedia.Enjent
             {
                 foreach(WebSocketClient cli in this.clients)
                 {
-                    cli.Send(message);
+                    // cli.Send(message);
                 }
             }
         }
@@ -116,7 +116,7 @@ namespace NarcityMedia.Enjent
             {
                 foreach(TWebSocketClient cli in this.clients)
                 {
-                    cli.Send(message);
+                    // cli.Send(message);
                 }
             }
         }
