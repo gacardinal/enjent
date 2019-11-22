@@ -101,7 +101,6 @@ namespace NarcityMedia.Enjent
             
             this.EventHandler = new Thread(this.EventHandlerLoop);
             this.EventHandler.Name = "WebSocketEventHandler";
-
             this.EventQueue = new ConcurrentQueue<WebSocketServerEventArgs>();
 
             this.handleMessageResetEvent = new ManualResetEventSlim(false);
@@ -113,7 +112,6 @@ namespace NarcityMedia.Enjent
             this.Socket.ReceiveTimeout = 1000;
 
             this.clients = new List<TWebSocketClient>(1024);
-
 
             this.ClientInitializationStrategy = initStrategy;
 
@@ -237,6 +235,7 @@ namespace NarcityMedia.Enjent
             /// The socket that is currently attempting to open a connection
             /// </summary>
             public Socket handler;
+
             /// <summary>
             /// The associated client object
             /// </summary>
@@ -285,7 +284,7 @@ namespace NarcityMedia.Enjent
                         }
                         else
                         {
-                            this.PushToEventQueue(new ErrorEventArgs(cli, e));
+                            this.PushToEventQueue(new ErrorEventArgs(cli, new WebSocketServerException("Error adding new client to internal list", e)));
                             cli.Dispose();
                             handler.Dispose();
                         }
@@ -470,47 +469,50 @@ namespace NarcityMedia.Enjent
         /// Negotiates a WebSocket connection incoming from an HTTP connection
         /// </summary>
         /// <param name="s">Negotiation state object</param>
-        private void NegotiateWebSocketConnection(Object s)
+        private void NegotiateWebSocketConnection(Object? s)
         {
-            SocketNegotiationState state = (SocketNegotiationState) s;
-            if (state.done == null)
+            if (s != null)
             {
-                state.exception = new WebSocketNegotiationException("Negotiation state 'done' attribute is required but was nul");
-                return;
-            }
-
-            bool incomingOK = false;
-            // Try to acquire a lock on an object used to parse the HTTP request to ensure only
-            // one request is parsed at a time as for now, the parsing logic is by no mean thread safe
-            // and the current method is executed by multiple ThreadPool threads at once
-            // TODO: Make parsing logic thread safe so it can be executed in parallel; using a dedicated parser class could make sense in this context
-            lock (this.headersmap)
-            {
-                incomingOK = this.ReadRequestHeaders(state.handler) &&
-                             this.AnalyzeRequestHeaders() &&
-                             this.Negociate101Upgrade(state.handler);
-
-                Dictionary<string, byte[]> incomingHeadersMap = new Dictionary<string, byte[]>(this.headersmap);
-
-                if (incomingOK)
+                SocketNegotiationState state = (SocketNegotiationState) s;
+                if (state.done == null)
                 {
-                    if (this.ClientInitializationStrategy != null)
+                    state.exception = new WebSocketNegotiationException("Negotiation state 'done' attribute is required but was nul");
+                    return;
+                }
+
+                bool incomingOK = false;
+                // Try to acquire a lock on an object used to parse the HTTP request to ensure only
+                // one request is parsed at a time as for now, the parsing logic is by no mean thread safe
+                // and the current method is executed by multiple ThreadPool threads at once
+                // TODO: Make parsing logic thread safe so it can be executed in parallel; using a dedicated parser class could make sense in this context
+                lock (this.headersmap)
+                {
+                    incomingOK = this.ReadRequestHeaders(state.handler) &&
+                                this.AnalyzeRequestHeaders() &&
+                                this.Negociate101Upgrade(state.handler);
+
+                    Dictionary<string, byte[]> incomingHeadersMap = new Dictionary<string, byte[]>(this.headersmap);
+
+                    if (incomingOK)
                     {
-                        EnjentHTTPRequest initialWSReq = new EnjentHTTPRequest(this.CurrentUrl, EnjentHTTPMethod.GET, incomingHeadersMap, this.QueryString);
-                        TWebSocketClient cli = this.ClientInitializationStrategy(state.handler, initialWSReq);
-                        state.cli = cli;
-                        state.done(cli);
+                        if (this.ClientInitializationStrategy != null)
+                        {
+                            EnjentHTTPRequest initialWSReq = new EnjentHTTPRequest(this.CurrentUrl, EnjentHTTPMethod.GET, incomingHeadersMap, this.QueryString);
+                            TWebSocketClient cli = this.ClientInitializationStrategy(state.handler, initialWSReq);
+                            state.cli = cli;
+                            state.done(cli);
+                        }
+                        else
+                        {
+                            state.exception = new WebSocketNegotiationException("You are using a generic version of the WebSocketServer class but you did not specify a ClientInitializationStrategy");
+                            state.done(null);
+                        }
                     }
                     else
                     {
-                        state.exception = new WebSocketNegotiationException("You are using a generic version of the WebSocketServer class but you did not specify a ClientInitializationStrategy");
+                        state.exception = new WebSocketNegotiationException("WebSocket negotiation failed");
                         state.done(null);
                     }
-                }
-                else
-                {
-                    state.exception = new WebSocketNegotiationException("WebSocket negotiation failed");
-                    state.done(null);
                 }
             }
         }
