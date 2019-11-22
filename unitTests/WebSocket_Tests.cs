@@ -3,12 +3,14 @@ using System.Diagnostics;
 using System.Linq;
 using System.Collections.Generic;
 using Xunit;
+using Xunit.Sdk;
 using Xunit.Abstractions;
 using System.Net;
 using NarcityMedia.Enjent;
 
 namespace EnjentUnitTests
 {
+
     /// <summary>
     /// Tests features specific to the WebSocket protocol.
     /// Test data for this test class is defined in WebSocket_Tests_data.cs
@@ -20,7 +22,16 @@ namespace EnjentUnitTests
 
 		public WebSocket_Tests(ITestOutputHelper o)
 		{
+
 			this.output = o;
+		}
+
+		public void Log(string message)
+		{
+			if (this.output != null)
+			{
+				this.output.WriteLine(message);
+			}
 		}
 
         [Fact]
@@ -57,14 +68,14 @@ namespace EnjentUnitTests
 			byte[] bigBuffer = new byte[1024 * 1000000];
 			rand.NextBytes(bigBuffer);
 			
-			this.output.WriteLine("Commencing masking algorithm benchmark");
+			this.Log("Commencing masking algorithm benchmark");
 			Stopwatch watch = Stopwatch.StartNew();
 
 			byte[] masked = WebSocketFrame.ApplyMask(bigBuffer, k);
 
 			watch.Stop();
 			long elapsedMs = watch.ElapsedMilliseconds;
-			this.output.WriteLine("Completed in : " + elapsedMs.ToString());
+			this.Log("Completed in : " + elapsedMs.ToString());
 		}
 
         [Fact]
@@ -96,8 +107,8 @@ namespace EnjentUnitTests
         {
             byte[] frameBytes = frame.GetBytes();
 
-			output.WriteLine(String.Format("Testing frame with payload (length {0}) {1}", frame.Plaintext.Length, frame.Plaintext));
-			output.WriteLine("Bytes: " + BitConverter.ToString(frameBytes));
+			Log(String.Format("Testing frame with payload (length {0}) {1}", frame.Plaintext?.Length, frame.Plaintext));
+			Log("Bytes: " + BitConverter.ToString(frameBytes));
 
             Assert.True((frameBytes[0] >> 7 == Convert.ToInt32(frame.Fin)), "Frame FIN bit was not set properly");
             Assert.True((byte) (frameBytes[0] & 0b00001111) == frame.OpCode, "Frame OPCode bits were not set properly");
@@ -148,7 +159,7 @@ namespace EnjentUnitTests
         {
             if (BitConverter.IsLittleEndian)
             {
-                this.output.WriteLine("Detected architecture using little-endian, will reverse the frame length bytes since they are encoded in a WebSocket frame as big-endian");
+                this.Log("Detected architecture using little-endian, will reverse the frame length bytes since they are encoded in a WebSocket frame as big-endian");
                 Array.Reverse(array);
             }
         }
