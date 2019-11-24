@@ -1,11 +1,10 @@
 using System;
 using System.Threading;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
 
 namespace NarcityMedia.Enjent
 {
-    public partial class WebSocketServer<TWebSocketClient> where TWebSocketClient : WebSocketClient
+    public abstract partial class WebSocketServerCore<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {
         public delegate void ConnectionEvent(object sender, ConnectionEventArgs ca);
         public delegate void DisconnectEvent(object sender, DisconnectionEventArgs da);
@@ -19,30 +18,40 @@ namespace NarcityMedia.Enjent
         private ControlFrameReceived? _onControlFrame = delegate {};
         private ErrorEvent? _onError = delegate {};
 
+        // Since event can be set to null references by the -= operator, they need to be declared as nullable
+        // For better void safety. However, this poses a problem when we try to lock them.
+        // At the same time, we don't want to have one single lock for all the references because we don't want a thread
+        // subscribing to one event to block others from subscribing to another event
+        private object onConnectEventMutex      = new object();
+        private object onDisconnectEventMutex   = new object();
+        private object onMessageEventMutex      = new object();
+        private object onControlFrameEventMutex = new object();
+        private object onErrorEventMutex        = new object();
+
         public event ConnectionEvent OnConnect 
         {
-            add { if (this._onConnect != null) lock ( this._onConnect) { this._onConnect += value; } }
-            remove { if (this._onConnect != null) lock ( this._onConnect) { this._onConnect -= value; } }
+            add { lock ( this.onConnectEventMutex) { this._onConnect += value; } }
+            remove { lock ( this.onConnectEventMutex) { this._onConnect -= value; } }
         }
         public event DisconnectEvent OnDisconnect 
         {
-            add { if (this._onDisconnect != null) lock (this._onDisconnect) { this._onDisconnect += value; } }
-            remove { if (this._onDisconnect != null) lock (this._onDisconnect) { this._onDisconnect -= value; } }
+            add { lock (this.onDisconnectEventMutex) { this._onDisconnect += value; } }
+            remove { lock (this.onDisconnectEventMutex) { this._onDisconnect -= value; } }
         }
         public event MessageEvent OnMessage 
         {
-            add { if (this._onMessage != null) lock (this._onMessage) { this._onMessage += value; } }
-            remove { if (this._onMessage != null) lock (this._onMessage) { this._onMessage -= value; } }
+            add { lock (this.onMessageEventMutex) { this._onMessage += value; } }
+            remove { lock (this.onMessageEventMutex) { this._onMessage -= value; } }
         }
         public event ControlFrameReceived OnControlFrame 
         {
-            add { if (this._onControlFrame != null) lock (this._onControlFrame) { this._onControlFrame += value; } }
-            remove { if (this._onControlFrame != null) lock (this._onControlFrame) { this._onControlFrame -= value; } }
+            add { lock (this.onControlFrameEventMutex) { this._onControlFrame += value; } }
+            remove { lock (this.onControlFrameEventMutex) { this._onControlFrame -= value; } }
         }
         public event ErrorEvent OnError 
         {
-            add { if (this._onError != null) lock (this._onError) { this._onError += value; } }
-            remove { if (this._onError != null) lock (this._onError) { this._onError -= value; } }
+            add { lock (this.onErrorEventMutex) { this._onError += value; } }
+            remove { lock (this.onErrorEventMutex) { this._onError -= value; } }
         }
 
         /// <summary>
@@ -87,15 +96,15 @@ namespace NarcityMedia.Enjent
                         if (EventQueue.TryDequeue(out curEventArgs))
                         {
                             if (curEventArgs is MessageEventArgs)
-                                if (this._onMessage != null) this._onMessage.Invoke(this, (MessageEventArgs) curEventArgs);
+                                this._onMessage?.Invoke(this, (MessageEventArgs) curEventArgs);
                             else if (curEventArgs is ConnectionEventArgs)
-                                if (this._onConnect != null) this._onConnect.Invoke(this, (ConnectionEventArgs) curEventArgs);
+                                this._onConnect?.Invoke(this, (ConnectionEventArgs) curEventArgs);
                             else if (curEventArgs is DisconnectionEventArgs)
-                                if (this._onDisconnect != null) this._onDisconnect.Invoke(this, (DisconnectionEventArgs) curEventArgs);
+                                this._onDisconnect?.Invoke(this, (DisconnectionEventArgs) curEventArgs);
                             else if (curEventArgs is ControlFrameEventArgs)
-                                if (this._onControlFrame != null) this._onControlFrame.Invoke(this, (ControlFrameEventArgs) curEventArgs);
+                                this._onControlFrame?.Invoke(this, (ControlFrameEventArgs) curEventArgs);
                             else if (curEventArgs is ErrorEventArgs)
-                                if (this._onError != null) this._onError.Invoke(this, (ErrorEventArgs) curEventArgs);
+                                this._onError?.Invoke(this, (ErrorEventArgs) curEventArgs);
                         }
                     }
                     while (!EventQueue.IsEmpty);
