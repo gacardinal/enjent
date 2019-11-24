@@ -49,7 +49,7 @@ namespace EnjentUnitTests
             Assert.True(expectedMasked.SequenceEqual(masked), "Masking algorithm didn't produce expected output");
         }
 
-		// This is not being NOT during the test execution
+		// This is NOT being run during the test execution
 		public void WebSocketFrame_ApplyMask_Benchmark()
 		{
 			byte[] k = new byte[4];
@@ -98,7 +98,7 @@ namespace EnjentUnitTests
 
 			output.WriteLine(String.Format("Testing frame with payload (length {0}) {1}", frame.Plaintext.Length, frame.Plaintext));
 			output.WriteLine("Bytes: " + BitConverter.ToString(frameBytes));
-
+    
             Assert.True((frameBytes[0] >> 7 == Convert.ToInt32(frame.Fin)), "Frame FIN bit was not set properly");
             Assert.True((byte) (frameBytes[0] & 0b00001111) == frame.OpCode, "Frame OPCode bits were not set properly");
             Assert.True((frameBytes[1] >> 7) == Convert.ToInt32(frame.Masked), "Frame MASKED bit was not set properly");
@@ -153,20 +153,12 @@ namespace EnjentUnitTests
             }
         }
 
-
-        [Fact]
-        public void WebSocketFrame_TryParse_Valid_DataFrame_Text_SingleFrame()
+        [Theory]
+        [MemberData(nameof(GetRFCTestExamples))]
+        public void WebSocketFrame_TryParse_Valid_DataFrame_Text_RFCExamples(byte[] bytes)
         {
-            string testContent = "test!";
+            
 
-            bool fin = true;
-            WebSocketOPCode OPCode = WebSocketOPCode.Text;
-            byte[] payload = System.Text.Encoding.UTF8.GetBytes(testContent);
-
-            // Manually craft a WebSocketFrame
-            byte[] maskingK = new byte[4];
-            // The masking key is supposed to be cryptographically secure but this will suffice for testing purposes
-            rand.NextBytes(maskingK);
         }
     }
 }

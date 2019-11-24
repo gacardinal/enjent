@@ -34,5 +34,26 @@ public partial class WebSocket_Tests
                 return data;
             }
         }
+
+        /// <summary>
+        /// Returns a set of byte[] representing WebSocket frames that were taken directly from the RFC 6455 document
+        /// https://tools.ietf.org/html/rfc6455#section-5.7
+        /// </summary>
+        /// <value></value>
+        public static TheoryData<byte[]> GetRFCTestExamples
+        {
+            get
+            {
+                TheoryData<byte[]> data = new TheoryData<byte[]>();
+
+                // A single-frame unmasked text message
+                data.Add(new byte[] { 0x81, 0x05, 0x48, 0x65, 0x6c, 0x6c, 0x6f }); // (contains "Hello")
+
+                // A single-frame masked text message
+                data.Add(new byte[] { 0x81, 0x85, 0x37, 0xfa, 0x21, 0x3d, 0x7f, 0x9f, 0x4d, 0x51, 0x58 }); // (contains "Hello")
+
+                return data;
+            }
+        }
     }
 }
