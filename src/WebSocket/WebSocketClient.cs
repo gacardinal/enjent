@@ -19,16 +19,19 @@ namespace NarcityMedia.Enjent
         /// Unique identifier for the client
         /// </summary>
         public readonly Guid Id;
-        
-        /// <summary>
-        /// The TCP socket associated with the current WebSocketClient
-        /// </summary>
-        public Socket Socket;
 
         /// <summary>
         /// Represents the initial HTTP request that was used to negotiate the WebSocket connection
         /// </summary>
         public EnjentHTTPRequest? InitialRequest;
+
+        /// <summary>
+        /// The TCP socket associated with the current WebSocketClient
+        /// </summary>
+        /// <remarks>
+        /// This field is reserved for internal use
+        /// </remarks>
+        internal Socket Socket;
 
         /// <summary>
         /// Initializes a new instance of a WebSocketClient
