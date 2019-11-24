@@ -23,7 +23,7 @@ namespace NarcityMedia.Enjent
         public WebSocketServer() : base(DefaultInitializationStrategy)
         {
         }
-
+        
         /// <summary>
         /// Default client initialization strategy
         /// </summary>
@@ -38,11 +38,21 @@ namespace NarcityMedia.Enjent
         }
     }
 
+    public class WebSocketServer<TWebSocketClient> : WebSocketServerCore<TWebSocketClient> where TWebSocketClient : WebSocketClient
+    {
+        /// <summary>
+        /// Initializes a new instance of the WebSocketServer class
+        /// </summary>
+        public WebSocketServer(ClientInitialization initStrat) : base(initStrat)
+        {
+        }
+    }
+
     /// <summary>
     /// Provides server-side WebSocket functionnalities
     /// </summary>
     /// <typeparam name="TWebSocketClient">The type used to represent clients that connect to the current WebSocketServer</typeparam>
-    public partial class WebSocketServer<TWebSocketClient> where TWebSocketClient : WebSocketClient
+    public abstract partial class WebSocketServerCore<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {
         /// <summary>
         /// Thread that will listen for incoming connections
@@ -92,7 +102,7 @@ namespace NarcityMedia.Enjent
         /// <summary>
         /// Creates a new instance of the WebSocketServer class
         /// </summary>
-        public WebSocketServer(ClientInitialization initStrategy)
+        public WebSocketServerCore(ClientInitialization initStrategy)
         {
             this.Listener = new Thread(this.NegociationLoop);
             // Set Thread as foreground to prevent program execution finishing

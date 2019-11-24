@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace NarcityMedia.Enjent
 {
-    public partial class WebSocketServer<TWebSocketClient>
+    public abstract partial class WebSocketServerCore<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {
         /// <summary>
         /// Sends a message to the socket associated with the current client

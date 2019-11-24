@@ -8,7 +8,8 @@ using System.Security.Cryptography;
 
 namespace NarcityMedia.Enjent
 {
-    public partial class WebSocketServer<TWebSocketClient> {
+    public abstract partial class WebSocketServerCore<TWebSocketClient> where TWebSocketClient : WebSocketClient
+    {
 
         /// <summary>
         /// Size of the chunks that will be read in RAM from the incoming socket connection
