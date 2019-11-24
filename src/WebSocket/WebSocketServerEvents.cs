@@ -1,10 +1,11 @@
 using System;
 using System.Threading;
+using System.Collections.Generic;
 using System.Collections.Concurrent;
 
 namespace NarcityMedia.Enjent
 {
-    public abstract partial class WebSocketServerCore<TWebSocketClient> where TWebSocketClient : WebSocketClient
+    public partial class WebSocketServerCore<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {
         public delegate void ConnectionEvent(object sender, ConnectionEventArgs ca);
         public delegate void DisconnectEvent(object sender, DisconnectionEventArgs da);
@@ -95,16 +96,18 @@ namespace NarcityMedia.Enjent
                     {
                         if (EventQueue.TryDequeue(out curEventArgs))
                         {
-                            if (curEventArgs is MessageEventArgs)
-                                this._onMessage?.Invoke(this, (MessageEventArgs) curEventArgs);
-                            else if (curEventArgs is ConnectionEventArgs)
-                                this._onConnect?.Invoke(this, (ConnectionEventArgs) curEventArgs);
-                            else if (curEventArgs is DisconnectionEventArgs)
-                                this._onDisconnect?.Invoke(this, (DisconnectionEventArgs) curEventArgs);
-                            else if (curEventArgs is ControlFrameEventArgs)
-                                this._onControlFrame?.Invoke(this, (ControlFrameEventArgs) curEventArgs);
-                            else if (curEventArgs is ErrorEventArgs)
-                                this._onError?.Invoke(this, (ErrorEventArgs) curEventArgs);
+							// Compare Enum values instead of trying to perform a cast for each type of event
+							// reference is only cast when proper type is found
+                            if (curEventArgs.EvType == WebSocketServerEventArgs.EventType.Message)
+                                if (this._onMessage != null) this._onMessage.Invoke(this, (MessageEventArgs) curEventArgs);
+                            else if (curEventArgs.EvType == WebSocketServerEventArgs.EventType.Connection)
+                                if (this._onConnect != null) this._onConnect.Invoke(this, (ConnectionEventArgs) curEventArgs);
+                            else if (curEventArgs.EvType == WebSocketServerEventArgs.EventType.Disconnection)
+                                if (this._onDisconnect != null) this._onDisconnect.Invoke(this, (DisconnectionEventArgs) curEventArgs);
+                            else if (curEventArgs.EvType == WebSocketServerEventArgs.EventType.ControlFrame)
+                                if (this._onControlFrame != null) this._onControlFrame.Invoke(this, (ControlFrameEventArgs) curEventArgs);
+                            else if (curEventArgs.EvType == WebSocketServerEventArgs.EventType.Error)
+                                if (this._onError != null) this._onError.Invoke(this, (ErrorEventArgs) curEventArgs);
                         }
                     }
                     while (!EventQueue.IsEmpty);
@@ -135,6 +138,16 @@ namespace NarcityMedia.Enjent
         /// </summary>
         public abstract class WebSocketServerEventArgs : EventArgs
         {
+			internal enum EventType {
+				Connection,
+				Disconnection,
+				Message,
+				ControlFrame,
+				Error
+			}
+
+			internal EventType EvType;
+
             public TWebSocketClient Cli;
 
             public WebSocketServerEventArgs(TWebSocketClient cli) : base()
@@ -154,6 +167,7 @@ namespace NarcityMedia.Enjent
             public MessageEventArgs(TWebSocketClient cli, WebSocketDataFrame dataFrame) : base(cli)
             {
                 this.DataFrame = dataFrame;
+				this.EvType = EventType.Message;
             }
         }
 
@@ -165,6 +179,7 @@ namespace NarcityMedia.Enjent
         {
             public ConnectionEventArgs(TWebSocketClient cli) : base(cli)
             {
+				this.EvType = EventType.Connection;
             }
         }
 
@@ -180,7 +195,9 @@ namespace NarcityMedia.Enjent
             public Exception? Exception;
 
             public DisconnectionEventArgs(TWebSocketClient cli) : base(cli)
-            {}
+            {
+				this.EvType = EventType.Disconnection;
+			}
 
             public DisconnectionEventArgs(TWebSocketClient cli, Exception e) : this(cli)
             {
@@ -202,6 +219,7 @@ namespace NarcityMedia.Enjent
             public ErrorEventArgs(TWebSocketClient cli, WebSocketServerException innerException) : base(cli)
             {
                 this.Exception = innerException;
+				this.EvType = EventType.Error;
             }
         }
 
@@ -212,6 +230,7 @@ namespace NarcityMedia.Enjent
             public ControlFrameEventArgs(TWebSocketClient cli, WebSocketControlFrame cf) : base(cli)
             {
                 this.ControlFrame = cf;
+				this.EvType = EventType.ControlFrame;
             }
         }
     }

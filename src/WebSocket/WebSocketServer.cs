@@ -205,15 +205,13 @@ namespace NarcityMedia.Enjent
                 case 8: // Close
                     try
                     {
-                        cli.SendControlFrame(new WebSocketControlFrame(true, false, WebSocketOPCode.Close));
+						this.SendControlFrame(cli, new WebSocketControlFrame(true, false, WebSocketOPCode.Close));
                         this.PushToEventQueue(new DisconnectionEventArgs(cli));
-                        // lock (this._onDisconnect) this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, cFrame));
                     }
                     catch (Exception e)
                     {
                         WebSocketServerException ex = new WebSocketServerException("Error while sending 'close' control frame. Connection will be dropped forcefully. See inner exception for additional information.", e);
                         this.PushToEventQueue(new DisconnectionEventArgs(cli, ex));
-                        // lock (this._onDisconnect) this._onDisconnect.Invoke(this, new WebSocketServerEventArgs(cli, ex));
                     }
                     finally
                     {
@@ -224,7 +222,7 @@ namespace NarcityMedia.Enjent
                 case 9: // Ping
                     try
                     {
-                        cli.SendControlFrame(new WebSocketControlFrame(true, false, WebSocketOPCode.Pong));
+						this.SendControlFrame(cli, new WebSocketControlFrame(true, false, WebSocketOPCode.Pong));
                     }
                     catch (Exception e)
                     {
