@@ -13,11 +13,21 @@ namespace NarcityMedia.Enjent.Client
 		/// </summary>
 		/// <value>Whether the current EnjentClient is connected or not</value>
 		public Boolean Connected { get; private set; }
+
 		/// <summary>
 		/// The address at which the current client will connect
 		/// </summary>
 		public readonly Uri ServerUri;
-		public readonly IPEndPoint? Endpoint;
+
+		/// <summary>
+		/// IP endpoint at which the current client connects
+		/// </summary>
+		private IPEndPoint? Endpoint;
+
+		/// <summary>
+		/// Socket used to communicate between the current client and server
+		/// </summary>
+		private Socket Socket;
 
 		/// <summary>
 		/// Initializes a new instance of EnjentClient
@@ -33,6 +43,8 @@ namespace NarcityMedia.Enjent.Client
 			UriHostNameType hnt = Uri.CheckHostName(serverUri.IdnHost);
 			if (hnt == UriHostNameType.Unknown)
 				throw new ArgumentException("URI host must be set", "serverUri.Host");
+			if (serverUri.Scheme != "ws")
+				throw new NotSupportedException("This class only supports the ws protocol fo rnow");
 
 			this.ServerUri = serverUri;
 		}
@@ -45,7 +57,9 @@ namespace NarcityMedia.Enjent.Client
 				IPAddress[] ipAddresses = await Dns.GetHostAddressesAsync(unescapedHost);
 				if (ipAddresses.Length > 0)
 				{
-
+					this.Endpoint = new IPEndPoint(ipAddresses[0], this.ServerUri.Port);
+					Socket s = new Socket(this.Endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+					await s.ConnectAsync(this.Socket, ipAddresses);
 				}
 				else
 				{
