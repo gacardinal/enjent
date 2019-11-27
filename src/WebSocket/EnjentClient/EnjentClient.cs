@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
@@ -8,6 +9,8 @@ namespace NarcityMedia.Enjent.Client
 
 	public class EnjentClient
 	{
+		private static int MAX_HTTP_RES_LENGTH = 2048;
+
 		/// <summary>
 		/// Indicates whether this EnjentClient instance currently has a connection open with a WebSocket server
 		/// </summary>
@@ -27,7 +30,7 @@ namespace NarcityMedia.Enjent.Client
 		/// <summary>
 		/// Socket used to communicate between the current client and server
 		/// </summary>
-		private Socket Socket;
+		private Socket? Socket;
 
 		/// <summary>
 		/// Initializes a new instance of EnjentClient
@@ -49,6 +52,22 @@ namespace NarcityMedia.Enjent.Client
 			this.ServerUri = serverUri;
 		}
 
+		private static byte[] GetHttpRequestBytes()
+		{
+			StringBuilder sb = new StringBuilder();
+			sb.AppendLine("GET /chat HTTP/1.1");
+			sb.AppendLine("Host: server.example.com");
+			sb.AppendLine("Upgrade: websocket");
+			sb.AppendLine("Connection: Upgrade");
+			sb.AppendLine("Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==");
+			sb.AppendLine("Origin: http://example.com");
+			sb.AppendLine("Sec-WebSocket-Protocol: chat, superchat");
+			sb.AppendLine("Sec-WebSocket-Version: 13");
+			sb.AppendLine("");
+
+			return Encoding.UTF8.GetBytes(sb.ToString());
+		}
+
 		public async Task Connect()
 		{
 			if (this.Endpoint == null)
@@ -58,13 +77,27 @@ namespace NarcityMedia.Enjent.Client
 				if (ipAddresses.Length > 0)
 				{
 					this.Endpoint = new IPEndPoint(ipAddresses[0], this.ServerUri.Port);
-					Socket s = new Socket(this.Endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-					await s.ConnectAsync(this.Socket, ipAddresses);
+					this.Socket = new Socket(this.Endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
 				}
 				else
 				{
-					throw new Exception("DNS resolution failed for hostname" + unescapedHost);
+					throw new Exception("DNS resolution failed for hostname " + unescapedHost);
 				}
+			}
+
+			try
+			{
+				await this.Socket.ConnectAsync(this.Endpoint);
+				await this.Socket.SendAsync(EnjentClient.GetHttpRequestBytes(), SocketFlags.None);
+
+				byte[] buf = new byte[MAX_HTTP_RES_LENGTH];
+				NetworkStream s = new NetworkStream(this.Socket);
+				int read = await s.ReadAsync(buf);
+				string message = Encoding.UTF8.GetString(buf);
+			}
+			catch (Exception e)
+			{
+				throw e;
 			}
 		}
 	}

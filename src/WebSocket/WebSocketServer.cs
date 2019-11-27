@@ -301,6 +301,7 @@ namespace NarcityMedia.Enjent
                     {
                         // TODO: make this not so nasty
                         string response = "HTTP/1.1 431 Request Header Fields too large\nEnjent-Message: Request header fields were too large\n\nRequest header fields too large";
+                        // TODO Handle socket error that can be thrown here
                         handler.Send(System.Text.Encoding.Default.GetBytes(response));
                         handler.Close();
                         handler.Dispose();
