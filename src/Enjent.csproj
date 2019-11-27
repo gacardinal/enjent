@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Library</OutputType>
-    <TargetFramework>netcoreapp3.0</TargetFramework>
+    <TargetFramework>netstandard2.1</TargetFramework>
     <RootNamespace>NarcityMedia.Enjent</RootNamespace>
 
     <PackageId>Enjent</PackageId>
@@ -15,8 +15,8 @@
     <Company>Narcity Media</Company>
     <RootNamespace>NarcityMedia.Enjent</RootNamespace>
 
-	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-	<Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
   </PropertyGroup>
 
 </Project>
