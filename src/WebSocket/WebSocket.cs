@@ -197,14 +197,27 @@ namespace NarcityMedia.Enjent
         /// Initializes a new instance of the WebSocketFrame class
         /// </summary>
         /// <param name="fin">Indicates whether the current WebSocketFrame is the last one of a multi frame message</param>
-        /// <param name="masked">Indicates whether the current WebSocketFrame is masked</param>
         /// <param name="payload">Payload of the current WebSocketFrame</param>
-        public WebSocketFrame(bool fin, bool masked, byte[] payload)
+        public WebSocketFrame(bool fin, byte[] payload)
         {
             this.Fin = fin;
-            this.Masked = masked;
             this._payload = payload;
+        }
 
+        /// <summary>
+        /// Initializes a new instance of the WebSocketFrame class with the specified masking key
+        /// </summary>
+        /// <param name="fin">Indicates whether the current WebSocketFrame is the last one of a multi frame message</param>
+        /// <param name="payload">Payload of the current WebSocketFrame</param>
+        public WebSocketFrame(bool fin, byte[] payload, byte[] maskingKey) : this(fin, payload)
+        {
+
+            if (maskingKey == null)
+                throw new ArgumentNullException("maskingKey");
+            if (maskingKey.Length != 4)
+                throw new ArgumentException("maskingKey should have a length of exactly 4 bytes", "maskingKey");
+            
+            this.Masked = true;
         }
 
         /// <summary>
@@ -334,7 +347,7 @@ namespace NarcityMedia.Enjent
         /// <param name="masked">Indicates whether the current SocketDataFrame is masked</param>
         /// <param name="payload">Payload of the current WebSocketFrame</param>
         /// <param name="dataType">The data type of the current SocketDataFrame</param>
-        public WebSocketDataFrame(bool fin, bool masked, byte[] payload,
+        public WebSocketDataFrame(bool fin, byte[] payload,
                                 DataFrameType dataType) : base(fin, masked, payload)
         {
             this.DataType = dataType;
@@ -505,6 +518,12 @@ namespace NarcityMedia.Enjent
             frames.Add(new WebSocketDataFrame(true, false, this.Payload, this.MessageType));
 
             return frames;
+        }
+
+        public List<WebSocketFrame> GetMaskedFrames()
+        {
+            List<WebSocketFrame> frames = new List<WebSocketFrame>(1);
+
         }
     }
 }

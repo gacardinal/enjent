@@ -3,6 +3,7 @@ using System.Text;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 
 namespace NarcityMedia.Enjent.Client
 {
@@ -94,11 +95,18 @@ namespace NarcityMedia.Enjent.Client
 				NetworkStream s = new NetworkStream(this.Socket);
 				int read = await s.ReadAsync(buf);
 				string message = Encoding.UTF8.GetString(buf);
+				
 			}
 			catch (Exception e)
 			{
 				throw e;
 			}
+		}
+
+		public Task Send(WebSocketMessage message)
+		{
+			IEnumerable<WebSocketFrame> frames = message.GetFrames();
+			await this.Socket.Send()
 		}
 	}
 }

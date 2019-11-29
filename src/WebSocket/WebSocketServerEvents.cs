@@ -94,20 +94,29 @@ namespace NarcityMedia.Enjent
                     // Execute all avents sequentially until EventQueue is empty
                     do
                     {
-                        if (EventQueue.TryDequeue(out curEventArgs))
+                        try
                         {
-							// Compare Enum values instead of trying to perform a cast for each type of event
-							// reference is only cast when proper type is found
-                            if (curEventArgs.EvType == WebSocketServerEventArgs.EventType.Message)
-                                if (this._onMessage != null) this._onMessage.Invoke(this, (MessageEventArgs) curEventArgs);
-                            else if (curEventArgs.EvType == WebSocketServerEventArgs.EventType.Connection)
-                                if (this._onConnect != null) this._onConnect.Invoke(this, (ConnectionEventArgs) curEventArgs);
-                            else if (curEventArgs.EvType == WebSocketServerEventArgs.EventType.Disconnection)
-                                if (this._onDisconnect != null) this._onDisconnect.Invoke(this, (DisconnectionEventArgs) curEventArgs);
-                            else if (curEventArgs.EvType == WebSocketServerEventArgs.EventType.ControlFrame)
-                                if (this._onControlFrame != null) this._onControlFrame.Invoke(this, (ControlFrameEventArgs) curEventArgs);
-                            else if (curEventArgs.EvType == WebSocketServerEventArgs.EventType.Error)
-                                if (this._onError != null) this._onError.Invoke(this, (ErrorEventArgs) curEventArgs);
+                            if (EventQueue.TryDequeue(out curEventArgs))
+                            {
+                                // Compare Enum values instead of trying to perform a cast for each type of event
+                                // reference is only cast when proper type is found
+                                if (curEventArgs.EvType == EventType.Connection) {
+                                    if (this._onConnect != null) this._onConnect.Invoke(this, (ConnectionEventArgs) curEventArgs);
+                                } else if (curEventArgs.EvType == EventType.Message) {
+                                    if (this._onMessage != null) this._onMessage.Invoke(this, (MessageEventArgs) curEventArgs);
+                                } else if (curEventArgs.EvType == EventType.Disconnection) {
+                                    if (this._onDisconnect != null) this._onDisconnect.Invoke(this, (DisconnectionEventArgs) curEventArgs);
+                                } else if (curEventArgs.EvType == EventType.ControlFrame) {
+                                    if (this._onControlFrame != null) this._onControlFrame.Invoke(this, (ControlFrameEventArgs) curEventArgs);
+                                } else if (curEventArgs.EvType == EventType.Error) {
+                                    if (this._onError != null) this._onError.Invoke(this, (ErrorEventArgs) curEventArgs);
+                                }
+                            }
+                            curEventArgs = null;
+                        }
+                        catch (Exception e)
+                        {
+                            throw e;
                         }
                     }
                     while (!EventQueue.IsEmpty);
@@ -138,15 +147,8 @@ namespace NarcityMedia.Enjent
         /// </summary>
         public abstract class WebSocketServerEventArgs : EventArgs
         {
-			internal enum EventType {
-				Connection,
-				Disconnection,
-				Message,
-				ControlFrame,
-				Error
-			}
 
-			internal EventType EvType;
+			public EventType EvType;
 
             public TWebSocketClient Cli;
 
@@ -235,4 +237,11 @@ namespace NarcityMedia.Enjent
         }
     }
 
+    public enum EventType {
+        Connection,
+        Disconnection,
+        Message,
+        ControlFrame,
+        Error
+    }
 }
