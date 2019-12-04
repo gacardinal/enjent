@@ -34,7 +34,7 @@ namespace NarcityMedia.Enjent
         /// <exception cref="SSystem.ObjectDisposedException">See <see cref="System.Net.Sockets.Socket.Send(byte[])" /><exception/>
         public void Send(TWebSocketClient cli, WebSocketMessage message)
         {
-            List<WebSocketFrame> frames = message.GetFrames();
+            IEnumerable<WebSocketFrame> frames = message.GetFrames();
             this.SendFrames(cli, frames);
         }
 
@@ -60,7 +60,7 @@ namespace NarcityMedia.Enjent
         /// <exception cref="SSystem.ArgumentNullException">See <see cref="System.Net.Sockets.Socket.Send(byte[])" /><exception/>
         /// <exception cref="SSystem.Net.Sockets.SocketException">See <see cref="System.Net.Sockets.Socket.Send(byte[])" /><exception/>
         /// <exception cref="SSystem.ObjectDisposedException">See <see cref="System.Net.Sockets.Socket.Send(byte[])" /><exception/>
-        internal void SendFrames(TWebSocketClient cli, List<WebSocketFrame> frames)
+        internal void SendFrames(TWebSocketClient cli, IEnumerable<WebSocketFrame> frames)
         {
 			try
 			{

@@ -79,6 +79,7 @@ namespace NarcityMedia.Enjent.Client
 				{
 					this.Endpoint = new IPEndPoint(ipAddresses[0], this.ServerUri.Port);
 					this.Socket = new Socket(this.Endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+					this.Connected = true;
 				}
 				else
 				{
@@ -103,10 +104,20 @@ namespace NarcityMedia.Enjent.Client
 			}
 		}
 
-		public Task Send(WebSocketMessage message)
+		public void Send(WebSocketMessage message)
 		{
-			IEnumerable<WebSocketFrame> frames = message.GetFrames();
-			await this.Socket.Send()
+			if (this.Socket != null && this.Connected)
+			{
+				IEnumerable<WebSocketFrame> frames = message.GetFrames();
+				foreach (WebSocketFrame f in frames)
+				{
+					this.Socket.Send(f.GetBytes());
+				}
+			}
+			else
+			{
+				throw new InvalidOperationException("Cannot send data while the client is not connected");
+			}
 		}
 	}
 }

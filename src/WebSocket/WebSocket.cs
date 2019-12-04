@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography;
 
 namespace NarcityMedia.Enjent
 {
@@ -163,6 +164,12 @@ namespace NarcityMedia.Enjent
         public readonly bool Masked;
 
         /// <summary>
+        /// 
+        /// </summary>
+        /// <value></value>
+        public byte[] MaskingKey { get; private set; }
+
+        /// <summary>
         /// Payload of the current WebSocketFrame
         /// </summary>
         protected byte[] _payload;
@@ -197,27 +204,27 @@ namespace NarcityMedia.Enjent
         /// Initializes a new instance of the WebSocketFrame class
         /// </summary>
         /// <param name="fin">Indicates whether the current WebSocketFrame is the last one of a multi frame message</param>
+        /// <param name="masked">Whether or not the current frame should be masked.true All frames sent by a client should be masked</param>
         /// <param name="payload">Payload of the current WebSocketFrame</param>
-        public WebSocketFrame(bool fin, byte[] payload)
+        /// <remarks>
+        /// If true is passed in as the 'masked' parameter, <see cref="this.MaskingKey" />
+        /// will be initialized to a byte array of length 4 which is derived from a secure source of randomness.
+        /// Else, <see cref="this.MaskingKey" /> will be initialized to an empty byte array
+        /// </remarks>
+        public WebSocketFrame(bool fin, bool masked, byte[] payload)
         {
             this.Fin = fin;
             this._payload = payload;
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the WebSocketFrame class with the specified masking key
-        /// </summary>
-        /// <param name="fin">Indicates whether the current WebSocketFrame is the last one of a multi frame message</param>
-        /// <param name="payload">Payload of the current WebSocketFrame</param>
-        public WebSocketFrame(bool fin, byte[] payload, byte[] maskingKey) : this(fin, payload)
-        {
-
-            if (maskingKey == null)
-                throw new ArgumentNullException("maskingKey");
-            if (maskingKey.Length != 4)
-                throw new ArgumentException("maskingKey should have a length of exactly 4 bytes", "maskingKey");
             
-            this.Masked = true;
+            if (masked)
+            {
+                this.MaskingKey = new byte[4];
+                CryptoRandomSingleton.Instance.GetBytes(this.MaskingKey);
+            }
+            else
+            {
+                this.MaskingKey = new byte[0];
+            }
         }
 
         /// <summary>
@@ -344,10 +351,10 @@ namespace NarcityMedia.Enjent
         /// Initializes a new instance of the SocketDataFrame class
         /// </summary>
         /// <param name="fin">Indicates whether the current SocketDataFrame is the last one of a multi frame message</param>
-        /// <param name="masked">Indicates whether the current SocketDataFrame is masked</param>
+        /// <param name="masked">Indicates whether the current SocketDataFrame should be masked or not</param>
         /// <param name="payload">Payload of the current WebSocketFrame</param>
         /// <param name="dataType">The data type of the current SocketDataFrame</param>
-        public WebSocketDataFrame(bool fin, byte[] payload,
+        public WebSocketDataFrame(bool fin, bool masked, byte[] payload,
                                 DataFrameType dataType) : base(fin, masked, payload)
         {
             this.DataType = dataType;
@@ -472,7 +479,7 @@ namespace NarcityMedia.Enjent
     /// A message is composed of one or more frames.
     /// </summary>
     /// <remarks>This public class only support messages that can fit in a single frame for now</remarks>
-    public abstract class WebSocketMessage
+    public class WebSocketMessage
     {
         /// <summary>
         /// Buffer containing the payload data
@@ -512,18 +519,20 @@ namespace NarcityMedia.Enjent
         /// </summary>
         /// <remarks>The method currently supports only 1 frame messages</remarks>
         /// <returns>A List containing the frames of the message</returns>
-        public List<WebSocketFrame> GetFrames()
+        public List<WebSocketDataFrame> GetFrames()
         {
-            List<WebSocketFrame> frames = new List<WebSocketFrame>(1);
+            List<WebSocketDataFrame> frames = new List<WebSocketDataFrame>(1);
             frames.Add(new WebSocketDataFrame(true, false, this.Payload, this.MessageType));
 
             return frames;
         }
 
-        public List<WebSocketFrame> GetMaskedFrames()
+        public List<WebSocketDataFrame> GetMaskedFrames()
         {
-            List<WebSocketFrame> frames = new List<WebSocketFrame>(1);
+            List<WebSocketDataFrame> frames = new List<WebSocketDataFrame>(1);
+            frames.Add(new WebSocketDataFrame(true, true, this.Payload, this.MessageType));
 
+            return frames;
         }
     }
 }
