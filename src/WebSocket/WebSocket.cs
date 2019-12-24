@@ -150,12 +150,12 @@ namespace NarcityMedia.Enjent
     /// Represents a general concept of a WebSocket frame described by the 
     /// WebSocket standard
     /// </summary>
-    public abstract partial class WebSocketFrame
+    public abstract partial class WebSocketFrame : WebSocketDataContainer
     {
         /// <summary>
         /// Indicates whether the current WebSocketFrame is the last one of a message
         /// </summary>
-        public bool Fin;
+        public readonly bool Fin;
 
         /// <summary>
         /// Indicates whether the current WebSocketFrame is masked.
@@ -168,32 +168,6 @@ namespace NarcityMedia.Enjent
         /// </summary>
         /// <value></value>
         public byte[] MaskingKey { get; private set; }
-
-        /// <summary>
-        /// Payload of the current WebSocketFrame
-        /// </summary>
-        protected byte[] _payload;
-
-        /// <summary>
-        /// Payload of the current WebSocketFrame
-        /// </summary>
-        /// <value></value>
-        public byte[] Payload
-        {
-            get { return this._payload; }
-            set
-            {
-                this._payload = value;
-            }
-        }
-
-		/// <summary>
-        /// Length of the payload of the current WebSocketFrame.
-		/// Eventhough the WS Protocl specification specifies that a frame may have a payload
-		/// length equal to up to the value of an unsigned 64 bits integer, the .NET runtime imposes
-		/// a hard limit on the maximum size of any object, that limit being the length of an int
-		/// </summary>
-        public int PayloadLength { get { return this.Payload.Length; } }
 
         /// <summary>
         /// The OPCode of the current WebSocketFrame
@@ -211,7 +185,7 @@ namespace NarcityMedia.Enjent
         /// will be initialized to a byte array of length 4 which is derived from a secure source of randomness.
         /// Else, <see cref="this.MaskingKey" /> will be initialized to an empty byte array
         /// </remarks>
-        public WebSocketFrame(bool fin, bool masked, byte[] payload)
+        public WebSocketFrame(bool fin, bool masked, byte[] payload) : base(payload)
         {
             this.Fin = fin;
             this._payload = payload;
@@ -239,34 +213,53 @@ namespace NarcityMedia.Enjent
         /// <returns>Returns the bytes that form the data frame</returns>
         public byte[] GetBytes()
         {
-            byte[] frameHeader = new byte[2];
+			// It's useful to determine the exact length of the frame beforehand
+			// to avoid some potential memory re-allocation
+			byte[] frameBytes = new byte[this.PredictFrameLength()];
 
-            // First octet - 1 bit for FIN, 3 reserved, 4 for OP Code
+            // First octet has 1 bit for FIN, 3 reserved, 4 for OP Code
             byte octet0 = (byte) ((this.Fin) ? 0b10000000 : 0b00000000);
             octet0 = (byte) ( octet0 | this.OpCode );
 
             byte octet1 = (byte) ((this.Masked) ? 0b10000000 : 0b00000000);
-            octet1 = (byte) ( octet1 | ( this.PayloadLength <= 125 ? this.PayloadLength : this.PayloadLength <= ushort.MaxValue ? 126 : 127 ) );
+            octet1 = (byte) ( octet1 | ( this._payload.Length <= 125 ? this._payload.Length : this._payload.Length <= ushort.MaxValue ? 126 : 127 ) );
 
-            frameHeader[0] = octet0;
-            frameHeader[1] = octet1;
+            frameBytes[0] = octet0;
+            frameBytes[1] = octet1;
 
-            if (this.Payload != null)
-            {
-				byte[] contentLengthBytes = this.GetContentLengthBytes();
-				byte[] headerWithPayloadLength = new byte[frameHeader.Length + contentLengthBytes.Length];
-				frameHeader.CopyTo(headerWithPayloadLength, 0);
-				contentLengthBytes.CopyTo(headerWithPayloadLength, frameHeader.Length);
-                byte[] finalBytes = AppendContentToHeader(headerWithPayloadLength, this.Payload);
+			byte[] contentLengthBytes = this.GetContentLengthBytes();
+			contentLengthBytes.CopyTo(frameBytes, 2);
+			
+			if (this.Masked && this.Payload.Length > 0)
+			{
+				this.MaskingKey.CopyTo(frameBytes, 2 + contentLengthBytes.Length);
+			}
 
-                return finalBytes;
-            }
+			int payloadWriteStart = 2 + contentLengthBytes.Length + ( this.Masked ? 4 : 0 );
+			this.Payload.CopyTo(frameBytes, payloadWriteStart);
 
-            return frameHeader;
+            return frameBytes;
         }
 
 		/// <summary>
-		/// Returns an array of bytes that represent the value of a given length integer to be inserted in a 
+		/// Returns the number of bytes necessary to represent the current
+		/// frame as a byte array
+		/// </summary>
+		/// <returns>
+		/// The number of bytes
+		/// </returns>
+		protected int PredictFrameLength()
+		{
+			return (
+				2
+				+ ( this._payload.Length <= 125 ? 0 : this._payload.Length <= ushort.MaxValue ? 2 : 4 )
+				+ ( this.Masked ? 4 : 0 )
+				+ this._payload.Length
+			);
+		}
+
+		/// <summary>
+		/// Returns an array of bytes that represent the length of to be inserted in a 
 		/// WebSocket frame as the content length.
 		/// The returned byte array will be of length:
 		/// 0 if the current frame's content length is smaller than or equal to 125
@@ -275,22 +268,22 @@ namespace NarcityMedia.Enjent
 		/// </summary>
 		/// <returns>An array of bytes that can be inserted in the current frame to represent the content length, if any</returns>
 		/// <remark>The length of a frame is a uint hence will never be bigger</remark>
-		private byte[] GetContentLengthBytes()
+		protected byte[] GetContentLengthBytes()
 		{
 			byte[] contentLengthBytes;
-			if (this.PayloadLength <= 125)
+			if (this._payload.Length <= 125)
 			{
 				contentLengthBytes = new byte[0];
 			}
             // Length must be encoded in network byte order
-        	else if (this.PayloadLength <= ushort.MaxValue)
+        	else if (this._payload.Length <= ushort.MaxValue)
 			{
-				byte[] encodedLength = BitConverter.GetBytes(this.PayloadLength);
+				byte[] encodedLength = BitConverter.GetBytes(this._payload.Length);
 				contentLengthBytes = new byte[2] { encodedLength[1], encodedLength[0] };
 			}
 			else
 			{
-				byte[] encodedLength = BitConverter.GetBytes(this.PayloadLength);
+				byte[] encodedLength = BitConverter.GetBytes(this._payload.Length);
 				contentLengthBytes = new byte[4] { encodedLength[3], encodedLength[2], encodedLength[1], encodedLength[0] };
 			}
 
@@ -319,35 +312,6 @@ namespace NarcityMedia.Enjent
     public class WebSocketDataFrame : WebSocketFrame
     {
         /// <summary>
-        /// Represents types of WebSocket data frames
-        /// </summary>
-        public enum DataFrameType { Text, Binary }
-
-        /// <summary>
-        /// Represents the type of the current SocketDataFrame
-        /// </summary>
-        public DataFrameType DataType;
-
-        private string? _plaintext;
-
-        /// <summary>
-        /// The plaintext content of the current WebSocketFrame
-        /// </summary>
-        public string? Plaintext
-        {
-            get { return this._plaintext; }
-            set
-            {
-                if (value != null)
-                {
-                    // this.Plaintext = System.Text.Encoding.UTF8.GetString(value);
-                    this._plaintext = value;
-                    this.Payload = System.Text.Encoding.UTF8.GetBytes(value);
-                }
-            }
-        }
-
-        /// <summary>
         /// Initializes a new instance of the SocketDataFrame class
         /// </summary>
         /// <param name="fin">Indicates whether the current SocketDataFrame is the last one of a multi frame message</param>
@@ -355,11 +319,10 @@ namespace NarcityMedia.Enjent
         /// <param name="payload">Payload of the current WebSocketFrame</param>
         /// <param name="dataType">The data type of the current SocketDataFrame</param>
         public WebSocketDataFrame(bool fin, bool masked, byte[] payload,
-                                DataFrameType dataType) : base(fin, masked, payload)
+                                WebSocketDataType dataType) : base(fin, masked, payload)
         {
-            this.DataType = dataType;
             this.InitOPCode();
-            if (this.DataType == DataFrameType.Text)
+            if (this.DataType == WebSocketDataType.Text)
             {
                 this.Plaintext = System.Text.Encoding.UTF8.GetString(payload);
             }
@@ -370,20 +333,20 @@ namespace NarcityMedia.Enjent
         /// </summary>
         protected override void InitOPCode()
         {
-			this.OpCode = (byte) ( this.DataType == DataFrameType.Text ? WebSocketOPCode.Text : WebSocketOPCode.Binary );
+			this.OpCode = (byte) ( this.DataType == WebSocketDataType.Text ? WebSocketOPCode.Text : WebSocketOPCode.Binary );
         }
     }
 
     /// <summary>
     /// Represents a WebSocket control frame as described in RFC 6455
     /// </summary>
-    public class WebSocketControlFrame : WebSocketDataFrame
+    public abstract class WebSocketControlFrame : WebSocketDataFrame
     {
         /// <summary>
         /// Initializes a new instance of the SocketControlFrame class
         /// </summary>
         /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
-        public WebSocketControlFrame(WebSocketOPCode controlOpCode) : base(true, false, new byte[0], WebSocketDataFrame.DataFrameType.Binary)
+        public WebSocketControlFrame(WebSocketOPCode controlOpCode) : base(true, false, new byte[0], WebSocketDataType.Binary)
         {
             this.OpCode = (byte) controlOpCode;
         }
@@ -395,7 +358,7 @@ namespace NarcityMedia.Enjent
         /// <param name="masked"></param>
         /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
         public WebSocketControlFrame(bool fin, bool masked, WebSocketOPCode controlOpCode)
-                : base(true, false, new byte[0], WebSocketDataFrame.DataFrameType.Binary)
+                : base(true, false, new byte[0], WebSocketDataType.Binary)
         {
             this.OpCode = (byte) controlOpCode;
         }
@@ -426,6 +389,7 @@ namespace NarcityMedia.Enjent
                 this._payload.CopyTo(payload, 0);
 
                 byte[] closeCodeBytes = BitConverter.GetBytes((ushort) value);
+				closeCodeBytes.EnsureNetworkByteOrder();
                 closeCodeBytes.CopyTo(payload, 0);
 
                 this.Payload = payload;
@@ -435,7 +399,7 @@ namespace NarcityMedia.Enjent
         /// <summary>
         /// (Optionnal) indicates a reason for the WebSocket connexion closing.
         /// This text is not necessarily 'human readable' and should ideally not
-        /// be show to the end user but may be useful for debugging.
+        /// be shown to the end user but may be useful for debugging.
         /// </summary>
         /// <value>The string representing the close reason</value>
         public string? CloseReason
@@ -479,39 +443,23 @@ namespace NarcityMedia.Enjent
     /// A message is composed of one or more frames.
     /// </summary>
     /// <remarks>This public class only support messages that can fit in a single frame for now</remarks>
-    public class WebSocketMessage
+    public class WebSocketMessage : WebSocketDataContainer
     {
-        /// <summary>
-        /// Buffer containing the payload data
-        /// </summary>
-        public byte[] Payload;
-
-		/// <summary>
-		/// Type of the current message
-		/// </summary>
-		public readonly WebSocketDataFrame.DataFrameType MessageType;
-
 		/// <summary>
 		/// Creates an instance of WebSocketMessage that contains the given payload.
 		/// <see cref="MessageType" /> will be set to <see cref="WebSocketDataFrame.DataFrameType.Binary" />
 		/// </summary>
 		/// <param name="payload">The payload to initialize the message with</param>
-        public WebSocketMessage(byte[] payload)
-        {
-			this.MessageType = WebSocketDataFrame.DataFrameType.Binary;
-			this.Payload = payload;
-        }
+        public WebSocketMessage(byte[] payload) : base(payload)
+        {}
 
 		/// <summary>
 		/// Creates an instance of WebSocketMessage that contains the given message as payload.
 		/// <see cref="MessageType" /> will be set to <see cref="WebSocketDataFrame.DataFrameType.Text" />
 		/// </summary>
 		/// <param name="message">The message to set as the payload</param>
-		public WebSocketMessage(string message)
-		{
-			this.MessageType = WebSocketDataFrame.DataFrameType.Text;
-			this.Payload = System.Text.Encoding.UTF8.GetBytes(message);
-		}
+		public WebSocketMessage(string message) : base(message)
+		{}
 
         /// <summary>
         /// Returns the Websocket frames that compose the current message, as per
@@ -522,7 +470,7 @@ namespace NarcityMedia.Enjent
         public List<WebSocketDataFrame> GetFrames()
         {
             List<WebSocketDataFrame> frames = new List<WebSocketDataFrame>(1);
-            frames.Add(new WebSocketDataFrame(true, false, this.Payload, this.MessageType));
+            frames.Add(new WebSocketDataFrame(true, false, this.Payload, this.DataType));
 
             return frames;
         }
@@ -530,11 +478,22 @@ namespace NarcityMedia.Enjent
         public List<WebSocketDataFrame> GetMaskedFrames()
         {
             List<WebSocketDataFrame> frames = new List<WebSocketDataFrame>(1);
-            frames.Add(new WebSocketDataFrame(true, true, this.Payload, this.MessageType));
+            frames.Add(new WebSocketDataFrame(true, true, this.Payload, this.DataType));
 
             return frames;
         }
     }
+
+	internal static class NetworkByteOrderByteArrayExtensions
+	{
+		public static void EnsureNetworkByteOrder(this byte[] that)
+		{
+			if (BitConverter.IsLittleEndian)
+			{
+				Array.Reverse(that);
+			}
+		}
+	}
 }
 
 /*

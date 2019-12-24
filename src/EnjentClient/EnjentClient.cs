@@ -71,6 +71,11 @@ namespace NarcityMedia.Enjent.Client
 
 		public async Task Connect()
 		{
+			if (this.Connected)
+			{
+				throw new InvalidOperationException("Cannot connect to a remote endpoint while current endpoint is already connected");
+			}
+
 			if (this.Endpoint == null)
 			{
 				string unescapedHost = Uri.UnescapeDataString(this.ServerUri.IdnHost);
@@ -79,7 +84,6 @@ namespace NarcityMedia.Enjent.Client
 				{
 					this.Endpoint = new IPEndPoint(ipAddresses[0], this.ServerUri.Port);
 					this.Socket = new Socket(this.Endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-					this.Connected = true;
 				}
 				else
 				{
@@ -91,6 +95,7 @@ namespace NarcityMedia.Enjent.Client
 			{
 				await this.Socket.ConnectAsync(this.Endpoint);
 				await this.Socket.SendAsync(EnjentClient.GetHttpRequestBytes(), SocketFlags.None);
+				this.Connected = true;
 
 				byte[] buf = new byte[MAX_HTTP_RES_LENGTH];
 				NetworkStream s = new NetworkStream(this.Socket);

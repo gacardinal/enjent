@@ -16,7 +16,7 @@ namespace NarcityMedia.Enjent
         public void Send(TWebSocketClient cli, string message)
         {
             byte[] bytes = System.Text.Encoding.UTF8.GetBytes(message);
-            WebSocketDataFrame frame = new WebSocketDataFrame(true, false, bytes, WebSocketDataFrame.DataFrameType.Text);
+            WebSocketDataFrame frame = new WebSocketDataFrame(true, false, bytes, WebSocketDataType.Text);
 
             List<WebSocketFrame> frames = new List<WebSocketFrame>();
             frames.Add(frame);
