@@ -81,7 +81,7 @@ namespace NarcityMedia.Enjent
 			byte[] maskingKey = new byte[4];
 			byte[] contentBuffer = new byte[contentLength];
 
-			WebSocketFrame frame = null;
+			WebSocketFrame? frame = null;
 			if (contentLength > 0 && contentLength <= 126)
 			{
 				if (contentLength == 126)
@@ -105,61 +105,75 @@ namespace NarcityMedia.Enjent
 			}
 			else if (opcode == WebSocketOPCode.Close)
 			{
-				WebSocketCloseFrame closeFrame = new WebSocketCloseFrame();
-				if (contentLength >= 2)
-				{
-					byte[] unmasked = ApplyMask(contentBuffer, maskingKey);
-					byte[] closeCodeBytes = new byte[2] { contentBuffer[0], contentBuffer[1] };
-					if (BitConverter.IsLittleEndian)
-					{
-						// Close codes are transmitted in network byte order (big endian)
-						Array.Reverse(closeCodeBytes);
-					}
-
-					int maybeCloseCode = BitConverter.ToInt16(contentBuffer);
-					if (System.Enum.IsDefined(typeof(WebSocketCloseCode), maybeCloseCode))
-					{
-						WebSocketCloseCode closeCode = (WebSocketCloseCode) maybeCloseCode;
-						closeFrame.CloseCode = closeCode;
-
-						if (contentLength > 2)
-						{
-							byte[] closeReasonBytes = new byte[contentLength - 2];
-							Array.Copy(contentBuffer, 2, closeReasonBytes, 0, closeReasonBytes.Length);
-							closeFrame.CloseReason = System.Text.Encoding.UTF8.GetString(closeReasonBytes);
-						}
-					}
-					else
-					{
-						// Invalid close code provided
-					}
-				}
-				else
-				{
-					frame = new WebSocketCloseFrame(WebSocketCloseCode.NoCloseCode);
-				}
-
-				frame = closeFrame;
+				frame = ParseCloseFrame(contentLength, maskingKey, contentBuffer);
+			}
+			else if (opcode == WebSocketOPCode.Ping)
+			{
+				frame = new WebSocketPingFrame(masked, contentBuffer);
+			}
+			else if (opcode == WebSocketOPCode.Pong)
+			{
+				frame = new WebSocketPongFrame(masked, contentBuffer);
 			}
 			else
 			{
+				throw new EnjentWebSocketProtocolException("Unknown WebSocket OpCode " + opcode.ToString());
 			}
 
 			return frame;
 		}
 
-        /// <summary>
-        /// Applies the masking / unmasking algorithm defined in section 5.3 of RFC6455.
-        /// </summary>
-        /// <param name="data">Data on which to apply the masking algorithm</param>
-        /// <param name="maskingKey">Masking key bytes</param>
-        /// <returns>The masked / unmasked data</returns>
-        /// <remarks>
-        /// This algorithm is such that passing the output of this function to itself with the same masking key
-        /// will yeild the original result because it essentially performs an XOR operation on the data with the masking key.
-        /// Reffer to section 5.3 of RFC6455 for full implementation details
-        /// </remarks>
-        public static byte[] ApplyMask(byte[] data, byte[] maskingKey)
+		private static WebSocketFrame ParseCloseFrame(ushort contentLength, byte[] maskingKey, byte[] contentBuffer)
+		{
+			WebSocketCloseFrame closeFrame = new WebSocketCloseFrame();
+			if (contentLength >= 2)
+			{
+				byte[] unmasked = ApplyMask(contentBuffer, maskingKey);
+				byte[] closeCodeBytes = new byte[2] { contentBuffer[0], contentBuffer[1] };
+				if (BitConverter.IsLittleEndian)
+				{
+					// Close codes are transmitted in network byte order (big endian)
+					Array.Reverse(closeCodeBytes);
+				}
+
+				int maybeCloseCode = BitConverter.ToInt16(contentBuffer);
+				if (System.Enum.IsDefined(typeof(WebSocketCloseCode), maybeCloseCode))
+				{
+					WebSocketCloseCode closeCode = (WebSocketCloseCode)maybeCloseCode;
+					closeFrame.CloseCode = closeCode;
+
+					if (contentLength > 2)
+					{
+						byte[] closeReasonBytes = new byte[contentLength - 2];
+						Array.Copy(contentBuffer, 2, closeReasonBytes, 0, closeReasonBytes.Length);
+						closeFrame.CloseReason = System.Text.Encoding.UTF8.GetString(closeReasonBytes);
+					}
+				}
+				else
+				{
+					throw new EnjentWebSocketProtocolException("Close frame specified a close reason but included an invalid close code");
+				}
+			}
+			else
+			{
+				closeFrame = new WebSocketCloseFrame(WebSocketCloseCode.NoCloseCode);
+			}
+
+			return closeFrame;
+		}
+
+		/// <summary>
+		/// Applies the masking / unmasking algorithm defined in section 5.3 of RFC6455.
+		/// </summary>
+		/// <param name="data">Data on which to apply the masking algorithm</param>
+		/// <param name="maskingKey">Masking key bytes</param>
+		/// <returns>The masked / unmasked data</returns>
+		/// <remarks>
+		/// This algorithm is such that passing the output of this function to itself with the same masking key
+		/// will yeild the original result because it essentially performs an XOR operation on the data with the masking key.
+		/// Reffer to section 5.3 of RFC6455 for full implementation details
+		/// </remarks>
+		public static byte[] ApplyMask(byte[] data, byte[] maskingKey)
         {
             if (maskingKey.Length != 4) throw new ArgumentException("Masking key must always be of length 4");
 
