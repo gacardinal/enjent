@@ -202,12 +202,6 @@ namespace NarcityMedia.Enjent
         }
 
         /// <summary>
-        /// Initializes the OPCode of the frame, the frame must decide it's own opcode
-        /// </summary>
-        /// <remarks>Derived public classes MUST override</remarks>
-        protected abstract void InitOPCode();
-
-        /// <summary>
         /// Returns the bytes representation of the data frame
         /// </summary>
         /// <returns>Returns the bytes that form the data frame</returns>
@@ -321,47 +315,32 @@ namespace NarcityMedia.Enjent
         public WebSocketDataFrame(bool fin, bool masked, byte[] payload,
                                 WebSocketDataType dataType) : base(fin, masked, payload)
         {
-            this.InitOPCode();
             if (this.DataType == WebSocketDataType.Text)
             {
                 this.Plaintext = System.Text.Encoding.UTF8.GetString(payload);
             }
-        }
-
-        /// <summary>
-        /// Determines the correct OPCode according to the data type of the current SocketDataFrame
-        /// </summary>
-        protected override void InitOPCode()
-        {
-			this.OpCode = (byte) ( this.DataType == WebSocketDataType.Text ? WebSocketOPCode.Text : WebSocketOPCode.Binary );
         }
     }
 
     /// <summary>
     /// Represents a WebSocket control frame as described in RFC 6455
     /// </summary>
-    public abstract class WebSocketControlFrame : WebSocketDataFrame
+    public abstract class WebSocketControlFrame : WebSocketFrame
     {
         /// <summary>
         /// Initializes a new instance of the SocketControlFrame class
         /// </summary>
         /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
-        public WebSocketControlFrame(WebSocketOPCode controlOpCode) : base(true, false, new byte[0], WebSocketDataType.Binary)
-        {
-            this.OpCode = (byte) controlOpCode;
-        }
+        public WebSocketControlFrame(WebSocketOPCode controlOpCode) : this(controlOpCode, false, new byte[0])
+        {}
 
-        /// <summary>
-        /// Initializes a new instance of the SocketControlFrame class
-        /// </summary>
-        /// <param name="fin"></param>
-        /// <param name="masked"></param>
-        /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
-        public WebSocketControlFrame(bool fin, bool masked, WebSocketOPCode controlOpCode)
-                : base(true, false, new byte[0], WebSocketDataType.Binary)
-        {
-            this.OpCode = (byte) controlOpCode;
-        }
+		/// <summary>
+		/// Initializes a new instance of the SocketControlFrame class
+		/// </summary>
+		/// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
+		/// <param name="masked">Whether or not the current control frame is masked</param>
+		public WebSocketControlFrame(WebSocketOPCode controlOpCode, bool masked, byte[] payload) : base(true, masked, payload)
+		{}
     }
 
     /// <summary>
@@ -437,6 +416,25 @@ namespace NarcityMedia.Enjent
             this.CloseReason = closeReason;
         }
     }
+
+	public class WebSocketPingFrame : WebSocketControlFrame
+	{
+		public WebSocketPingFrame() : base(WebSocketOPCode.Ping)
+		{}
+
+		public WebSocketPingFrame(bool masked, byte[] payload) : base(WebSocketOPCode.Ping, masked, payload)
+		{}
+	}
+
+	
+	public class WebSocketPongFrame : WebSocketControlFrame
+	{
+		public WebSocketPongFrame() : base(WebSocketOPCode.Pong)
+		{}
+		
+		public WebSocketPongFrame(bool masked, byte[] payload) : base(WebSocketOPCode.Ping, masked, payload)
+		{}
+	}
 
     /// <summary>
     /// Represents a message that is to be sent via WebSocket.
