@@ -99,7 +99,7 @@ namespace NarcityMedia.Enjent
         /// Sends a message to all the clients that are member of the current room
         /// </summary>
         /// <param name="message">The message to broadcast</param>
-        public void Broadcast(WebSocketMessage message)
+        public void Broadcast(BinaryMessage message)
         {
             lock (this.clients) 
             {

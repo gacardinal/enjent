@@ -109,7 +109,7 @@ namespace NarcityMedia.Enjent.Client
 			}
 		}
 
-		public void Send(WebSocketMessage message)
+		public void Send(BinaryMessage message)
 		{
 			if (this.Socket != null && this.Connected)
 			{

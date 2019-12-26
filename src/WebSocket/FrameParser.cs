@@ -4,7 +4,7 @@ using System.Net.Sockets;
 
 namespace NarcityMedia.Enjent
 {
-    abstract partial class WebSocketFrame : WebSocketDataContainer
+    abstract partial class WebSocketFrame
     {
 		/// <summary>
 		/// Tries to parse the given bytes as a <see cref="WebSocketFrame" />.
@@ -95,17 +95,29 @@ namespace NarcityMedia.Enjent
 					contentLength = (ushort) (largerHeader[2] << 8 | largerHeader[3]);
 				}
 
-				input.Read(maskingKey);
+				if (masked)
+				{
+					input.Read(maskingKey);
+				}
 				input.Read(contentBuffer);
 			}
 
-			if (opcode == WebSocketOPCode.Text || opcode == WebSocketOPCode.Binary)
+			if (masked)
 			{
-				frame = new WebSocketDataFrame(fin, masked, ApplyMask(contentBuffer, maskingKey), opcode == WebSocketOPCode.Binary ? WebSocketDataType.Binary : WebSocketDataType.Text);
+				contentBuffer = ApplyMask(contentBuffer, maskingKey);
+			}
+
+			if (opcode == WebSocketOPCode.Binary)
+			{
+				frame = new WebSocketBinaryFrame(fin, masked, contentBuffer);
+			}
+			if (opcode == WebSocketOPCode.Text)
+			{
+				frame = new WebSocketTextFrame(fin, masked, contentBuffer);
 			}
 			else if (opcode == WebSocketOPCode.Close)
 			{
-				frame = ParseCloseFrame(contentLength, maskingKey, contentBuffer);
+				frame = ParseCloseFrame(contentBuffer);
 			}
 			else if (opcode == WebSocketOPCode.Ping)
 			{
@@ -120,15 +132,19 @@ namespace NarcityMedia.Enjent
 				throw new EnjentWebSocketProtocolException("Unknown WebSocket OpCode " + opcode.ToString());
 			}
 
+
+			if (masked)
+			{
+				frame.MaskingKey = maskingKey;
+			}
 			return frame;
 		}
 
-		private static WebSocketFrame ParseCloseFrame(ushort contentLength, byte[] maskingKey, byte[] contentBuffer)
+		private static WebSocketFrame ParseCloseFrame(byte[] contentBuffer)
 		{
 			WebSocketCloseFrame closeFrame = new WebSocketCloseFrame();
-			if (contentLength >= 2)
+			if (contentBuffer.Length >= 2)
 			{
-				byte[] unmasked = ApplyMask(contentBuffer, maskingKey);
 				byte[] closeCodeBytes = new byte[2] { contentBuffer[0], contentBuffer[1] };
 				if (BitConverter.IsLittleEndian)
 				{
@@ -142,9 +158,9 @@ namespace NarcityMedia.Enjent
 					WebSocketCloseCode closeCode = (WebSocketCloseCode)maybeCloseCode;
 					closeFrame.CloseCode = closeCode;
 
-					if (contentLength > 2)
+					if (contentBuffer.Length > 2)
 					{
-						byte[] closeReasonBytes = new byte[contentLength - 2];
+						byte[] closeReasonBytes = new byte[contentBuffer.Length - 2];
 						Array.Copy(contentBuffer, 2, closeReasonBytes, 0, closeReasonBytes.Length);
 						closeFrame.CloseReason = System.Text.Encoding.UTF8.GetString(closeReasonBytes);
 					}
