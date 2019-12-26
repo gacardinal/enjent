@@ -6,12 +6,12 @@ namespace NarcityMedia.Enjent
 	/// Represents errors relative to the WebSocket protocol.
 	/// See the RFC6455 specification for informations relative to the WebSocket protocol
 	/// </summary>
-	class EnjentWebSocketException : Exception
+	class EnjentWebSocketProtocolException : Exception
 	{
-		public EnjentWebSocketException() : base() {}
+		public EnjentWebSocketProtocolException() : base() {}
 
-		public EnjentWebSocketException(string message) : base(message) {}
+		public EnjentWebSocketProtocolException(string message) : base(message) {}
 		
-		public EnjentWebSocketException(string message, Exception innerException) : base(message, innerException) {}
+		public EnjentWebSocketProtocolException(string message, Exception innerException) : base(message, innerException) {}
 	}
 }

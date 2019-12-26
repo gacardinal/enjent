@@ -41,7 +41,7 @@ namespace NarcityMedia.Enjent
 					}
 					catch (Exception e)
 					{
-						throw new EnjentWebSocketException("Tried to set invalid UTF8 data as payload", e);
+						throw new EnjentWebSocketProtocolException("Tried to set invalid UTF8 data as payload", e);
 					}
 				}
 				else
