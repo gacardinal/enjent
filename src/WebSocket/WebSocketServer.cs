@@ -200,13 +200,26 @@ namespace NarcityMedia.Enjent
         {
             switch (cFrame.OpCode)
             {
-                case 0: // Continuation
+                case WebSocketOPCode.Continuation:
                     break;
-                case 8: // Close
+                case WebSocketOPCode.Close:
                     try
                     {
-						this.SendControlFrame(cli, new WebSocketControlFrame(true, false, WebSocketOPCode.Close));
-                        this.PushToEventQueue(new DisconnectionEventArgs(cli));
+						WebSocketCloseFrame closeFrame = (WebSocketCloseFrame) cFrame;
+						WebSocketCloseFrame echoCloseFrame = new WebSocketCloseFrame();
+						DisconnectionEventArgs de = new DisconnectionEventArgs(cli);
+						if (closeFrame.CloseCode != WebSocketCloseCode.NoCloseCode)
+						{
+							echoCloseFrame.CloseCode = closeFrame.CloseCode;
+							de.CloseCode = closeFrame.CloseCode;
+
+							if (!String.IsNullOrEmpty(closeFrame.CloseReason))
+							{
+								de.CloseReason = closeFrame.CloseReason;
+							}
+						}
+						this.SendControlFrame(cli, echoCloseFrame);
+                        this.PushToEventQueue(de);
                     }
                     catch (Exception e)
                     {
@@ -215,14 +228,16 @@ namespace NarcityMedia.Enjent
                     }
                     finally
                     {
-
                         cli.Dispose();
                     }
                     break;
-                case 9: // Ping
+                case WebSocketOPCode.Ping:
                     try
                     {
-						this.SendControlFrame(cli, new WebSocketControlFrame(true, false, WebSocketOPCode.Pong));
+						WebSocketPingFrame pf = (WebSocketPingFrame) cFrame;
+						WebSocketPongFrame response = new WebSocketPongFrame();
+						response.Payload = pf.Payload;
+						this.SendControlFrame(cli, pf);
                     }
                     catch (Exception e)
                     {
@@ -354,7 +369,7 @@ namespace NarcityMedia.Enjent
         /// <remark>
         /// Will most likely be executed by a ThreadPool thread which executes the receive logic
         /// </remark>
-        private void RemoveCLient(TWebSocketClient cli)
+        private void RemoveClient(TWebSocketClient cli)
         {
             if (cli != null)
             {
@@ -422,25 +437,33 @@ namespace NarcityMedia.Enjent
                     int received = receiveState.Cli.Socket.EndReceive(iar);
                     if (received != 0)
                     {
-                        WebSocketFrame? frame = WebSocketFrame.TryParse(receiveState.buffer, receiveState.Cli.Socket);
+                        WebSocketFrame frame = WebSocketFrame.Parse(new NetworkStream(receiveState.Cli.Socket), receiveState.buffer);
                         if (frame != null)
                         {
-                            if (frame is WebSocketDataFrame)
-                            {
-                                WebSocketDataFrame dataFrame = (WebSocketDataFrame) frame;
-                                if (!(String.IsNullOrEmpty(dataFrame.Plaintext) || (dataFrame.Plaintext.Length == 1 && char.IsControl(dataFrame.Plaintext.ElementAt(0)))))
+							if (frame.OpCode == WebSocketOPCode.Text)
+							{
+                                WebSocketTextFrame textFrame = (WebSocketTextFrame) frame;
+                                if (
+									!(String.IsNullOrEmpty(textFrame.Plaintext)
+									|| (textFrame.Plaintext.Length == 1 && char.IsControl(textFrame.Plaintext.ElementAt(0))))
+								)
                                 {
-                                    this.PushToEventQueue(new MessageEventArgs(receiveState.Cli, (WebSocketDataFrame) frame));
+                                    this.PushToEventQueue(new MessageEventArgs(receiveState.Cli, textFrame));
                                     StartClientReceive(receiveState.Cli);
                                 }
                                 else
                                 {
                                     // Many browsers and WebSocket client side implementations send an empty data frame on disconnection
                                     // for some obscure reason, so if it's the case, we disconnect the client 
-                                    this.RemoveCLient(receiveState.Cli);
+                                    this.RemoveClient(receiveState.Cli);
                                     this.PushToEventQueue(new DisconnectionEventArgs(receiveState.Cli));
                                     receiveState.Cli.Dispose();
                                 }
+
+							}
+                            else if (frame.OpCode == WebSocketOPCode.Binary)
+                            {
+								
                             }
                             else
                             {
@@ -450,7 +473,7 @@ namespace NarcityMedia.Enjent
                         }
                         else
                         {
-                            this.RemoveCLient(receiveState.Cli);
+                            this.RemoveClient(receiveState.Cli);
                             Exception e = new WebSocketServerException("Error while parsing an incoming WebSocketFrame");
                             this.PushToEventQueue(new DisconnectionEventArgs(receiveState.Cli, e));
                             receiveState.Cli.Dispose();
@@ -458,7 +481,7 @@ namespace NarcityMedia.Enjent
                     }
                     else
                     {
-                        this.RemoveCLient(receiveState.Cli);
+                        this.RemoveClient(receiveState.Cli);
                         this.PushToEventQueue(new DisconnectionEventArgs(receiveState.Cli));
                         receiveState.Cli.Dispose();
                     }
@@ -466,7 +489,9 @@ namespace NarcityMedia.Enjent
                 catch (Exception e)
                 {
                     // TODO: Send a closing frame with 1011 "Internal Server Error" closing code as per protocol specifications
-                    this.RemoveCLient(receiveState.Cli);
+                    WebSocketCloseFrame cf = new WebSocketCloseFrame(WebSocketCloseCode.ProtocolError);
+					this.SendControlFrame(receiveState.Cli, cf);
+					this.RemoveClient(receiveState.Cli);
                     Exception ex = new WebSocketServerException("An error occured while processing message received from client. See inner exception for additional information", e);
                     this.PushToEventQueue(new DisconnectionEventArgs(receiveState.Cli, ex));
                     receiveState.Cli.Dispose();
