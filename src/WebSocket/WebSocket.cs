@@ -145,6 +145,11 @@ namespace NarcityMedia.Enjent
         TLSHandshakeFailure = 1015
     }
 
+	/// <summary>
+	/// Represents types of WebSocket payload data
+	/// </summary>
+	public enum WebSocketDataType { Text, Binary }
+
     /// <summary>
     /// Represents a general concept of a WebSocket frame described by the 
     /// WebSocket standard
@@ -154,28 +159,48 @@ namespace NarcityMedia.Enjent
         /// <summary>
         /// Indicates whether the current WebSocketFrame is the last one of a message
         /// </summary>
-        public readonly bool Fin;
+        public bool Fin;
 
         /// <summary>
         /// Indicates whether the current WebSocketFrame is masked.
         /// Frames comming from the client must be masked whereas frames sent from the server must NOT be masked
         /// </summary>
-        public readonly bool Masked;
+        public bool Masked;
 
         /// <summary>
         /// The OPCode of the current WebSocketFrame
         /// </summary>
-        public byte OpCode;
+        public WebSocketOPCode OpCode;
 
 		public byte[] Payload;
 
-		public BinaryPayload P;
+		private byte[]? _maskingKey;
 
         /// <summary>
-        /// 
-        /// </summary>
-        /// <value></value>
-        public byte[] MaskingKey { get; private set; }
+        /// A 'Lazily' initialized byte[] of length 4 that represents the masking key that will be used
+        /// to mask the frame, if <see cref="Masked" /> is true.
+		/// </summary>
+        /// <value>The bytes forming the masking key</value>
+        public byte[] MaskingKey
+		{
+			get
+			{
+				if (this._maskingKey != null) {
+					return this._maskingKey;
+				} else {
+					this._maskingKey = GenerateMaskingKey();
+					return this.MaskingKey;
+				}
+			}
+			set
+			{
+				if (value.Length == 4) {
+					this._maskingKey = value;
+				} else {
+					throw new ArgumentException("Value set as masking key should have a length of exactly 4 bytes");
+				}
+			}
+		}
 
         /// <summary>
         /// Initializes a new instance of the WebSocketFrame class
@@ -192,18 +217,15 @@ namespace NarcityMedia.Enjent
         {
             this.Fin = fin;
 			this.Payload = payload;
-			this.P = new BinaryPayload(payload);
-            
-            if (masked)
-            {
-                this.MaskingKey = new byte[4];
-                CryptoRandomSingleton.Instance.GetBytes(this.MaskingKey);
-            }
-            else
-            {
-                this.MaskingKey = new byte[0];
-            }
         }
+
+		private static byte[] GenerateMaskingKey()
+		{
+			byte[] k = new byte[4];
+			CryptoRandomSingleton.Instance.GetBytes(k);
+
+			return k;
+		}
 
         /// <summary>
         /// Returns the bytes representation of the data frame
@@ -217,7 +239,7 @@ namespace NarcityMedia.Enjent
 
             // First octet has 1 bit for FIN, 3 reserved, 4 for OP Code
             byte octet0 = (byte) ((this.Fin) ? 0b10000000 : 0b00000000);
-            octet0 = (byte) ( octet0 | this.OpCode );
+            octet0 = (byte) ( octet0 | (byte) this.OpCode );
 
             byte octet1 = (byte) ((this.Masked) ? 0b10000000 : 0b00000000);
             octet1 = (byte) ( octet1 | ( this.Payload.Length <= 125 ? this.Payload.Length : this.Payload.Length <= ushort.MaxValue ? 126 : 127 ) );
@@ -320,6 +342,10 @@ namespace NarcityMedia.Enjent
     /// </summary>
     public class WebSocketBinaryFrame : WebSocketDataFrame
     {
+		new public readonly WebSocketDataType DataType = WebSocketDataType.Binary;
+
+		public WebSocketBinaryFrame() : this(new byte[0]) {}
+
 		public WebSocketBinaryFrame(byte[] payload) : this(true, false, payload)
 		{}
 
@@ -336,15 +362,41 @@ namespace NarcityMedia.Enjent
 
 	public class WebSocketTextFrame : WebSocketDataFrame
 	{
-		new public TextPayload P;
+		new public readonly WebSocketDataType DataType = WebSocketDataType.Text;
 
+		private byte[] _payload;
+		
+		new public byte[] Payload
+		{
+			get { return this._payload; }
+			set
+			{
+				this._plaintext = Encoding.UTF8.GetString(value);
+				this._payload = value;
+			}
+		}
+
+		private string _plaintext;
+
+		public string Plaintext
+		{
+			get { return this._plaintext; }
+			set
+			{
+				this._payload = Encoding.UTF8.GetBytes(value);
+				this._plaintext = value;
+			}
+		}
+
+		public WebSocketTextFrame() : this(String.Empty) {}
 
 		public WebSocketTextFrame(string plaintext) : this(true, false, plaintext)
 		{}
 
 		public WebSocketTextFrame(bool fin, bool masked, string plaintext) : base(fin, masked, new byte[0], WebSocketDataType.Text)
 		{
-			this.P = new TextPayload(plaintext);
+			this._plaintext = plaintext;
+			this._payload = Encoding.UTF8.GetBytes(plaintext);
 		}
 	}
 
