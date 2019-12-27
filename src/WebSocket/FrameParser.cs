@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text;
 using System.Net.Sockets;
 
 namespace NarcityMedia.Enjent
@@ -43,7 +44,7 @@ namespace NarcityMedia.Enjent
         /// </returns>
         /// <remarks>
         /// If the parsing is successful, a caller should check the type of the object that is returned too as to, for example,
-        /// differenciate between a <see cref="WebSocketDataFrame" /> and a <see cref="WebSocketControlFrame" />,
+        /// differenciate between a <see cref="TF" /> and a <see cref="WebSocketControlFrame" />,
 		/// are both derived from <see cref="WebSocketFrame" />.
 		/// </remarks>
         public static bool TryParse(Stream input, out WebSocketFrame? result)
@@ -60,6 +61,14 @@ namespace NarcityMedia.Enjent
 			}
         }
 
+		public static WebSocketFrame Parse(Stream input)
+		{
+			byte[] headerBytes = new byte[2];
+			input.Read(headerBytes);
+
+			return WebSocketFrame.Parse(input, headerBytes);
+		}
+
 		/// <summary>
 		/// 
 		/// </summary>
@@ -68,16 +77,18 @@ namespace NarcityMedia.Enjent
 		/// <remarks>
         /// Consider passing an instance of type <see cref="NetworkStream" /> or <see cref="MemoryStream" /> as the input parameter
 		/// </remarks>
-		public static WebSocketFrame Parse(Stream input)
+		public static WebSocketFrame Parse(Stream input, byte[] header)
 		{
-			byte[] headerBytes = new byte[2];
-			input.Read(headerBytes);
+			if (header.Length != 2)
+				throw new ArgumentException("Header must have a length of exactly 2", nameof(header));
 
-            int headerSize = headerBytes.Length;
-            bool fin = (headerBytes[0] >> 7) != 0;
-            WebSocketOPCode opcode = (WebSocketOPCode) ((byte) (headerBytes[0] & 0b00001111));
-            bool masked = (headerBytes[1] & 0b10000000) != 0;
-            ushort contentLength = (ushort) (headerBytes[1] & 0b01111111);
+			input.Read(header);
+
+            int headerSize = header.Length;
+            bool fin = (header[0] >> 7) != 0;
+            WebSocketOPCode opcode = (WebSocketOPCode) ((byte) (header[0] & 0b00001111));
+            bool masked = (header[1] & 0b10000000) != 0;
+            ushort contentLength = (ushort) (header[1] & 0b01111111);
 			byte[] maskingKey = new byte[4];
 			byte[] contentBuffer = new byte[contentLength];
 
@@ -88,7 +99,7 @@ namespace NarcityMedia.Enjent
 				{
 					headerSize = 4;
 					byte[] largerHeader = new byte[headerSize];
-					headerBytes.CopyTo(largerHeader, 0);
+					header.CopyTo(largerHeader, 0);
 					// Read next two bytes and interpret them as the content length
 					input.Read(largerHeader, 2, 2);
 					// input.Receive(largerHeader, 2, 2, SocketFlags.None);
@@ -113,7 +124,15 @@ namespace NarcityMedia.Enjent
 			}
 			if (opcode == WebSocketOPCode.Text)
 			{
-				frame = new WebSocketTextFrame(fin, masked, contentBuffer);
+				try
+				{
+					string text = Encoding.UTF8.GetString(contentBuffer);
+					frame = new WebSocketTextFrame(fin, masked, text);
+				}
+				catch (Exception e)
+				{
+					throw new EnjentWebSocketProtocolException("Got invalid UTF8 data", e);
+				}
 			}
 			else if (opcode == WebSocketOPCode.Close)
 			{
@@ -132,11 +151,11 @@ namespace NarcityMedia.Enjent
 				throw new EnjentWebSocketProtocolException("Unknown WebSocket OpCode " + opcode.ToString());
 			}
 
-
 			if (masked)
 			{
 				frame.MaskingKey = maskingKey;
 			}
+
 			return frame;
 		}
 
