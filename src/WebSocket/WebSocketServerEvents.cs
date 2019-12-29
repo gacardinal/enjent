@@ -196,16 +196,19 @@ namespace NarcityMedia.Enjent
             /// </summary>
             public Exception? Exception;
 
-			public WebSocketCloseCode CloseCode;
+			public WebSocketCloseFrame? CloseFrame;
 
-			public string CloseReason;
-
-            public DisconnectionEventArgs(TWebSocketClient cli) : base(cli)
+            public DisconnectionEventArgs(TWebSocketClient client) : base(client)
             {
 				this.EvType = EventType.Disconnection;
 			}
 
-            public DisconnectionEventArgs(TWebSocketClient cli, Exception e) : this(cli)
+			public DisconnectionEventArgs(TWebSocketClient client, WebSocketCloseFrame closeFrame) : this(client)
+			{
+				this.CloseFrame = closeFrame;
+			}
+
+            public DisconnectionEventArgs(TWebSocketClient client, Exception e) : this(client)
             {
                 Exception = e;
             }
