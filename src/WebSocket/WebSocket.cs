@@ -161,45 +161,37 @@ namespace NarcityMedia.Enjent
         /// </summary>
         public bool Fin;
 
-        /// <summary>
+		/// <summary>
         /// Indicates whether the current WebSocketFrame is masked.
         /// Frames comming from the client must be masked whereas frames sent from the server must NOT be masked
         /// </summary>
         public bool Masked;
+
+		/// <summary>
+		/// Represents the masking key used to mask the current frame if <see cref="Masked" /> is true
+		/// </summary>
+		/// <remarks>
+		/// The <see cref="GetBytes" /> method ignores this field if <see cref="Masked" /> is false
+		/// </remarks>
+		public byte[] MaskingKey;
 
         /// <summary>
         /// The OPCode of the current WebSocketFrame
         /// </summary>
         public WebSocketOPCode OpCode;
 
-		public byte[] Payload;
+		protected byte[] _payload;
 
-		private byte[]? _maskingKey;
-
-        /// <summary>
-        /// A 'Lazily' initialized byte[] of length 4 that represents the masking key that will be used
-        /// to mask the frame, if <see cref="Masked" /> is true.
-		/// </summary>
-        /// <value>The bytes forming the masking key</value>
-        public byte[] MaskingKey
+		public byte[] Payload
 		{
-			get
-			{
-				if (this._maskingKey != null) {
-					return this._maskingKey;
-				} else {
-					this._maskingKey = GenerateMaskingKey();
-					return this.MaskingKey;
-				}
-			}
-			set
-			{
-				if (value.Length == 4) {
-					this._maskingKey = value;
-				} else {
-					throw new ArgumentException("Value set as masking key should have a length of exactly 4 bytes");
-				}
-			}
+			get { return _payload; }
+			set { this._payload = value; }
+		}
+
+		public WebSocketFrame(bool fin, byte[] payload, byte[] maskingKey) : this(fin, false, payload, maskingKey)
+		{
+			this.MaskingKey = new byte[4];
+			CryptoRandomSingleton.Instance.GetNonZeroBytes(this.MaskingKey);
 		}
 
         /// <summary>
@@ -213,19 +205,18 @@ namespace NarcityMedia.Enjent
         /// will be initialized to a byte array of length 4 which is derived from a secure source of randomness.
         /// Else, <see cref="this.MaskingKey" /> will be initialized to an empty byte array
         /// </remarks>
-        public WebSocketFrame(bool fin, bool masked, byte[] payload)
+        public WebSocketFrame(bool fin, bool masked, byte[] payload, byte[] maskingKey)
         {
+			if (maskingKey == null)
+				throw new ArgumentNullException(nameof(maskingKey));
+			if (maskingKey.Length != 4)
+				throw new ArgumentException("A masking key should have a length of exactly 4 bytes", nameof(maskingKey));
+
             this.Fin = fin;
-			this.Payload = payload;
+			this.Masked = masked;
+			this._payload = payload ?? new byte[0];
+			this.MaskingKey = maskingKey;
         }
-
-		private static byte[] GenerateMaskingKey()
-		{
-			byte[] k = new byte[4];
-			CryptoRandomSingleton.Instance.GetBytes(k);
-
-			return k;
-		}
 
         /// <summary>
         /// Returns the bytes representation of the data frame
@@ -326,6 +317,28 @@ namespace NarcityMedia.Enjent
         }
     }
 
+	public class WebSocketContinuationFrame : WebSocketFrame
+	{
+		public WebSocketContinuationFrame(bool fin, byte[] payload) : this(fin, payload, new byte[4])
+		{}
+
+        public WebSocketContinuationFrame(bool fin, byte[] payload, byte[] maskingKey) : base(fin, masked, payload, maskingKey)
+		{
+			this.OpCode = WebSocketOPCode.Continuation;
+		}
+
+		public static WebSocketContinuationFrame FromDataFrame(WebSocketDataFrame dataFrame)
+		{
+			if (dataFrame.Masked)
+			{
+				return new WebSocketContinuationFrame(dataFrame.Fin, dataFrame.Mas)
+			}
+			else
+			{
+				return new WebSocketContinuationFrame(dataFrame.Fin, dataFrame.Masked, dataFrame.Payload);
+			}
+		}
+	}
 
 	public abstract class WebSocketDataFrame : WebSocketFrame
 	{
@@ -334,6 +347,7 @@ namespace NarcityMedia.Enjent
 		public WebSocketDataFrame(bool fin, bool masked, byte[] payload, WebSocketDataType dataType) : base(fin, masked, payload)
 		{
 			this.DataType = dataType;
+			this.OpCode = dataType == WebSocketDataType.Binary ? WebSocketOPCode.Binary : WebSocketOPCode.Text;
 		}
 	}
 
@@ -342,11 +356,9 @@ namespace NarcityMedia.Enjent
     /// </summary>
     public class WebSocketBinaryFrame : WebSocketDataFrame
     {
-		new public readonly WebSocketDataType DataType = WebSocketDataType.Binary;
-
 		public WebSocketBinaryFrame() : this(new byte[0]) {}
 
-		public WebSocketBinaryFrame(byte[] payload) : this(true, false, payload)
+		public WebSocketBinaryFrame(byte[] payload) : this(payload, false, false)
 		{}
 
         /// <summary>
@@ -356,15 +368,13 @@ namespace NarcityMedia.Enjent
         /// <param name="masked">Indicates whether the current SocketDataFrame should be masked or not</param>
         /// <param name="payload">Payload of the current WebSocketFrame</param>
         /// <param name="dataType">The data type of the current SocketDataFrame</param>
-        public WebSocketBinaryFrame(bool fin, bool masked, byte[] payload) : base(fin, masked, payload, WebSocketDataType.Binary)
+        public WebSocketBinaryFrame(byte[] payload, bool fin, bool masked) : base(fin, masked, payload, WebSocketDataType.Binary)
         {}
     }
 
 	public class WebSocketTextFrame : WebSocketDataFrame
 	{
 		new public readonly WebSocketDataType DataType = WebSocketDataType.Text;
-
-		private byte[] _payload;
 		
 		new public byte[] Payload
 		{
@@ -409,7 +419,7 @@ namespace NarcityMedia.Enjent
         /// Initializes a new instance of the SocketControlFrame class
         /// </summary>
         /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
-        public WebSocketControlFrame(WebSocketOPCode controlOpCode) : this(controlOpCode, false, new byte[0])
+        public WebSocketControlFrame(WebSocketOPCode controlOpCode) : this(controlOpCode, new byte[0], false)
         {}
 
 		/// <summary>
@@ -417,8 +427,13 @@ namespace NarcityMedia.Enjent
 		/// </summary>
 		/// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
 		/// <param name="masked">Whether or not the current control frame is masked</param>
-		public WebSocketControlFrame(WebSocketOPCode controlOpCode, bool masked, byte[] payload) : base(true, masked, payload)
-		{}
+		public WebSocketControlFrame(WebSocketOPCode controlOpCode, byte[] payload, bool masked) : base(true, masked, payload)
+		{
+			if (payload.Length > 125)
+				throw new ArgumentException("A control frame's Payload of 125 bytes or less", nameof(payload));
+
+			this.OpCode = controlOpCode;
+		}
     }
 
     /// <summary>
@@ -426,32 +441,8 @@ namespace NarcityMedia.Enjent
     /// </summary>
     public class WebSocketCloseFrame : WebSocketControlFrame
     {
-        private WebSocketCloseCode _closeCode;
         private string? _closeReason;
-
-        /// <summary>
-        /// Represents the <see cref="WebSocketCLoseCode"> for the closing of a WebSocket connection.
-        /// </summary>
-        /// <value>The <see cref="WebSocketCLoseCode"> for the closing of a WebSocket connection</value>
-        public WebSocketCloseCode CloseCode
-        {
-            get { return this._closeCode; }
-            set
-            {
-                this._closeCode = value;
-
-                int payloadLength = this.Payload.Length > 2 ? this.Payload.Length : 2;
-                byte[] payload = new byte[payloadLength];
-
-                this.Payload.CopyTo(payload, 0);
-
-                byte[] closeCodeBytes = BitConverter.GetBytes((ushort) value);
-				closeCodeBytes.EnsureNetworkByteOrder();
-                closeCodeBytes.CopyTo(payload, 0);
-
-                this.Payload = payload;
-            }
-        }
+        public WebSocketCloseCode CloseCode;
 
         /// <summary>
         /// (Optionnal) indicates a reason for the WebSocket connexion closing.
@@ -459,57 +450,59 @@ namespace NarcityMedia.Enjent
         /// be shown to the end user but may be useful for debugging.
         /// </summary>
         /// <value>The string representing the close reason</value>
-        public string? CloseReason
-        {
-            get { return this._closeReason; }
-            set
-            {
-                this._closeReason = value;
-
-                if (value != null)
-                {
-                    byte[] payload = new byte[2 + value.Length];
-                    byte[] reasonBytes = System.Text.Encoding.UTF8.GetBytes(value);
-                    
-                    Array.Copy(this.Payload, payload, 2);
-                    reasonBytes.CopyTo(payload, 2);
-
-                    this.Payload = payload;
-                }
-            }
-        }
+        public string? CloseReason { get { return this._closeReason; } }
 
         public WebSocketCloseFrame() : this(WebSocketCloseCode.NormalClosure)
         {}
 
-        public WebSocketCloseFrame(WebSocketCloseCode closeCode) : base(WebSocketOPCode.Close)
-        {
-            // Initialize the first two bytes of the close frame body to a 2-byte unsigned integer
-            // as per RFC 6455 section 5.5.1
-            this._closeCode = closeCode;
-        }
+        public WebSocketCloseFrame(WebSocketCloseCode closeCode) : this(closeCode, String.Empty)
+        {}
 
-        public WebSocketCloseFrame(WebSocketCloseCode closeCode, string closeReason) : this(closeCode)
-        {
-            this.CloseReason = closeReason;
-        }
+		public WebSocketCloseFrame(WebSocketCloseCode closeCode, string closeReason) : this(closeCode, closeReason, false)
+		{}
+
+		public WebSocketCloseFrame(WebSocketCloseCode closeCode, string closeReason, bool masked) : base(WebSocketOPCode.Close, new byte[0], masked)
+		{
+			this.SetCloseReason(closeCode, closeReason);
+		}
+
+		/// <summary>
+		/// Sets the <see cref="CloseCode" /> and <see cref="CloseReason" /> of the current instance.
+		/// </summary>
+		/// <param name="closeCode">The WebSocket close code to set for the current instance</param>
+		/// <param name="closeReason">The close reason to set as the current instance</param>
+		/// <remarks>
+		/// As per the WebSocket specification, it is mandatory to specify a close code if a close reason is present
+		/// hence there is no overload of this mwethod that accepts only a close reason
+		/// /<remarks>
+		public void SetCloseReason(WebSocketCloseCode closeCode, string closeReason)
+		{
+            this._closeReason = closeReason ?? String.Empty;
+            this.CloseCode = closeCode;
+		}
     }
 
 	public class WebSocketPingFrame : WebSocketControlFrame
 	{
-		public WebSocketPingFrame() : base(WebSocketOPCode.Ping)
+		public WebSocketPingFrame() : this(new byte[0])
 		{}
 
-		public WebSocketPingFrame(bool masked, byte[] payload) : base(WebSocketOPCode.Ping, masked, payload)
+		public WebSocketPingFrame(byte[] payload) : this(payload, false)
+		{}
+
+		public WebSocketPingFrame(byte[] payload, bool masked) : base(WebSocketOPCode.Ping, payload, masked)
 		{}
 	}
 
 	public class WebSocketPongFrame : WebSocketControlFrame
 	{
-		public WebSocketPongFrame() : base(WebSocketOPCode.Pong)
+		public WebSocketPongFrame() : this(new byte[0])
 		{}
-		
-		public WebSocketPongFrame(bool masked, byte[] payload) : base(WebSocketOPCode.Ping, masked, payload)
+
+		public WebSocketPongFrame(byte[] payload) : this(payload, false)
+		{}
+
+		public WebSocketPongFrame(byte[] payload, bool masked) : base(WebSocketOPCode.Pong, payload, masked)
 		{}
 	}
 
