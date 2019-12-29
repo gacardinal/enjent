@@ -92,7 +92,6 @@ namespace NarcityMedia.Enjent
 			byte[] maskingKey = new byte[4];
 			byte[] contentBuffer = new byte[contentLength];
 
-			WebSocketFrame? frame = null;
 			if (contentLength > 0 && contentLength <= 126)
 			{
 				if (contentLength == 126)
@@ -118,37 +117,38 @@ namespace NarcityMedia.Enjent
 				contentBuffer = ApplyMask(contentBuffer, maskingKey);
 			}
 
-			if (opcode == WebSocketOPCode.Binary)
+			WebSocketFrame? frame = null;
+			switch (opcode)
 			{
-				frame = new WebSocketBinaryFrame(fin, masked, contentBuffer);
-			}
-			if (opcode == WebSocketOPCode.Text)
-			{
-				try
-				{
-					string text = Encoding.UTF8.GetString(contentBuffer);
-					frame = new WebSocketTextFrame(fin, masked, text);
-				}
-				catch (Exception e)
-				{
-					throw new EnjentWebSocketProtocolException("Got invalid UTF8 data", e);
-				}
-			}
-			else if (opcode == WebSocketOPCode.Close)
-			{
-				frame = ParseCloseFrame(contentBuffer);
-			}
-			else if (opcode == WebSocketOPCode.Ping)
-			{
-				frame = new WebSocketPingFrame(masked, contentBuffer);
-			}
-			else if (opcode == WebSocketOPCode.Pong)
-			{
-				frame = new WebSocketPongFrame(masked, contentBuffer);
-			}
-			else
-			{
-				throw new EnjentWebSocketProtocolException("Unknown WebSocket OpCode " + opcode.ToString());
+				case WebSocketOPCode.Continuation:
+					frame = (WebSocketFrame) new WebSocketBinaryFrame(contentBuffer, fin, masked);
+					frame.OpCode = WebSocketOPCode.Continuation;
+					break;
+				case WebSocketOPCode.Binary:
+					frame = new WebSocketBinaryFrame(contentBuffer, fin, masked);
+					break;
+				case WebSocketOPCode.Text:
+					try
+					{
+						string text = Encoding.UTF8.GetString(contentBuffer);
+						frame = new WebSocketTextFrame(fin, masked, text);
+					}
+					catch (Exception e)
+					{
+						throw new EnjentWebSocketProtocolException("Got invalid UTF8 data", e);
+					}
+					break;
+				case WebSocketOPCode.Close:
+					frame = ParseCloseFrame(contentBuffer);
+					break;
+				case WebSocketOPCode.Ping:
+					frame = new WebSocketPingFrame(contentBuffer, masked);
+					break;
+				case WebSocketOPCode.Pong:
+					frame = new WebSocketPongFrame(contentBuffer, masked);
+					break;
+				default:
+					throw new EnjentWebSocketProtocolException("Unknown WebSocket OpCode " + opcode.ToString());
 			}
 
 			if (masked)
@@ -174,14 +174,14 @@ namespace NarcityMedia.Enjent
 				int maybeCloseCode = BitConverter.ToInt16(contentBuffer);
 				if (System.Enum.IsDefined(typeof(WebSocketCloseCode), maybeCloseCode))
 				{
-					WebSocketCloseCode closeCode = (WebSocketCloseCode)maybeCloseCode;
+					WebSocketCloseCode closeCode = (WebSocketCloseCode) maybeCloseCode;
 					closeFrame.CloseCode = closeCode;
 
 					if (contentBuffer.Length > 2)
 					{
 						byte[] closeReasonBytes = new byte[contentBuffer.Length - 2];
 						Array.Copy(contentBuffer, 2, closeReasonBytes, 0, closeReasonBytes.Length);
-						closeFrame.CloseReason = System.Text.Encoding.UTF8.GetString(closeReasonBytes);
+						closeFrame.SetCloseReason(closeCode, System.Text.Encoding.UTF8.GetString(closeReasonBytes));
 					}
 				}
 				else

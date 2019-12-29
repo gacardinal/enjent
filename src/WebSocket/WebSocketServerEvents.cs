@@ -164,9 +164,9 @@ namespace NarcityMedia.Enjent
         /// </summary>
         public class MessageEventArgs : WebSocketServerEventArgs
         {
-            public WebSocketDataFrame DataFrame;
+            public WebSocketTextFrame DataFrame;
             
-            public MessageEventArgs(TWebSocketClient cli, WebSocketDataFrame dataFrame) : base(cli)
+            public MessageEventArgs(TWebSocketClient cli, WebSocketTextFrame dataFrame) : base(cli)
             {
                 this.DataFrame = dataFrame;
 				this.EvType = EventType.Message;
@@ -195,6 +195,10 @@ namespace NarcityMedia.Enjent
             /// <see cref="Exception" /> that lead to the closing of the current conneciton, if any
             /// </summary>
             public Exception? Exception;
+
+			public WebSocketCloseCode CloseCode;
+
+			public string CloseReason;
 
             public DisconnectionEventArgs(TWebSocketClient cli) : base(cli)
             {
