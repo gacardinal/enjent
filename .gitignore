@@ -44,3 +44,4 @@ output.log
 *.app
 
 desktop.ini
+.vscode/settings.json
