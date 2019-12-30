@@ -31,6 +31,9 @@ namespace NarcityMedia.Enjent
             TFrameType frame = new TFrameType();
 			frame.Fin = true;
 			frame.Masked = masked;
+			frame.Payload = this.Payload;
+
+			frames[0] = frame;
 
             return frames;
         }

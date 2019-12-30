@@ -109,11 +109,21 @@ namespace NarcityMedia.Enjent.Client
 			}
 		}
 
-		public void Send(BinaryMessage message)
+
+		public void Send(WebSocketMessage<WebSocketTextFrame> binMessage)
+		{
+			this.Send(binMessage.GetFrames());
+		}
+
+		public void Send(WebSocketMessage<WebSocketBinaryFrame> binMessage)
+		{
+			this.Send(binMessage.GetFrames());
+		}
+
+		public void Send(IEnumerable<WebSocketFrame> frames)
 		{
 			if (this.Socket != null && this.Connected)
 			{
-				IEnumerable<WebSocketFrame> frames = message.GetFrames();
 				foreach (WebSocketFrame f in frames)
 				{
 					this.Socket.Send(f.GetBytes());
