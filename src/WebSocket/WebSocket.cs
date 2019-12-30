@@ -180,24 +180,20 @@ namespace NarcityMedia.Enjent
         /// </summary>
         public WebSocketOPCode OpCode;
 
-		protected byte[] _payload;
+		public byte[] Payload;
 
-		public byte[] Payload
+		public WebSocketFrame(byte[] payload)
 		{
-			get { return _payload; }
-			set { this._payload = value; }
-		}
+			if (payload == null)
+				throw new ArgumentNullException(nameof(payload), "Payload should not be null");
 
-		public WebSocketFrame(bool fin, byte[] payload, byte[] maskingKey) : this(fin, false, payload, maskingKey)
-		{
+			this.Payload = payload;
 			this.MaskingKey = new byte[4];
-			CryptoRandomSingleton.Instance.GetNonZeroBytes(this.MaskingKey);
 		}
 
         /// <summary>
         /// Initializes a new instance of the WebSocketFrame class
         /// </summary>
-        /// <param name="fin">Indicates whether the current WebSocketFrame is the last one of a multi frame message</param>
         /// <param name="masked">Whether or not the current frame should be masked.true All frames sent by a client should be masked</param>
         /// <param name="payload">Payload of the current WebSocketFrame</param>
         /// <remarks>
@@ -205,16 +201,15 @@ namespace NarcityMedia.Enjent
         /// will be initialized to a byte array of length 4 which is derived from a secure source of randomness.
         /// Else, <see cref="this.MaskingKey" /> will be initialized to an empty byte array
         /// </remarks>
-        public WebSocketFrame(bool fin, bool masked, byte[] payload, byte[] maskingKey)
+        public WebSocketFrame(byte[] payload, byte[] maskingKey) : this(payload)
         {
 			if (maskingKey == null)
 				throw new ArgumentNullException(nameof(maskingKey));
 			if (maskingKey.Length != 4)
 				throw new ArgumentException("A masking key should have a length of exactly 4 bytes", nameof(maskingKey));
 
-            this.Fin = fin;
-			this.Masked = masked;
-			this._payload = payload ?? new byte[0];
+			this.Masked = true;
+			CryptoRandomSingleton.Instance.GetNonZeroBytes(this.MaskingKey);
 			this.MaskingKey = maskingKey;
         }
 
@@ -319,10 +314,10 @@ namespace NarcityMedia.Enjent
 
 	public class WebSocketContinuationFrame : WebSocketFrame
 	{
-		public WebSocketContinuationFrame(bool fin, byte[] payload) : this(fin, payload, new byte[4])
+		public WebSocketContinuationFrame(byte[] payload) : base(payload)
 		{}
 
-        public WebSocketContinuationFrame(bool fin, byte[] payload, byte[] maskingKey) : base(fin, masked, payload, maskingKey)
+        public WebSocketContinuationFrame(byte[] payload, byte[] maskingKey) : base(payload, maskingKey)
 		{
 			this.OpCode = WebSocketOPCode.Continuation;
 		}
@@ -331,11 +326,11 @@ namespace NarcityMedia.Enjent
 		{
 			if (dataFrame.Masked)
 			{
-				return new WebSocketContinuationFrame(dataFrame.Fin, dataFrame.Mas)
+				return new WebSocketContinuationFrame(dataFrame.Payload, dataFrame.MaskingKey);
 			}
 			else
 			{
-				return new WebSocketContinuationFrame(dataFrame.Fin, dataFrame.Masked, dataFrame.Payload);
+				return new WebSocketContinuationFrame(dataFrame.Payload);
 			}
 		}
 	}
@@ -344,7 +339,7 @@ namespace NarcityMedia.Enjent
 	{
 		public readonly WebSocketDataType DataType;
 
-		public WebSocketDataFrame(bool fin, bool masked, byte[] payload, WebSocketDataType dataType) : base(fin, masked, payload)
+		public WebSocketDataFrame(byte[] payload, WebSocketDataType dataType) : base(payload)
 		{
 			this.DataType = dataType;
 			this.OpCode = dataType == WebSocketDataType.Binary ? WebSocketOPCode.Binary : WebSocketOPCode.Text;
@@ -358,9 +353,6 @@ namespace NarcityMedia.Enjent
     {
 		public WebSocketBinaryFrame() : this(new byte[0]) {}
 
-		public WebSocketBinaryFrame(byte[] payload) : this(payload, false, false)
-		{}
-
         /// <summary>
         /// Initializes a new instance of the SocketDataFrame class
         /// </summary>
@@ -368,7 +360,7 @@ namespace NarcityMedia.Enjent
         /// <param name="masked">Indicates whether the current SocketDataFrame should be masked or not</param>
         /// <param name="payload">Payload of the current WebSocketFrame</param>
         /// <param name="dataType">The data type of the current SocketDataFrame</param>
-        public WebSocketBinaryFrame(byte[] payload, bool fin, bool masked) : base(fin, masked, payload, WebSocketDataType.Binary)
+        public WebSocketBinaryFrame(byte[] payload) : base(payload, WebSocketDataType.Binary)
         {}
     }
 
@@ -376,6 +368,8 @@ namespace NarcityMedia.Enjent
 	{
 		new public readonly WebSocketDataType DataType = WebSocketDataType.Text;
 		
+		private byte[] _payload;
+
 		new public byte[] Payload
 		{
 			get { return this._payload; }
@@ -400,10 +394,7 @@ namespace NarcityMedia.Enjent
 
 		public WebSocketTextFrame() : this(String.Empty) {}
 
-		public WebSocketTextFrame(string plaintext) : this(true, false, plaintext)
-		{}
-
-		public WebSocketTextFrame(bool fin, bool masked, string plaintext) : base(fin, masked, new byte[0], WebSocketDataType.Text)
+		public WebSocketTextFrame(string plaintext) : base(new byte[0], WebSocketDataType.Text)
 		{
 			this._plaintext = plaintext;
 			this._payload = Encoding.UTF8.GetBytes(plaintext);
@@ -419,7 +410,7 @@ namespace NarcityMedia.Enjent
         /// Initializes a new instance of the SocketControlFrame class
         /// </summary>
         /// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
-        public WebSocketControlFrame(WebSocketOPCode controlOpCode) : this(controlOpCode, new byte[0], false)
+        public WebSocketControlFrame(WebSocketOPCode controlOpCode) : this(controlOpCode, new byte[0])
         {}
 
 		/// <summary>
@@ -427,7 +418,7 @@ namespace NarcityMedia.Enjent
 		/// </summary>
 		/// <param name="controlOpCode">The control OPCode of the current SocketControlFrame</param>
 		/// <param name="masked">Whether or not the current control frame is masked</param>
-		public WebSocketControlFrame(WebSocketOPCode controlOpCode, byte[] payload, bool masked) : base(true, masked, payload)
+		public WebSocketControlFrame(WebSocketOPCode controlOpCode, byte[] payload) : base(payload)
 		{
 			if (payload.Length > 125)
 				throw new ArgumentException("A control frame's Payload of 125 bytes or less", nameof(payload));
@@ -458,10 +449,7 @@ namespace NarcityMedia.Enjent
         public WebSocketCloseFrame(WebSocketCloseCode closeCode) : this(closeCode, String.Empty)
         {}
 
-		public WebSocketCloseFrame(WebSocketCloseCode closeCode, string closeReason) : this(closeCode, closeReason, false)
-		{}
-
-		public WebSocketCloseFrame(WebSocketCloseCode closeCode, string closeReason, bool masked) : base(WebSocketOPCode.Close, new byte[0], masked)
+		public WebSocketCloseFrame(WebSocketCloseCode closeCode, string closeReason) : base(WebSocketOPCode.Close, new byte[0])
 		{
 			this.SetCloseReason(closeCode, closeReason);
 		}
@@ -487,10 +475,7 @@ namespace NarcityMedia.Enjent
 		public WebSocketPingFrame() : this(new byte[0])
 		{}
 
-		public WebSocketPingFrame(byte[] payload) : this(payload, false)
-		{}
-
-		public WebSocketPingFrame(byte[] payload, bool masked) : base(WebSocketOPCode.Ping, payload, masked)
+		public WebSocketPingFrame(byte[] payload) : base(WebSocketOPCode.Ping, payload)
 		{}
 	}
 
@@ -499,10 +484,7 @@ namespace NarcityMedia.Enjent
 		public WebSocketPongFrame() : this(new byte[0])
 		{}
 
-		public WebSocketPongFrame(byte[] payload) : this(payload, false)
-		{}
-
-		public WebSocketPongFrame(byte[] payload, bool masked) : base(WebSocketOPCode.Pong, payload, masked)
+		public WebSocketPongFrame(byte[] payload) : base(WebSocketOPCode.Pong, payload)
 		{}
 	}
 
