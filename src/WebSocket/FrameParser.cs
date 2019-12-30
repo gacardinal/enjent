@@ -82,15 +82,12 @@ namespace NarcityMedia.Enjent
 			if (header.Length != 2)
 				throw new ArgumentException("Header must have a length of exactly 2", nameof(header));
 
-			input.Read(header);
-
             int headerSize = header.Length;
             bool fin = (header[0] >> 7) != 0;
             WebSocketOPCode opcode = (WebSocketOPCode) ((byte) (header[0] & 0b00001111));
             bool masked = (header[1] & 0b10000000) != 0;
             ushort contentLength = (ushort) (header[1] & 0b01111111);
 			byte[] maskingKey = new byte[4];
-			byte[] contentBuffer = new byte[contentLength];
 
 			if (contentLength > 0 && contentLength <= 126)
 			{
@@ -109,8 +106,11 @@ namespace NarcityMedia.Enjent
 				{
 					input.Read(maskingKey);
 				}
-				input.Read(contentBuffer);
+
 			}
+
+			byte[] contentBuffer = new byte[contentLength];
+			input.Read(contentBuffer);
 
 			if (masked)
 			{
@@ -121,17 +121,16 @@ namespace NarcityMedia.Enjent
 			switch (opcode)
 			{
 				case WebSocketOPCode.Continuation:
-					frame = (WebSocketFrame) new WebSocketBinaryFrame(contentBuffer, fin, masked);
-					frame.OpCode = WebSocketOPCode.Continuation;
+					frame = new WebSocketContinuationFrame(contentBuffer);
 					break;
 				case WebSocketOPCode.Binary:
-					frame = new WebSocketBinaryFrame(contentBuffer, fin, masked);
+					frame = new WebSocketBinaryFrame(contentBuffer);
 					break;
 				case WebSocketOPCode.Text:
 					try
 					{
 						string text = Encoding.UTF8.GetString(contentBuffer);
-						frame = new WebSocketTextFrame(fin, masked, text);
+						frame = new WebSocketTextFrame(text);
 					}
 					catch (Exception e)
 					{
@@ -142,17 +141,20 @@ namespace NarcityMedia.Enjent
 					frame = ParseCloseFrame(contentBuffer);
 					break;
 				case WebSocketOPCode.Ping:
-					frame = new WebSocketPingFrame(contentBuffer, masked);
+					frame = new WebSocketPingFrame(contentBuffer);
 					break;
 				case WebSocketOPCode.Pong:
-					frame = new WebSocketPongFrame(contentBuffer, masked);
+					frame = new WebSocketPongFrame(contentBuffer);
 					break;
 				default:
 					throw new EnjentWebSocketProtocolException("Unknown WebSocket OpCode " + opcode.ToString());
 			}
 
+			frame.Fin = fin;
+
 			if (masked)
 			{
+				frame.Masked = true;
 				frame.MaskingKey = maskingKey;
 			}
 
