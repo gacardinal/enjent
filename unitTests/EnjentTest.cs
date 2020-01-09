@@ -11,7 +11,7 @@ namespace EnjentUnitTests
     {
     	private readonly ITestOutputHelper output;
 
-		private static Random rand = new Random();
+		protected static Random rand = new Random();
 
 		public EnjentTest(ITestOutputHelper o)
 		{

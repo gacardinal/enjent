@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 
-namespace NarcityMedia.Enjent
+using NarcityMedia.Enjent.WebSocket;
+
+namespace NarcityMedia.Enjent.Server
 {
     public abstract partial class WebSocketServerCore<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {

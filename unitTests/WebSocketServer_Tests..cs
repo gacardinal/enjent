@@ -1,7 +1,7 @@
-using System;
 using Xunit;
 using System.Net;
-using NarcityMedia.Enjent;
+
+using NarcityMedia.Enjent.Server;
 
 namespace EnjentUnitTests
 {

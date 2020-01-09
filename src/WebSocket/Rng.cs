@@ -1,7 +1,7 @@
 using System;
 using System.Security.Cryptography;
 
-namespace NarcityMedia.Enjent
+namespace NarcityMedia.Enjent.WebSocket
 {
     /// <summary>
     /// Wraps an instance of <see cref="System.Security.Cryptography.RNGCryptoServiceProvider" />

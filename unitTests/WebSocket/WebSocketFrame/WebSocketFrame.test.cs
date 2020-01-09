@@ -2,9 +2,9 @@ using System;
 using System.Linq;
 using System.IO;
 using Xunit;
-using Xunit.Sdk;
 using Xunit.Abstractions;
-using NarcityMedia.Enjent;
+
+using NarcityMedia.Enjent.WebSocket;
 
 namespace EnjentUnitTests.WebSocket
 {

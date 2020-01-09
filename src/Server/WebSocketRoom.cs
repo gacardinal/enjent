@@ -3,7 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace NarcityMedia.Enjent
+using NarcityMedia.Enjent.WebSocket;
+
+namespace NarcityMedia.Enjent.Server
 {
 	public class WebSocketRoom : WebSocketRoom<WebSocketClient>
 	{

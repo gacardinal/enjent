@@ -1,9 +1,10 @@
 using System;
 using System.Threading;
-using System.Collections.Generic;
 using System.Collections.Concurrent;
 
-namespace NarcityMedia.Enjent
+using NarcityMedia.Enjent.WebSocket;
+
+namespace NarcityMedia.Enjent.Server
 {
     public partial class WebSocketServerCore<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {

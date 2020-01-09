@@ -2,6 +2,8 @@ using System;
 using Xunit;
 using NarcityMedia.Enjent;
 
+using NarcityMedia.Enjent.WebSocket;
+
 namespace EnjentUnitTests.WebSocket
 {
 	public partial class WebSocketFrameTest

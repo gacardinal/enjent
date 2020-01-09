@@ -1,10 +1,6 @@
-using System;
 using Xunit;
-using System.Collections.Generic;
-using System.Linq;
-using Xunit.Sdk;
-using Xunit.Abstractions;
-using NarcityMedia.Enjent;
+
+using NarcityMedia.Enjent.WebSocket;
 
 namespace EnjentUnitTests.WebSocket
 {
@@ -39,7 +35,7 @@ namespace EnjentUnitTests.WebSocket
 				// Binary frames masked
 				foreach (byte[] p in binPayloads)
 				{
-					data.Add(new WebSocketBinaryFrame(p, false, true));
+					data.Add(new WebSocketBinaryFrame());
 				}
 
 				// Control frames

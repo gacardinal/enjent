@@ -1,6 +1,6 @@
 using System;
 
-namespace NarcityMedia.Enjent
+namespace NarcityMedia.Enjent.WebSocket
 {
 	/// <summary>
 	/// Represents errors relative to the WebSocket protocol.

@@ -2,7 +2,7 @@ using System;
 using System.Text;
 using System.Collections.Generic;
 
-namespace NarcityMedia.Enjent
+namespace NarcityMedia.Enjent.WebSocket
 {
 	public abstract class WebSocketMessage<TFrameType> where TFrameType : WebSocketDataFrame, new()
 	{

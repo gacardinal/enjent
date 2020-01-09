@@ -1,7 +1,6 @@
-using System;
 using Xunit;
-using Xunit.Abstractions;
-using NarcityMedia.Enjent;
+
+using NarcityMedia.Enjent.WebSocket;
 
 namespace EnjentUnitTests.WebSocket
 {

@@ -3,7 +3,7 @@ using System.IO;
 using System.Text;
 using System.Net.Sockets;
 
-namespace NarcityMedia.Enjent
+namespace NarcityMedia.Enjent.WebSocket
 {
     abstract partial class WebSocketFrame
     {

@@ -1,11 +1,11 @@
-using System;
-using NarcityMedia.Enjent;
+
+using NarcityMedia.Enjent.WebSocket;
 
 namespace EnjentUnitTests
 {
 	class WebSocketFrameConcretion : WebSocketFrame
 	{
-		public WebSocketFrameConcretion(bool fin, bool masked, byte[] payload) : base(fin, masked, payload)
+		public WebSocketFrameConcretion(byte[] payload) : base(payload)
 		{}
 	}
 }
