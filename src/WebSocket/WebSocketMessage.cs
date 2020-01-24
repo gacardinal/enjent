@@ -1,10 +1,16 @@
 using System;
 using System.Text;
+using System.Linq;
 using System.Collections.Generic;
 
 namespace NarcityMedia.Enjent.WebSocket
 {
-	public abstract class WebSocketMessage<TFrameType> where TFrameType : WebSocketDataFrame, new()
+	public interface IWebSocketMessage
+	{
+
+	}
+
+	public abstract class WebSocketMessage<TFrameType> : IWebSocketMessage where TFrameType : WebSocketDataFrame, new()
 	{
 		public WebSocketDataType DataType;
 
@@ -80,6 +86,11 @@ namespace NarcityMedia.Enjent.WebSocket
 		{
 			this._message = message;
 			this.Payload = Encoding.UTF8.GetBytes(message);
+		}
+
+		public TextMessage(WebSocketTextFrame[] frames)
+		{
+			this._message = string.Join(String.Empty, frames.Select(f => f.Plaintext));
 		}
 	}
 }

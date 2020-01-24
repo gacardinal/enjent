@@ -14,11 +14,11 @@ namespace NarcityMedia.Enjent.Server
         public delegate void ControlFrameReceived(object sender, ControlFrameEventArgs a);
         public delegate void ErrorEvent(object sender, ErrorEventArgs a);
 
-        private ConnectionEvent? _onConnect = delegate {};
-        private DisconnectEvent? _onDisconnect = delegate {};
-        private MessageEvent? _onMessage = delegate {};
-        private ControlFrameReceived? _onControlFrame = delegate {};
-        private ErrorEvent? _onError = delegate {};
+        private ConnectionEvent? _onConnect				= delegate {};
+        private DisconnectEvent? _onDisconnect			= delegate {};
+        private MessageEvent? _onMessage				= delegate {};
+        private ControlFrameReceived? _onControlFrame 	= delegate {};
+        private ErrorEvent? _onError					= delegate {};
 
         // Since event can be set to null references by the -= operator, they need to be declared as nullable
         // For better void safety. However, this poses a problem when we try to lock them.
@@ -95,30 +95,23 @@ namespace NarcityMedia.Enjent.Server
                     // Execute all avents sequentially until EventQueue is empty
                     do
                     {
-                        try
-                        {
-                            if (EventQueue.TryDequeue(out curEventArgs))
-                            {
-                                // Compare Enum values instead of trying to perform a cast for each type of event
-                                // reference is only cast when proper type is found
-                                if (curEventArgs.EvType == EventType.Connection) {
-                                    if (this._onConnect != null) this._onConnect.Invoke(this, (ConnectionEventArgs) curEventArgs);
-                                } else if (curEventArgs.EvType == EventType.Message) {
-                                    if (this._onMessage != null) this._onMessage.Invoke(this, (MessageEventArgs) curEventArgs);
-                                } else if (curEventArgs.EvType == EventType.Disconnection) {
-                                    if (this._onDisconnect != null) this._onDisconnect.Invoke(this, (DisconnectionEventArgs) curEventArgs);
-                                } else if (curEventArgs.EvType == EventType.ControlFrame) {
-                                    if (this._onControlFrame != null) this._onControlFrame.Invoke(this, (ControlFrameEventArgs) curEventArgs);
-                                } else if (curEventArgs.EvType == EventType.Error) {
-                                    if (this._onError != null) this._onError.Invoke(this, (ErrorEventArgs) curEventArgs);
-                                }
-                            }
-                            curEventArgs = null;
-                        }
-                        catch (Exception e)
-                        {
-                            throw e;
-                        }
+						if (EventQueue.TryDequeue(out curEventArgs))
+						{
+							// Compare Enum values instead of trying to perform a cast for each type of event
+							// reference is only cast when proper type is found
+							if (curEventArgs.EvType == EventType.Connection) {
+								if (this._onConnect != null) this._onConnect.Invoke(this, (ConnectionEventArgs) curEventArgs);
+							} else if (curEventArgs.EvType == EventType.Message) {
+								if (this._onMessage != null) this._onMessage.Invoke(this, (MessageEventArgs) curEventArgs);
+							} else if (curEventArgs.EvType == EventType.Disconnection) {
+								if (this._onDisconnect != null) this._onDisconnect.Invoke(this, (DisconnectionEventArgs) curEventArgs);
+							} else if (curEventArgs.EvType == EventType.ControlFrame) {
+								if (this._onControlFrame != null) this._onControlFrame.Invoke(this, (ControlFrameEventArgs) curEventArgs);
+							} else if (curEventArgs.EvType == EventType.Error) {
+								if (this._onError != null) this._onError.Invoke(this, (ErrorEventArgs) curEventArgs);
+							}
+						}
+						curEventArgs = null;
                     }
                     while (!EventQueue.IsEmpty);
                 }
@@ -163,16 +156,36 @@ namespace NarcityMedia.Enjent.Server
         /// Instance of this class are passed to <see cref="this.MessageEvent" /> handlers when a message is sent from a client
         /// to the current server
         /// </summary>
-        public class MessageEventArgs : WebSocketServerEventArgs
+        public abstract class MessageEventArgs : WebSocketServerEventArgs
         {
-            public WebSocketTextFrame DataFrame;
+            public object? Message;
             
-            public MessageEventArgs(TWebSocketClient cli, WebSocketTextFrame dataFrame) : base(cli)
+            public MessageEventArgs(TWebSocketClient cli, object message) : base(cli)
             {
-                this.DataFrame = dataFrame;
+                this.Message = message;
 				this.EvType = EventType.Message;
             }
         }
+
+		public class BinaryMessageEventArgs : MessageEventArgs
+		{
+			public new BinaryMessage Message;
+
+			public BinaryMessageEventArgs(TWebSocketClient cli, BinaryMessage message) : base(cli, message)
+			{
+				this.Message = message;
+			}
+		}
+
+		public class TextMessageEventArgs : MessageEventArgs
+		{
+			public new TextMessage Message;
+		
+			public TextMessageEventArgs(TWebSocketClient cli, TextMessage message) : base(cli, message)
+			{
+				this.Message = message;
+			}
+		}
 
         /// <summary>
         /// Instance of this class are passed to <see cref="this.ConnectionEvent" /> handlers when a client successfully connects

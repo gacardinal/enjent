@@ -2,6 +2,7 @@ using System;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -101,6 +102,11 @@ namespace NarcityMedia.Enjent.Server
         /// </summary>
         private List<TWebSocketClient> clients;
 
+		static WebSocketServerCore()
+		{
+			GoingAwayFrameBytes = new WebSocketCloseFrame(WebSocketCloseCode.GoingAway).GetBytes();
+		}
+
         /// <summary>
         /// Creates a new instance of the WebSocketServer class
         /// </summary>
@@ -166,14 +172,38 @@ namespace NarcityMedia.Enjent.Server
             }
         }
 
+		private static byte[] GoingAwayFrameBytes;
+
         /// <summary>
         /// Executed by the 'listener' Thread, used to perform cleanup operation before quitting
         /// </summary>
-        private void Quit()
+        private Task Quit()
         {
-            // TODO: Send a close frame with 1001 "Going Away" closing code to every client as per protocol specifications
-            // TODO: Dispose of every connection cleanly before closing
+			WebSocketCloseFrame goingAwayFrame = new WebSocketCloseFrame(WebSocketCloseCode.GoingAway);
+			byte[] frameBytes = goingAwayFrame.GetBytes();
+
+			Action<object> sendCloseFrame = NotifyGoingAway;
+
+			lock (this.clients)
+			{
+				Task[] tasks = new Task[this.clients.Count];
+				for (int i = 0; i < this.clients.Count; i++)
+				{
+					tasks[i] = Task.Factory.StartNew(sendCloseFrame, this.clients[i]);
+				}
+
+				return Task.WhenAll(tasks);
+			}
         }
+
+		private static void NotifyGoingAway(object state)
+		{
+			TWebSocketClient? cli = state as TWebSocketClient;
+			if (cli != null)
+			{
+				cli.Socket.Send(GoingAwayFrameBytes);
+			}
+		}
 
         /// <summary>
         /// Safely stops the current WebSocketServer
@@ -207,9 +237,9 @@ namespace NarcityMedia.Enjent.Server
                 case WebSocketOPCode.Close:
                     try
                     {
-						WebSocketCloseFrame closeFrame = (WebSocketCloseFrame) cFrame;
-						WebSocketCloseFrame echoCloseFrame = new WebSocketCloseFrame();
-						DisconnectionEventArgs de = new DisconnectionEventArgs(cli);
+						var closeFrame = (WebSocketCloseFrame) cFrame;
+						var echoCloseFrame = new WebSocketCloseFrame();
+						var de = new DisconnectionEventArgs(cli);
 						if (closeFrame.CloseCode != WebSocketCloseCode.NoCloseCode)
 						{
 							echoCloseFrame.CloseCode = closeFrame.CloseCode;
@@ -420,6 +450,15 @@ namespace NarcityMedia.Enjent.Server
             }
         }
 
+		/// <summary>
+		/// Represents a websocket frame buffer to handle fragmented messages for a single client.
+		/// Each client's socket receive operations are handled by a single ThreadPool thread hence the buffer
+		/// must be held in a ThreadLocal
+		/// </summary>
+		private ThreadLocal<WebSocketFrame[]> tl_frameBuffer = new ThreadLocal<WebSocketFrame[]>(() => {
+			return new WebSocketFrame[1024];
+		});
+
         /// <summary>
         /// Executes logic to receive data from a WebSocket connection
         /// </summary>
@@ -437,7 +476,14 @@ namespace NarcityMedia.Enjent.Server
                         WebSocketFrame frame = WebSocketFrame.Parse(new NetworkStream(receiveState.Cli.Socket), receiveState.buffer);
                         if (frame != null)
                         {
-							if (frame.OpCode == WebSocketOPCode.Text)
+							// Instead of trying to determine the WebSocketFrame subtype using the is or as keyword
+							// we compare the OpCode ints directly to hopefully get more performance
+							if (frame.OpCode == WebSocketOPCode.Continuation)
+							{
+								WebSocketContinuationFrame cont = (WebSocketContinuationFrame) frame;
+								
+							}
+							else if (frame.OpCode == WebSocketOPCode.Text)
 							{
                                 WebSocketTextFrame textFrame = (WebSocketTextFrame) frame;
                                 if (
@@ -445,7 +491,8 @@ namespace NarcityMedia.Enjent.Server
 									|| (textFrame.Plaintext.Length == 1 && char.IsControl(textFrame.Plaintext.ElementAt(0))))
 								)
                                 {
-                                    this.PushToEventQueue(new MessageEventArgs(receiveState.Cli, textFrame));
+									TextMessage texMessage = new TextMessage();
+                                    this.PushToEventQueue(new TextMessageEventArgs(receiveState.Cli, textFrame));
                                     StartClientReceive(receiveState.Cli);
                                 }
                                 else
@@ -456,7 +503,6 @@ namespace NarcityMedia.Enjent.Server
                                     this.PushToEventQueue(new DisconnectionEventArgs(receiveState.Cli));
                                     receiveState.Cli.Dispose();
                                 }
-
 							}
                             else if (frame.OpCode == WebSocketOPCode.Binary)
                             {

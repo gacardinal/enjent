@@ -2,6 +2,8 @@ using System;
 using System.Net.Sockets;
 using System.Collections.Generic;
 
+using NarcityMedia.Enjent.WebSocket;
+
 namespace NarcityMedia.Enjent.Server
 {
     /// <summary>
