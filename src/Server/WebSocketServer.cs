@@ -455,9 +455,7 @@ namespace NarcityMedia.Enjent.Server
 		/// Each client's socket receive operations are handled by a single ThreadPool thread hence the buffer
 		/// must be held in a ThreadLocal
 		/// </summary>
-		private ThreadLocal<WebSocketFrame[]> tl_frameBuffer = new ThreadLocal<WebSocketFrame[]>(() => {
-			return new WebSocketFrame[1024];
-		});
+		private ThreadLocal<WebSocketMessageBuffer?> tl_frameBuffer = new ThreadLocal<WebSocketMessageBuffer?>();
 
         /// <summary>
         /// Executes logic to receive data from a WebSocket connection
@@ -481,33 +479,82 @@ namespace NarcityMedia.Enjent.Server
 							if (frame.OpCode == WebSocketOPCode.Continuation)
 							{
 								WebSocketContinuationFrame cont = (WebSocketContinuationFrame) frame;
-								
+								if (tl_frameBuffer.Value != null)
+								{
+									try
+									{
+										if (frame.Fin)
+										{
+											WebSocketMessage message = tl_frameBuffer.Value.End(cont);
+											if (message.DataType == WebSocketDataType.Binary)
+											{
+												TextMessage txtMessage = (TextMessage) message;
+												TextMessageEventArgs tmea = new TextMessageEventArgs(receiveState.Cli, txtMessage);
+                                    			this.PushToEventQueue(tmea);
+											}
+											else
+											{
+												BinaryMessage binMessage = (BinaryMessage) message;
+												BinaryMessageEventArgs bmea = new BinaryMessageEventArgs(receiveState.Cli, binMessage);
+												this.PushToEventQueue(bmea);
+											}
+
+											tl_frameBuffer.Value = null;
+										}
+										else
+										{
+											tl_frameBuffer.Value.Append(cont);
+											// TODO: Fire on continuation frame event
+										}
+									}
+									catch (WebSocketServerException wssex)
+									{
+										tl_frameBuffer.Value = null;
+										DisconnectionEventArgs de = new DisconnectionEventArgs(receiveState.Cli, wssex);
+										this.PushToEventQueue(de);
+                                    	this.RemoveClient(receiveState.Cli);
+                                    	receiveState.Cli.Dispose();
+									}
+								}
+								else
+								{
+									// TODO: Fail connection because the first frame of a fragmented message cannot have a Continuation OpCode
+								}
 							}
-							else if (frame.OpCode == WebSocketOPCode.Text)
+							else if (frame.OpCode == WebSocketOPCode.Text || frame.OpCode == WebSocketOPCode.Binary)
 							{
                                 WebSocketTextFrame textFrame = (WebSocketTextFrame) frame;
-                                if (
+								if (!frame.Fin)
+								{ // The message is fragmented
+									if (tl_frameBuffer.Value == null)
+									{
+										this.tl_frameBuffer.Value = new WebSocketMessageBuffer(textFrame, 1024);
+									}
+									else
+									{ // Received a frame with a non-continuation opcode before the end of another fragmented message
+										//TODO: fail connection
+									}
+								}
+
+                                if ( // Necessary to check for control characters because for an unknown reason some browsers seemed to send an empty text frame on disconnect
 									!(String.IsNullOrEmpty(textFrame.Plaintext)
 									|| (textFrame.Plaintext.Length == 1 && char.IsControl(textFrame.Plaintext.ElementAt(0))))
 								)
                                 {
-									TextMessage texMessage = new TextMessage();
-                                    this.PushToEventQueue(new TextMessageEventArgs(receiveState.Cli, textFrame));
+									// TODO: Fire 'OnTextFrame' event
+									TextMessage texMessage = new TextMessage("");
+
                                     StartClientReceive(receiveState.Cli);
                                 }
                                 else
                                 {
                                     // Many browsers and WebSocket client side implementations send an empty data frame on disconnection
                                     // for some obscure reason, so if it's the case, we disconnect the client 
-                                    this.RemoveClient(receiveState.Cli);
                                     this.PushToEventQueue(new DisconnectionEventArgs(receiveState.Cli));
+                                    this.RemoveClient(receiveState.Cli);
                                     receiveState.Cli.Dispose();
                                 }
 							}
-                            else if (frame.OpCode == WebSocketOPCode.Binary)
-                            {
-								
-                            }
                             else
                             {
                                 this.DefaultControlFrameHandler(receiveState.Cli, (WebSocketControlFrame) frame);

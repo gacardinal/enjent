@@ -5,24 +5,26 @@ using System.Collections.Generic;
 
 namespace NarcityMedia.Enjent.WebSocket
 {
-	public interface IWebSocketMessage
-	{
-
-	}
-
-	public abstract class WebSocketMessage<TFrameType> : IWebSocketMessage where TFrameType : WebSocketDataFrame, new()
+	public abstract class WebSocketMessage
 	{
 		public WebSocketDataType DataType;
-
+		
 		public byte[] Payload;
-
-		public WebSocketMessage() : this(new byte[0])
-		{}
 
 		public WebSocketMessage(byte[] payload)
 		{
 			this.Payload = payload;
 		}
+	}
+
+	public abstract class WebSocketMessage<TFrameType> : WebSocketMessage where TFrameType : WebSocketDataFrame, new()
+	{
+
+		public WebSocketMessage() : this(new byte[0])
+		{}
+
+		public WebSocketMessage(byte[] payload) : base(payload)
+		{}
 
         /// <summary>
         /// Returns the Websocket frames that compose the current message, as per
@@ -44,7 +46,7 @@ namespace NarcityMedia.Enjent.WebSocket
             return frames;
         }
 	}
-	
+
     /// <summary>
     /// Represents a message that is to be sent via WebSocket.
     /// A message is composed of one or more frames.
@@ -79,6 +81,7 @@ namespace NarcityMedia.Enjent.WebSocket
 
 		public TextMessage(byte[] bytes) : base(bytes)
 		{
+			this.DataType = WebSocketDataType.Text;
 			this._message = Encoding.UTF8.GetString(bytes);
 		}
 
