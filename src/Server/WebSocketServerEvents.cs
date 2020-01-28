@@ -11,12 +11,15 @@ namespace NarcityMedia.Enjent.Server
         public delegate void ConnectionEvent(object sender, ConnectionEventArgs ca);
         public delegate void DisconnectEvent(object sender, DisconnectionEventArgs da);
         public delegate void MessageEvent(object sender, MessageEventArgs ma);
+        public delegate void TextMessageEvent(object sender, TextMessageEventArgs ma);
+        public delegate void BinaryMessageEvent(object sender, BinaryMessageEventArgs ma);
         public delegate void ControlFrameReceived(object sender, ControlFrameEventArgs a);
         public delegate void ErrorEvent(object sender, ErrorEventArgs a);
 
         private ConnectionEvent? _onConnect				= delegate {};
         private DisconnectEvent? _onDisconnect			= delegate {};
-        private MessageEvent? _onMessage				= delegate {};
+        private TextMessageEvent? _onTextMessage        = delegate {};
+        private BinaryMessageEvent? _onBinaryMessage    = delegate {};
         private ControlFrameReceived? _onControlFrame 	= delegate {};
         private ErrorEvent? _onError					= delegate {};
 
@@ -24,11 +27,13 @@ namespace NarcityMedia.Enjent.Server
         // For better void safety. However, this poses a problem when we try to lock them.
         // At the same time, we don't want to have one single lock for all the references because we don't want a thread
         // subscribing to one event to block others from subscribing to another event
-        private object onConnectEventMutex      = new object();
-        private object onDisconnectEventMutex   = new object();
-        private object onMessageEventMutex      = new object();
-        private object onControlFrameEventMutex = new object();
-        private object onErrorEventMutex        = new object();
+        private object onConnectEventMutex          = new object();
+        private object onDisconnectEventMutex       = new object();
+        private object onMessageEventMutex          = new object();
+        private object onTextMessageEventMutex      = new object();
+        private object onBinaryMessageEventMutex    = new object();
+        private object onControlFrameEventMutex     = new object();
+        private object onErrorEventMutex            = new object();
 
         public event ConnectionEvent OnConnect 
         {
@@ -40,10 +45,15 @@ namespace NarcityMedia.Enjent.Server
             add { lock (this.onDisconnectEventMutex) { this._onDisconnect += value; } }
             remove { lock (this.onDisconnectEventMutex) { this._onDisconnect -= value; } }
         }
-        public event MessageEvent OnMessage 
+        public event TextMessageEvent OnTextMessage 
         {
-            add { lock (this.onMessageEventMutex) { this._onMessage += value; } }
-            remove { lock (this.onMessageEventMutex) { this._onMessage -= value; } }
+            add { lock (this.onMessageEventMutex) { this._onTextMessage += value; } }
+            remove { lock (this.onMessageEventMutex) { this._onTextMessage -= value; } }
+        }
+        public event BinaryMessageEvent OnBinaryMessage
+        {
+            add { lock (this.onMessageEventMutex) { this._onBinaryMessage += value; } }
+            remove { lock (this.onMessageEventMutex) { this._onBinaryMessage -= value; } }
         }
         public event ControlFrameReceived OnControlFrame 
         {
@@ -101,8 +111,10 @@ namespace NarcityMedia.Enjent.Server
 							// reference is only cast when proper type is found
 							if (curEventArgs.EvType == EventType.Connection) {
 								if (this._onConnect != null) this._onConnect.Invoke(this, (ConnectionEventArgs) curEventArgs);
-							} else if (curEventArgs.EvType == EventType.Message) {
-								if (this._onMessage != null) this._onMessage.Invoke(this, (MessageEventArgs) curEventArgs);
+							} else if (curEventArgs.EvType == EventType.TextMessage) {
+								if (this._onTextMessage != null) this._onTextMessage.Invoke(this, (TextMessageEventArgs) curEventArgs);
+							} else if (curEventArgs.EvType == EventType.BinaryMessage) {
+								if (this._onBinaryMessage != null) this._onBinaryMessage.Invoke(this, (BinaryMessageEventArgs) curEventArgs);
 							} else if (curEventArgs.EvType == EventType.Disconnection) {
 								if (this._onDisconnect != null) this._onDisconnect.Invoke(this, (DisconnectionEventArgs) curEventArgs);
 							} else if (curEventArgs.EvType == EventType.ControlFrame) {
@@ -262,6 +274,8 @@ namespace NarcityMedia.Enjent.Server
         Connection,
         Disconnection,
         Message,
+        TextMessage,
+        BinaryMessage,
         ControlFrame,
         Error
     }
