@@ -186,6 +186,7 @@ namespace NarcityMedia.Enjent.Server
 			public BinaryMessageEventArgs(TWebSocketClient cli, BinaryMessage message) : base(cli, message)
 			{
 				this.Message = message;
+				this.EvType = EventType.BinaryMessage;
 			}
 		}
 
@@ -196,6 +197,7 @@ namespace NarcityMedia.Enjent.Server
 			public TextMessageEventArgs(TWebSocketClient cli, TextMessage message) : base(cli, message)
 			{
 				this.Message = message;
+				this.EvType = EventType.TextMessage;
 			}
 		}
 

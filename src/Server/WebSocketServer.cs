@@ -232,8 +232,6 @@ namespace NarcityMedia.Enjent.Server
         {
             switch (cFrame.OpCode)
             {
-                case WebSocketOPCode.Continuation:
-                    break;
                 case WebSocketOPCode.Close:
                     try
                     {
@@ -265,7 +263,8 @@ namespace NarcityMedia.Enjent.Server
 						WebSocketPongFrame response = new WebSocketPongFrame();
 						response.Payload = pf.Payload;
 						this.SendControlFrame(cli, pf);
-                    }
+						StartClientReceive(cli);
+					}
                     catch (Exception e)
                     {
                         WebSocketServerException ex = new WebSocketServerException("Error while sending 'pong' control frame", e);
@@ -542,8 +541,9 @@ namespace NarcityMedia.Enjent.Server
 								)
                                 {
 									// TODO: Fire 'OnTextFrame' event
-									TextMessage texMessage = new TextMessage("");
-
+									TextMessage txtMessage = new TextMessage(textFrame.Plaintext);
+									TextMessageEventArgs tmea = new TextMessageEventArgs(receiveState.Cli, txtMessage);
+									PushToEventQueue(tmea);
                                     StartClientReceive(receiveState.Cli);
                                 }
                                 else
@@ -558,7 +558,6 @@ namespace NarcityMedia.Enjent.Server
                             else
                             {
                                 this.DefaultControlFrameHandler(receiveState.Cli, (WebSocketControlFrame) frame);
-                                StartClientReceive(receiveState.Cli);
                             }
                         }
                         else
