@@ -60,7 +60,7 @@ namespace NarcityMedia.Enjent.Server
         /// <summary>
         /// Thread that will listen for incoming connections
         /// </summary>
-        private Thread Listener;
+        private Thread HttpListener;
 
         /// <summary>
         /// The socket that will be bound on the endpoint passed to the WebSocketServer.Start() method
@@ -102,10 +102,10 @@ namespace NarcityMedia.Enjent.Server
         /// </summary>
         public WebSocketServerCore(ClientInitialization initStrategy)
         {
-            this.Listener = new Thread(this.NegociationLoop);
+            this.HttpListener = new Thread(this.NegociationLoop);
             // Set Thread as foreground to prevent program execution finishing
-            this.Listener.IsBackground = false;
-            this.Listener.Name = "WebSocketServerHTTPListener";
+            this.HttpListener.IsBackground = false;
+            this.HttpListener.Name = "WebSocketServerHTTPListener";
             
             this.EventHandler = new Thread(this.EventHandlerLoop);
             this.EventHandler.Name = "WebSocketEventHandler";
@@ -139,7 +139,7 @@ namespace NarcityMedia.Enjent.Server
                     this.Socket.Bind(endpoint);
                     this.Socket.Listen(1024);
                     this.Listening = true;
-                    this.Listener.Start();
+                    this.HttpListener.Start();
                     this.EventHandler.Start();
                 }
                 catch (SocketException e)

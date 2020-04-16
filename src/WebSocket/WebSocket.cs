@@ -367,28 +367,15 @@ namespace NarcityMedia.Enjent.WebSocket
 	public class WebSocketTextFrame : WebSocketDataFrame
 	{
 		new public readonly WebSocketDataType DataType = WebSocketDataType.Text;
-		
-		private byte[] _payload;
 
-		new public byte[] Payload
-		{
-			get { return this._payload; }
-			set
-			{
-				this._plaintext = Encoding.UTF8.GetString(value);
-				this._payload = value;
-			}
-		}
-
-		private string _plaintext;
-
+        string _plaintext;
 		public string Plaintext
 		{
 			get { return this._plaintext; }
 			set
 			{
-				this._payload = Encoding.UTF8.GetBytes(value);
 				this._plaintext = value;
+				this.Payload = Encoding.UTF8.GetBytes(value);
 			}
 		}
 
@@ -396,8 +383,8 @@ namespace NarcityMedia.Enjent.WebSocket
 
 		public WebSocketTextFrame(string plaintext) : base(new byte[0], WebSocketDataType.Text)
 		{
-			this._plaintext = plaintext;
-			this._payload = Encoding.UTF8.GetBytes(plaintext);
+            this._plaintext = plaintext; // For void safety
+            this.Plaintext = plaintext;
 		}
 	}
 
@@ -421,7 +408,7 @@ namespace NarcityMedia.Enjent.WebSocket
 		public WebSocketControlFrame(WebSocketOPCode controlOpCode, byte[] payload) : base(payload)
 		{
 			if (payload.Length > 125)
-				throw new ArgumentException("A control frame's Payload of 125 bytes or less", nameof(payload));
+				throw new ArgumentException("A control frame's Payload must be of 125 bytes or less", nameof(payload));
 
 			this.OpCode = controlOpCode;
 		}

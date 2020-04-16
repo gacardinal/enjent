@@ -52,7 +52,7 @@ namespace NarcityMedia.Enjent.Server
         private const string WEBSOCKET_COOKIE_HEADER = "Cookie";
 
         /// <summary>
-        /// Key defined in RFC 6455 necessary to the negociation of a ne WebSocket conneciton
+        /// Key defined in RFC 6455 necessary to the negociation of a new WebSocket conneciton
         /// </summary>
         /// <value>Byte array representing the RFC 6455 key</value>
         private static readonly byte[] RFC6455_CONCAT_GUID = new byte[] {

@@ -1,3 +1,4 @@
+using System;
 using Xunit;
 
 using NarcityMedia.Enjent.WebSocket;
@@ -15,7 +16,16 @@ namespace EnjentUnitTests.WebSocket
 				data.Add(new WebSocketBinaryFrame());
 				data.Add(new WebSocketBinaryFrame(new byte[0]));
 
+				byte[][] smallBinPayloads = new byte[][] {
+					new byte[0],
+					new byte[1],
+					new byte[32],
+					new byte[125]
+				};
+
 				byte[][] binPayloads = new byte[][] {
+					new byte[0],
+					new byte[1],
 					new byte[32],
 					new byte[125],
 					new byte[126],
@@ -43,7 +53,7 @@ namespace EnjentUnitTests.WebSocket
 				// - Ping Frames
 				data.Add(new WebSocketPingFrame());
 				data.Add(new WebSocketPingFrame(new byte[0]));
-				foreach (byte[] p in binPayloads)
+				foreach (byte[] p in smallBinPayloads)
 				{
 					data.Add(new WebSocketPingFrame(p));
 				}
@@ -51,7 +61,7 @@ namespace EnjentUnitTests.WebSocket
 				// - Pong Frames
 				data.Add(new WebSocketPongFrame());
 				data.Add(new WebSocketPongFrame(new byte[0]));
-				foreach (byte[] p in binPayloads)
+				foreach (byte[] p in smallBinPayloads)
 				{
 					data.Add(new WebSocketPongFrame(p));
 				}
