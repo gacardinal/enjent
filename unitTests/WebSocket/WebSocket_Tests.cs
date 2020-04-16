@@ -16,8 +16,6 @@ namespace EnjentUnitTests
     /// </summary>
     public partial class WebSocket_Tests : EnjentTest
     {
-        private static Random rand = new Random();
-
 		public WebSocket_Tests(ITestOutputHelper o) : base(o)
 		{}
     }

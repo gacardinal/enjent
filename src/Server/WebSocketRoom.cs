@@ -9,7 +9,14 @@ namespace NarcityMedia.Enjent.Server
 {
 	public class WebSocketRoom : WebSocketRoom<WebSocketClient>
 	{
+        public WebSocketRoom(WebSocketServer<WebSocketClient> server) : base(server)
+        {}
 
+        public WebSocketRoom(WebSocketServer<WebSocketClient> server, string name) : base(server, name)
+        {}
+
+        public WebSocketRoom(WebSocketServer<WebSocketClient> server, IEnumerable<WebSocketClient> clients) : base(server, clients)
+        {}
 	}
 
     /// <summary>
@@ -28,13 +35,19 @@ namespace NarcityMedia.Enjent.Server
         public string? Name;
 
         /// <summary>
-        /// Gets the number of <see cref="WebSocketClient" /> in the current room
+        /// Gets the number of <see cref="TWebSocketClient" /> in the current room
         /// </summary>
         /// <value>The number of clients in the room</value>
         public int Count
         {
             get { return this.clients.Count; }
         }
+
+		/// <summary>
+		/// Reference to the <see cref="WebSocketServerCore{TWebSocketClient}" /> that 'holds' the current instance of
+		/// <see cref="WebSocketRoom{TWebSocketClient}" />.
+		/// </summary>
+		public readonly WebSocketServerCore<TWebSocketClient> Server;
 
         public bool IsReadOnly
         {
@@ -50,51 +63,22 @@ namespace NarcityMedia.Enjent.Server
         /// The inner collection on which the current Room interfaces
         /// </summary>
         private List<TWebSocketClient> clients;
-        
-        public WebSocketRoom()
+
+        public WebSocketRoom(WebSocketServerCore<TWebSocketClient> server)
         {
             this.Id = Guid.NewGuid();
+			this.Server = server;
             this.clients = new List<TWebSocketClient>(100);
         }
 
-        public WebSocketRoom(string name) : this()
+        public WebSocketRoom(WebSocketServerCore<TWebSocketClient> server, string name) : this(server)
         {
             this.Name = name;
         }
 
-        public WebSocketRoom(IEnumerable<TWebSocketClient> clients) : this()
+        public WebSocketRoom(WebSocketServerCore<TWebSocketClient> server, IEnumerable<TWebSocketClient> clients) : this(server)
         {
             this.clients.AddRange(clients);
-        }
-
-        /// <summary>
-        /// Aggregates the given range of Rooms by performing a 'union' operation on it.
-        /// This means that the returned WebSocketRoom is one that contains all the WebSocketClients
-        /// contained in all the rooms param without duplicates
-        /// </summary>
-        /// <param name="rooms">The range of WebSocketRoom objects to aggregate</param>
-        /// <returns>
-        /// A new WebSocketRoom containing all the contents of the WebSocketRooms
-        /// in the Rooms param without duplicates
-        /// </returns>
-        /// <remark>
-        /// If parameter rooms is 
-        /// </remark>
-        public static WebSocketRoom<TWebSocketClient> Aggregate(IEnumerable<WebSocketRoom<TWebSocketClient>> rooms)
-        {
-            if (rooms == null) return new WebSocketRoom<TWebSocketClient>();
-
-            int nbRooms = rooms.Count();
-            if (nbRooms == 0) return new WebSocketRoom<TWebSocketClient>();
-            if (nbRooms == 1) return rooms.ElementAt(0);
-
-            WebSocketRoom<TWebSocketClient> aggregate = rooms.ElementAt(0);
-            for (int i = 1; i < nbRooms; i++)
-            {
-                aggregate.Union(rooms.ElementAt(i));
-            }
-
-            return aggregate;
         }
 
         /// <summary>
@@ -105,9 +89,9 @@ namespace NarcityMedia.Enjent.Server
         {
             lock (this.clients) 
             {
-                foreach(WebSocketClient cli in this.clients)
+                foreach(TWebSocketClient cli in this.clients)
                 {
-                    // cli.Send(message);
+                    this.Server.Send(cli, message);
                 }
             }
         }
@@ -118,7 +102,7 @@ namespace NarcityMedia.Enjent.Server
             {
                 foreach(TWebSocketClient cli in this.clients)
                 {
-                    // cli.Send(message);
+                    this.Server.Send(cli, message);
                 }
             }
         }

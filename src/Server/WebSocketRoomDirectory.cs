@@ -5,16 +5,16 @@ using System.Linq;
 namespace NarcityMedia.Enjent.Server
 {
     /// <summary>
-    /// Implements a 'non-binary tree-like' structure to 
+    /// Implements a 'non-binary tree-like' structure to store <see cref="WebSocketRoom" /> instances organized
+	/// as 'namespaces'
     /// </summary>
     internal class WebSocketRoomDirectory<TWebSocketClient> where TWebSocketClient : WebSocketClient
     {
         public DirectoryNode<WebSocketRoom<TWebSocketClient>> Root;
 
-        public WebSocketRoomDirectory()
+        public WebSocketRoomDirectory(WebSocketServerCore<TWebSocketClient> server)
         {
-            this.Root = new DirectoryNode<WebSocketRoom<TWebSocketClient>>("/", new WebSocketRoom<TWebSocketClient>());
-            
+            this.Root = new DirectoryNode<WebSocketRoom<TWebSocketClient>>("/", new WebSocketRoom<TWebSocketClient>(server));
         }
 
         public WebSocketRoom<TWebSocketClient> AddClientToRoom(TWebSocketClient cli, string[] segments)
@@ -29,11 +29,11 @@ namespace NarcityMedia.Enjent.Server
                 }
                 else
                 { // If node doesn't exist, create all the necessary nodes to represent the desired path
-                    child = new DirectoryNode<WebSocketRoom<TWebSocketClient>>(segments[i], new WebSocketRoom<TWebSocketClient>());
+                    child = new DirectoryNode<WebSocketRoom<TWebSocketClient>>(segments[i], new WebSocketRoom<TWebSocketClient>(this.Root.Value.Server));
                     for (int j = i; i < segments.Length; j++)
                     {
                         DirectoryNode<WebSocketRoom<TWebSocketClient>> pathNode = new DirectoryNode<WebSocketRoom<TWebSocketClient>>(
-                            segments[j], new WebSocketRoom<TWebSocketClient>()
+                            segments[j], new WebSocketRoom<TWebSocketClient>(this.Root.Value.Server)
                         );
 
                         child.AddNode(pathNode);
@@ -43,13 +43,18 @@ namespace NarcityMedia.Enjent.Server
                         }
                     }
 
-                    break;
+                    break; // Pay attention to this break
                 }
             }
 
             leafNode.Value.Add(cli);
             return leafNode.Value;
         }
+
+		// public WebSocketRoom<TWebSocketClient> ToWebSocketRoom(IList<string> segments)
+		// {
+
+		// }
     }
 
     internal class DirectoryNode<TValue>
@@ -93,5 +98,25 @@ namespace NarcityMedia.Enjent.Server
             dirNode = this.Children.FirstOrDefault(n => n.Identifier == identifier);
             return dirNode == null;
         }
+
+		/// <summary>
+		/// Returns the values of all the children (recursively) of the current <see cref="DirectoryNode{TValue}" />
+		/// in a list
+		/// </summary>
+		/// <returns>A list containing all the instances of TValue held by all the children of the current node</returns>
+		public List<TValue> GetFletChildren()
+		{
+			List<TValue> allValues = new List<TValue>(this.Children.Count);
+			
+			if (this.Children.Count > 0)
+			{
+				foreach (DirectoryNode<TValue> child in this.Children)
+				{
+					// allValues.AddRange(child.GetFletChildren()+);
+				}
+			}
+
+			return allValues;
+		}
     }
 }

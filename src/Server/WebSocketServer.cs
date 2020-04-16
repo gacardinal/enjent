@@ -73,19 +73,14 @@ namespace NarcityMedia.Enjent.Server
         private bool Listening;
 
         /// <summary>
-        /// Internal Room that holds every client that is connected to the server
+        /// Holds a reference to every connected client
         /// </summary>
-        private WebSocketRoom<TWebSocketClient> _allClients;
+        private List<TWebSocketClient> clients;
 
-        /// <summary>
-        /// Returns a <see cref="WebSocketRoom" /> that contains all the clients currently connected
-        /// to the server
-        /// </summary>
-        /// <value>The returned <see cref="WebSocketRoom" /> is a copy of an internal WebsocketRoom object</value>
-        public WebSocketRoom<TWebSocketClient> AllClients
-        {
-            get { return new WebSocketRoom<TWebSocketClient>(this._allClients); }
-        }
+		/// <summary>
+		/// Represents a structure to organizes rooms in namespaces
+		/// </summary>
+		internal readonly WebSocketRoomDirectory<TWebSocketClient> RoomNamespaces;
 
         /// <summary>
         /// Strategy used to initialize a new instance of the generic TWebSocketClient type when a new WebSocket connection is accepted
@@ -96,11 +91,6 @@ namespace NarcityMedia.Enjent.Server
         /// </remark>
         public delegate TWebSocketClient ClientInitialization(Socket socket, EnjentHTTPRequest initialWSRequest);
         private ClientInitialization ClientInitializationStrategy;
-
-        /// <summary>
-        /// Holds a reference to every connected client
-        /// </summary>
-        private List<TWebSocketClient> clients;
 
 		static WebSocketServerCore()
 		{
@@ -123,8 +113,7 @@ namespace NarcityMedia.Enjent.Server
 
             this.handleMessageResetEvent = new ManualResetEventSlim(false);
 
-            this._allClients = new WebSocketRoom<TWebSocketClient>();
-            this._allClients.Name = "GLOBAL";
+			this.RoomNamespaces = new WebSocketRoomDirectory<TWebSocketClient>(this);
 
             this.Socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
             this.Socket.ReceiveTimeout = 1000;
