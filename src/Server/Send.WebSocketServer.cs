@@ -17,8 +17,8 @@ namespace NarcityMedia.Enjent.Server
         /// <exception cref="SSystem.ObjectDisposedException">See <see cref="System.Net.Sockets.Socket.Send(byte[])" /><exception/>
         public void Send(TWebSocketClient cli, string message)
         {
-            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(message);
             WebSocketTextFrame frame = new WebSocketTextFrame(message);
+            frame.Fin = true;
 
             List<WebSocketFrame> frames = new List<WebSocketFrame>();
             frames.Add(frame);
