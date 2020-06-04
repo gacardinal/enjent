@@ -14,7 +14,7 @@ namespace NarcityMedia.Enjent.Server
         /// <summary>
         /// Size of the chunks that will be read in RAM from the incoming socket connection
         /// </summary>
-        private const int HEADER_CHUNK_BUFFER_SIZE = 1024 * 2;
+        private const int HEADER_CHUNK_BUFFER_SIZE = 1024 * 6;
 
         /// <summary>
         /// Byte representation of the 'new line' character
